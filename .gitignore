@@ -1,0 +1,7 @@
+*.err
+*.out
+*.txt
+
+/mediawiki_history_dumps/
+/.venv/
+databases/*.db
