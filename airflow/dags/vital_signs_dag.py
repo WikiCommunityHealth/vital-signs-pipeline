@@ -16,8 +16,10 @@ with DAG(
 ) as dag:
     #funzione per eseguire lo script 
     def run_vital_signs():
-        subprocess.run(["python3", "/home/pata/community_health_metrics_scripts_26_01_2022/vital_signs.py"], check=True)
-
+        subprocess.run(["python3", "/home/pata/Scrivania/tirocinio/automation_vital_signs/vital_signs.py"], check=True)
+    
+    def run_download_script():
+        subprocess.run(["python3", "/home/pata/Scrivania/tirocinio/automation_vital_signs/download_dumps.py"], check=True)
     #task da eseguire
     run_script_task = PythonOperator(
         task_id='run_vital_signs_script',
@@ -25,8 +27,14 @@ with DAG(
         dag=dag,
     )
 
+    download_dumps_task = PythonOperator(
+        task_id="run_download_dumps_script",
+        python_callable=run_download_script,
+        dag=dag
+    )
+
     
-    run_script_task
+    download_dumps_task.set_downstream(run_script_task) 
 
 
 
