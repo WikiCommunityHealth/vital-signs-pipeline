@@ -1,6 +1,6 @@
 *.err
 *.out
-*.txt
+domande.txt
 
 /mediawiki_history_dumps/
 /.venv/

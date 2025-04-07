@@ -50,8 +50,9 @@ vital_signs_web_db = 'vital_signs_web.db'
 def main():
 
     # EDITORS
-
+    
     create_vital_signs_editors_db()
+
     for languagecode in wikilanguagecodes:
         print('*')
         print(languagecode)
@@ -63,6 +64,7 @@ def main():
         print(languagecode+" done")
 
         print('*')
+    
     editor_metrics_primary_language_calculation()
 
     # VITAL SIGNS
