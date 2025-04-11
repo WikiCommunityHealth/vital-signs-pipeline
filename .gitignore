@@ -4,5 +4,5 @@ domande.txt
 test_db.py
 /mediawiki_history_dumps/
 /.venv/
-databases/*.db
+/databases/*.db
 /old_script/
