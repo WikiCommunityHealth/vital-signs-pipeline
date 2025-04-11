@@ -1,7 +1,7 @@
 *.err
 *.out
 domande.txt
-/home/pata/Scrivania/tirocinio/automation_vital_signs/test_db.py
+test_db.py
 /mediawiki_history_dumps/
 /.venv/
 databases/*.db
