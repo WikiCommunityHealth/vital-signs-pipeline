@@ -1,3 +1,4 @@
+from scripts import config
 import os
 import shutil
 import requests
@@ -41,8 +42,8 @@ def download_dumps():
         return local_filename
 
 
-    if os.path.exists("./mediawiki_history_dumps/"):
-        shutil.rmtree("./mediawiki_history_dumps/")
+    if os.path.exists(config.dumps_path):
+        shutil.rmtree(config.dumps_path)
     #current_YYYY_MM = datetime.now().strftime("%Y-%m")
     #base_url = "https://dumps.wikimedia.org/other/mediawiki_history/"
     #
@@ -54,8 +55,7 @@ def download_dumps():
     #    correct_url = f"{base_url}{previous_YYYY_MM}/"
     correct_url = "https://dumps.wikimedia.org/other/mediawiki_history/2025-02/"
     print(f"Utilizzando la directory: {correct_url}")
-    save_path = "./mediawiki_history_dumps"
-    os.makedirs(save_path, exist_ok=True)
+    os.makedirs(config.dumps_path, exist_ok=True)
 
     # Ottieni tutte le sottodirectory delle wiki
     wiki_dirs = get_wiki_directories(correct_url)
@@ -64,7 +64,7 @@ def download_dumps():
 
     for wiki_dir in wiki_dirs:
         wiki_name = wiki_dir.rstrip('/').split('/')[-1]  # Estrai il nome della wiki
-        wiki_save_path = os.path.join(save_path, wiki_name)
+        wiki_save_path = os.path.join(config.dumps_path, wiki_name)
         os.makedirs(wiki_save_path, exist_ok=True)  # Crea la directory per la wiki
 
         print(f"Scaricando da {wiki_dir} in {wiki_save_path}")
