@@ -1,43 +1,88 @@
+from airflow.operators.python import PythonOperator
+from airflow.operators.empty import EmptyOperator
 from airflow import DAG
+from airflow.utils.task_group import TaskGroup
+
+
 from datetime import datetime, timedelta
-import subprocess
-from airflow.operators.python import PythonOperator 
+
+
+from scripts import utils
+from scripts import fill_editors_db
+from scripts.download_dumps import download_dumps
+from scripts.create_db import create_db
+from scripts.primary_language import cross_wiki_editor_metrics
+from scripts.fill_web_db import compute_wiki_vital_signs
+
+
+wikilanguagecodes = utils.get_cleaned_subdirectories()
+
 with DAG(
-    default_args = {
-    'owner': 'andrea_denina',
-    'depends_on_past': False,
-    'start_date': datetime(2025, 4, 3),
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    default_args={
+        'owner': 'andrea_denina',
+        'depends_on_past': False,
+        'start_date': datetime(2025, 4, 3),
+        'retries': 1,
+        'retry_delay': timedelta(minutes=5),
     },
-    description='Esegue lo script vital_signs.py ogni mese',
+    description='',
     schedule_interval='@monthly',  # Esecuzione mensile
     catchup=False
 ) as dag:
-    #funzione per eseguire lo script 
-    def run_vital_signs():
-        subprocess.run(["python3", "/home/pata/Scrivania/tirocinio/automation_vital_signs/vital_signs.py"], check=True)
-    
-    def run_download_script():
-        subprocess.run(["python3", "/home/pata/Scrivania/tirocinio/automation_vital_signs/download_dumps.py"], check=True)
-    #task da eseguire
-    run_script_task = PythonOperator(
-        task_id='run_vital_signs_script',
-        python_callable=run_vital_signs,
-        dag=dag,
-    )
+
+    start = EmptyOperator(task_id='start')
+    end = EmptyOperator(task_id='end')
 
     download_dumps_task = PythonOperator(
-        task_id="run_download_dumps_script",
-        python_callable=run_download_script,
-        dag=dag
+        task_id="download_dumps",
+        python_callable=download_dumps,
+
     )
 
-    
-    download_dumps_task.set_downstream(run_script_task) 
+    create_db_task = PythonOperator(
+        task_id="create_dbs",
+        python_callable=create_db,
+        op_args=[wikilanguagecodes]
+    )
 
+    editor_groups = []
 
+    for code in wikilanguagecodes:
+        with TaskGroup(group_id=f"{code}wiki_editors_db") as editors_tg:
 
+            process_metrics_from_dumps_task = PythonOperator(
+                task_id=f"{code}_first_step",
+                python_callable=fill_editors_db.process_editor_metrics_from_dump,
+                op_args=[code]
+            )
 
+            calculate_streaks_task = PythonOperator(
+                task_id=f"{code}_second_step",
+                python_callable=fill_editors_db.calculate_editor_activity_streaks,
+                op_args=[code]
+            )
 
+            process_metrics_from_dumps_task >> calculate_streaks_task
+        editor_groups.append(editors_tg)
 
+    primary_language_task = PythonOperator(
+        task_id="primary_language",
+        python_callable=cross_wiki_editor_metrics,
+        op_args=[wikilanguagecodes]
+    )
+
+    web_groups = []
+
+    for code in wikilanguagecodes:
+        with TaskGroup(group_id=f"{code}wiki_web_db") as web_tg:
+
+            compute_vital_signs_task = PythonOperator(
+                task_id=f"{code}",
+                python_callable=compute_wiki_vital_signs,
+                op_args=[code],
+
+            )
+
+        web_groups.append(web_tg)
+
+    start >> download_dumps_task >> create_db_task >> editor_groups >> primary_language_task >> web_groups >> end

@@ -6,39 +6,43 @@ from dateutil.relativedelta import relativedelta
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-def get_wiki_directories(base_url):
-    response = requests.get(base_url)
-    if response.status_code != 200:
-        print(f"Errore nel recupero della pagina: {response.status_code}")
-        return []
-    
-    soup = BeautifulSoup(response.text, 'html.parser')
-    directories = [urljoin(base_url, a['href']) for a in soup.find_all('a', href=True) if a['href'].endswith('wiki/')]
-    return directories
 
-def get_dump_links(wiki_url):
-    response = requests.get(wiki_url)
-    if response.status_code != 200:
-        print(f"Errore nel recupero della pagina {wiki_url}: {response.status_code}")
-        return []
-    
-    soup = BeautifulSoup(response.text, 'html.parser')
-    links = [urljoin(wiki_url, a['href']) for a in soup.find_all('a', href=True) if a['href'].endswith('.bz2')]
-    return links
+def download_dumps():
+    def get_wiki_directories(base_url):
+        response = requests.get(base_url)
+        if response.status_code != 200:
+            print(f"Errore nel recupero della pagina: {response.status_code}")
+            return []
 
-def download_file(url, save_path):
-    local_filename = os.path.join(save_path, url.split('/')[-1])
-    
-    with requests.get(url, stream=True) as response:
-        response.raise_for_status()
-        with open(local_filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-    
-    print(f"Scaricato: {local_filename}")
-    return local_filename
+        soup = BeautifulSoup(response.text, 'html.parser')
+        directories = [urljoin(base_url, a['href']) for a in soup.find_all('a', href=True) if a['href'].endswith('wiki/')]
+        return directories
 
-def main():
+    def get_dump_links(wiki_url):
+        response = requests.get(wiki_url)
+        if response.status_code != 200:
+            print(f"Errore nel recupero della pagina {wiki_url}: {response.status_code}")
+            return []
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        links = [urljoin(wiki_url, a['href']) for a in soup.find_all('a', href=True) if a['href'].endswith('.bz2')]
+        return links
+
+    def download_file(url, save_path):
+        local_filename = os.path.join(save_path, url.split('/')[-1])
+
+        with requests.get(url, stream=True) as response:
+            response.raise_for_status()
+            with open(local_filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        print(f"Scaricato: {local_filename}")
+        return local_filename
+
+
+    if os.path.exists("./mediawiki_history_dumps/"):
+        shutil.rmtree("./mediawiki_history_dumps/")
     #current_YYYY_MM = datetime.now().strftime("%Y-%m")
     #base_url = "https://dumps.wikimedia.org/other/mediawiki_history/"
     #
@@ -48,35 +52,29 @@ def main():
     #else:
     #    previous_YYYY_MM = (datetime.now() - relativedelta(months=1)).strftime("%Y-%m")
     #    correct_url = f"{base_url}{previous_YYYY_MM}/"
-
     correct_url = "https://dumps.wikimedia.org/other/mediawiki_history/2025-02/"
     print(f"Utilizzando la directory: {correct_url}")
     save_path = "./mediawiki_history_dumps"
     os.makedirs(save_path, exist_ok=True)
-    
+
     # Ottieni tutte le sottodirectory delle wiki
     wiki_dirs = get_wiki_directories(correct_url)
     if not wiki_dirs:
         print("Nessuna directory wiki trovata.")
-        return
+
     for wiki_dir in wiki_dirs:
         wiki_name = wiki_dir.rstrip('/').split('/')[-1]  # Estrai il nome della wiki
         wiki_save_path = os.path.join(save_path, wiki_name)
         os.makedirs(wiki_save_path, exist_ok=True)  # Crea la directory per la wiki
-        
+
         print(f"Scaricando da {wiki_dir} in {wiki_save_path}")
         links = get_dump_links(wiki_dir)
-        
+
         if not links:
             print(f"Nessun file trovato per {wiki_name}.")
             continue
         
         for link in links:
             download_file(link, wiki_save_path)
-    
-    print("Download completato.")
 
-if __name__ == "__main__":
-    if os.path.exists("./mediawiki_history_dumps/"):
-        shutil.rmtree("./mediawiki_history_dumps/")
-    main()
+    print("Download completato.")

@@ -6,7 +6,7 @@ import sqlite3
 import csv
 
 
-def editor_metrics_primary_language_calculation():
+def cross_wiki_editor_metrics(wikilanguagecodes):
 
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
     cursor = conn.cursor()
@@ -14,15 +14,13 @@ def editor_metrics_primary_language_calculation():
     query = ("CREATE TABLE IF NOT EXISTS allwiki_editors (lang text, user_name text, edit_count integer, year_month_first_edit text, lustrum_first_edit text, PRIMARY KEY (lang, user_name));")
     cursor.execute(query)
 
-    wikilanguagecodes = utils.get_cleaned_subdirectories()
-
     for languagecode in wikilanguagecodes:
         query = 'INSERT INTO allwiki_editors SELECT "'+languagecode + \
             '", user_name, edit_count, year_month_first_edit, lustrum_first_edit FROM ' + \
                 languagecode+'wiki_editors WHERE user_name != "";'
         cursor.execute(query)
         conn.commit()
-        print(languagecode)
+        
     print('Allwiki editors table filled')
 
     try:

@@ -1,23 +1,15 @@
-from scripts import utils
 from scripts import config
 
 import sqlite3
-import time
 
 
 def compute_wiki_vital_signs(languagecode):
 
-    functionstartTime = time.time()
-    function_name = 'Aaa '+languagecode
-    print(function_name)
-
-    conn = sqlite3.connect(config.databases_path + config.vital_signs_editors_db)
+    conn = sqlite3.connect(config.databases_path +
+                           config.vital_signs_editors_db)
     cursor = conn.cursor()
     conn2 = sqlite3.connect(config.databases_path + config.vital_signs_web_db)
     cursor2 = conn2.cursor()
-
-    d_paths, cym = utils.get_mediawiki_paths(languagecode)
-    cycle_year_month = cym
 
     query_cm = 'INSERT OR IGNORE INTO vital_signs_metrics (langcode, year_year_month, year_month, topic, m1, m1_calculation, m1_value, m2, m2_calculation, m2_value, m1_count, m2_count) VALUES (?,?,?,?,?,?,?,?,?,?,?,?);'
 
@@ -169,10 +161,6 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
-
-            # print (active_editors_5_year_month)
-            # print (active_editors_100_year_month)
-            # input('')
 
             # active_editors    monthly_edits   bin 1, 5, 10, 50, 100, 500, 1000
             parameters = []
@@ -399,7 +387,6 @@ def compute_wiki_vital_signs(languagecode):
             conn2.commit()
 
             # GLOBAL / PRIMARY
-            # aquí hi falten els active editors totals
 
             values = [5, 100]
             parameters = []
@@ -415,7 +402,7 @@ def compute_wiki_vital_signs(languagecode):
                             str(v)+' AND e2.bot = "editor" GROUP BY 2, 3'
 
                 for row in cursor.execute(query):
-                    # print (row)
+
                     m2_count = row[0]
                     year_month = row[1]
                     primarylang = row[2]
