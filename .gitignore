@@ -2,6 +2,7 @@
 *.out
 domande.txt
 test_db.py
+testing.py
 /mediawiki_history_dumps/
 /.venv/
 /databases/*.db
