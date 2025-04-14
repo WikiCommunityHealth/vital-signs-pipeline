@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: custom-airflow:latest
+    container_name: airflow
+    restart: always
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW_UID: ${AIRFLOW_UID}
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+      AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'False'
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
+      - ./databases:/opt/databases
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      - airflow_init
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: custom-airflow:latest
+    restart: always
+    depends_on:
+      - airflow_init
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
+      - ./databases:/opt/databases
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW_UID: ${AIRFLOW_UID}
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+    command: scheduler
+
+  airflow_init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: custom-airflow:latest
+    restart: on-failure
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
+      - ./databases:/opt/databases
+    environment:
+      AIRFLOW_UID: ${AIRFLOW_UID}9
+    entrypoint: /opt/airflow/scripts/entrypoint-init.sh
