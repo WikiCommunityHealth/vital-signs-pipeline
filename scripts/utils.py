@@ -1,8 +1,6 @@
 import config
-
 import os
 import datetime
-
 from dateutil import relativedelta
 
 cycle_year_month = (datetime.date.today() -

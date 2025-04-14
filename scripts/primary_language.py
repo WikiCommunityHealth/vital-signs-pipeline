@@ -1,8 +1,4 @@
-
-import utils
-
 import config
-
 import os
 import sqlite3
 import csv

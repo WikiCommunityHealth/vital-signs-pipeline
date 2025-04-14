@@ -1,17 +1,16 @@
-FROM apache/airflow:2.8.1-python3.10
-
-WORKDIR /opt/airflow
+FROM apache/airflow:slim-3.0.0rc2-python3.10
 
 USER root
-
+RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && apt-get clean
 COPY requirements.txt .
-
-
-COPY airflow/ .
+COPY dags/ /opt/airflow/dags/
 COPY scripts/ /opt/airflow/scripts/
-RUN mkdir -p /opt/mediawiki_history_dumps && \
-    mkdir -p /opt/databases && \
-    chown -R airflow: /opt/mediawiki_history_dumps /opt/databases
+COPY mediawiki_history_dumps/ /opt/mediawiki_history_dumps/
+COPY databases/ /opt/databases/
+
+
+RUN mkdir -p /opt/databases /opt/mediawiki_history_dumps \
+    && chown -R airflow: /opt/databases /opt/mediawiki_history_dumps /opt/airflow/scripts
 
 
 ENV PYTHONPATH="/opt/airflow/scripts"

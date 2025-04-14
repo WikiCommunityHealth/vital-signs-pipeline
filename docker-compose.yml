@@ -10,11 +10,10 @@ services:
     restart: always
     environment:
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor
-      AIRFLOW_UID: ${AIRFLOW_UID}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
       AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
-      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'False'
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW_UID: 50000
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
@@ -27,35 +26,31 @@ services:
       - airflow_init
 
   scheduler:
+    image: custom-airflow:latest
     build:
       context: .
-      dockerfile: Dockerfile
-    image: custom-airflow:latest
     restart: always
-    depends_on:
-      - airflow_init
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./scripts:/opt/airflow/scripts
-      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
-      - ./databases:/opt/databases
     environment:
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor
-      AIRFLOW_UID: ${AIRFLOW_UID}
       AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
-    command: scheduler
-
-  airflow_init:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: custom-airflow:latest
-    restart: on-failure
+      AIRFLOW_UID: 50000
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
       - ./databases:/opt/databases
-    environment:
-      AIRFLOW_UID: ${AIRFLOW_UID}9
+    command: scheduler
+    depends_on:
+      - airflow_init
+
+  airflow_init:
+    image: custom-airflow:latest
+    build:
+      context: .
+    restart: on-failure
+    volumes:
+      - ./scripts:/opt/airflow/scripts
+      - ./dags:/opt/airflow/dags
+      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
+      - ./databases:/opt/databases
     entrypoint: /opt/airflow/scripts/entrypoint-init.sh

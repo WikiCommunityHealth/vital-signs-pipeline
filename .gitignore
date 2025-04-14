@@ -7,4 +7,4 @@ testing.py
 /.venv/
 /databases/*.db
 /old_script/
-scripts/__pycache__
+airflow/scripts/__pycache__
