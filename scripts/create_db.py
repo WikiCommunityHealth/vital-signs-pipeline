@@ -1,5 +1,4 @@
-from scripts import config
-from scripts import utils
+import config
 import sqlite3
 
 def create_db(wikilanguagecodes):

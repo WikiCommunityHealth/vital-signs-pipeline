@@ -1,5 +1,7 @@
-from scripts import utils
-from scripts import config
+
+import utils
+
+import config
 
 import os
 import sqlite3

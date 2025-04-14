@@ -7,3 +7,4 @@ testing.py
 /.venv/
 /databases/*.db
 /old_script/
+scripts/__pycache__
