@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: custom-airflow:latest
-    container_name: airflow
+    container_name: airflow_main
     restart: always
     environment:
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor
@@ -15,10 +15,12 @@ services:
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
       AIRFLOW_UID: 50000
     volumes:
+      - ./airflow.cfg:/opt/airflow/airflow.cfg
+      - ./airflow.db:/opt/airflow/airflow.db
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
-      - ./databases:/opt/databases
+      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - ./databases:/opt/airflow/databases
     ports:
       - "8080:8080"
     command: webserver
@@ -35,10 +37,12 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
       AIRFLOW_UID: 50000
     volumes:
+      - ./airflow.cfg:/opt/airflow/airflow.cfg
+      - ./airflow.db:/opt/airflow/airflow.db
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
-      - ./databases:/opt/databases
+      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - ./databases:/opt/airflow/databases
     command: scheduler
     depends_on:
       - airflow_init
@@ -49,8 +53,10 @@ services:
       context: .
     restart: on-failure
     volumes:
+      - ./airflow.cfg:/opt/airflow/airflow.cfg
+      - ./airflow.db:/opt/airflow/airflow.db
       - ./scripts:/opt/airflow/scripts
       - ./dags:/opt/airflow/dags
-      - ./mediawiki_history_dumps:/opt/mediawiki_history_dumps
-      - ./databases:/opt/databases
+      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - ./databases:/opt/airflow/databases
     entrypoint: /opt/airflow/scripts/entrypoint-init.sh

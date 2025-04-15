@@ -1,4 +1,4 @@
-import config
+from scripts import config
 import os
 import shutil
 import requests

@@ -6,6 +6,10 @@ from airflow.utils.task_group import TaskGroup
 
 from datetime import datetime, timedelta
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 from scripts import utils
 from scripts import fill_editors_db
@@ -18,6 +22,7 @@ from scripts.fill_web_db import compute_wiki_vital_signs
 wikilanguagecodes = utils.get_cleaned_subdirectories()
 
 with DAG(
+    dag_id='vital_signs',
     default_args={
         'owner': 'andrea_denina',
         'depends_on_past': False,

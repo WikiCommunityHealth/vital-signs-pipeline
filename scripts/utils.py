@@ -1,4 +1,4 @@
-import config
+from scripts import config
 import os
 import datetime
 from dateutil import relativedelta
