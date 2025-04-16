@@ -1,26 +1,26 @@
-version: '3.8'
+x-airflow-env: &airflow-env
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+  AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
+  AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+
 
 services:
   airflow:
     build:
       context: .
-      dockerfile: Dockerfile
     image: custom-airflow:latest
     container_name: airflow_main
     restart: always
-    environment:
-      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
-      AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-      AIRFLOW_UID: 50000
+    environment: *airflow-env
     volumes:
       - ./airflow.cfg:/opt/airflow/airflow.cfg
-      - ./airflow.db:/opt/airflow/airflow.db
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
       - ./databases:/opt/airflow/databases
+      - ./logs:/opt/airflow/logs
     ports:
       - "8080:8080"
     command: webserver
@@ -29,34 +29,50 @@ services:
 
   scheduler:
     image: custom-airflow:latest
-    build:
-      context: .
     restart: always
-    environment:
-      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
-      AIRFLOW_UID: 50000
+    environment: *airflow-env
     volumes:
       - ./airflow.cfg:/opt/airflow/airflow.cfg
-      - ./airflow.db:/opt/airflow/airflow.db
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
       - ./databases:/opt/airflow/databases
+      - ./logs:/opt/airflow/logs
     command: scheduler
     depends_on:
       - airflow_init
 
   airflow_init:
     image: custom-airflow:latest
-    build:
-      context: .
     restart: on-failure
+    environment: *airflow-env
     volumes:
       - ./airflow.cfg:/opt/airflow/airflow.cfg
-      - ./airflow.db:/opt/airflow/airflow.db
-      - ./scripts:/opt/airflow/scripts
       - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
       - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
       - ./databases:/opt/airflow/databases
-    entrypoint: /opt/airflow/scripts/entrypoint-init.sh
+      - ./logs:/opt/airflow/logs
+    entrypoint: >
+      /bin/bash -c "
+      airflow db init &&
+      airflow users create --username admin --password admin --firstname Andrea --lastname Denina --role Admin --email andredeninaf@gmail.com
+      "
+    depends_on:
+      - postgres
+  postgres:
+      image: postgres:15
+      container_name: postgres
+      restart: always
+      environment:
+        POSTGRES_USER: airflow
+        POSTGRES_PASSWORD: airflow
+        POSTGRES_DB: airflow
+      volumes:
+        - postgres-db-volume:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U airflow"]
+        interval: 10s
+        retries: 5
+volumes:
+  postgres-db-volume:

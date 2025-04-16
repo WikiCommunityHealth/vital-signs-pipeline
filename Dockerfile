@@ -1,20 +1,20 @@
-FROM apache/airflow:slim-3.0.0rc2-python3.10
+FROM apache/airflow:2.10.5-python3.12
 
-
-ARG AIRFLOW_USER_HOME=/opt/airflow/
-ARG AIRFLOW_DEPS=""
-ARG PYTHON_DEPS=""
-ENV AIRFLOW_HOME=${AIRFLOW_USER_HOME}
-
-
+WORKDIR /opt/airflow
 
 USER root
-WORKDIR /opt/airflow/
-RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && apt-get clean
-COPY . /opt/airflow/
-RUN chown -R airflow: /opt/
-EXPOSE 8080 5555 8793
-USER airflow
-RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["webserver"]
+COPY requirements.txt /requirements.txt
+COPY --chown=airflow:root dags/ /opt/airflow/dags/
+COPY --chown=airflow:root airflow.cfg /opt/airflow/
+COPY --chown=airflow:root scripts/ /opt/airflow/scripts/
+
+RUN mkdir -p /opt/airflow/databases /opt/airflow/mediawiki_history_dumps
+RUN chown -R airflow: /opt/airflow/databases /opt/airflow/mediawiki_history_dumps
+
+RUN mkdir -p /opt/airflow/logs 
+RUN chown -R airflow: /opt/airflow/logs
+
+USER airflow
+
+RUN pip install --no-cache-dir -r /requirements.txt

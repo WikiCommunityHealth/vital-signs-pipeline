@@ -112,3 +112,49 @@ File Path                                                       PID    Runtime  
 /home/pata/Scrivania/tirocinio/airflow/dags/vital_signs_dag.py                           1           0  0.31s           2025-04-14T20:16:25                      12
 ================================================================================
 [2025-04-14T22:16:50.196+0200] {manager.py:465} INFO - Exiting gracefully upon receiving signal 15
+[2025-04-16T15:38:03.199+0000] {manager.py:483} INFO - Processing files using up to 2 processes at a time 
+[2025-04-16T15:38:03.200+0000] {manager.py:484} INFO - Process each file at most once every 30 seconds
+[2025-04-16T15:38:03.201+0000] {manager.py:485} INFO - Checking for new files in /opt/airflow/dags every 300 seconds
+[2025-04-16T15:38:03.202+0000] {manager.py:821} INFO - Searching for files in /opt/airflow/dags
+[2025-04-16T15:38:03.206+0000] {manager.py:824} INFO - There are 1 files in /opt/airflow/dags
+[2025-04-16T15:38:03.386+0000] {manager.py:997} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                               PID  Runtime      # DAGs    # Errors  Last Runtime    Last Run      Last # of DB Queries
+------------------------------------  -----  ---------  --------  ----------  --------------  ----------  ----------------------
+/opt/airflow/dags/vital_signs_dag.py    166  0.04s             0           0                                                   0
+================================================================================
+[2025-04-16T15:38:33.407+0000] {manager.py:997} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                             PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run               Last # of DB Queries
+------------------------------------  -----  ---------  --------  ----------  --------------  -------------------  ----------------------
+/opt/airflow/dags/vital_signs_dag.py                           1           0  1.86s           2025-04-16T15:38:05                      45
+================================================================================
+[2025-04-16T15:39:03.839+0000] {manager.py:997} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                             PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run               Last # of DB Queries
+------------------------------------  -----  ---------  --------  ----------  --------------  -------------------  ----------------------
+/opt/airflow/dags/vital_signs_dag.py                           1           0  0.53s           2025-04-16T15:38:35                      12
+================================================================================
+[2025-04-16T15:39:33.887+0000] {manager.py:997} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                             PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run               Last # of DB Queries
+------------------------------------  -----  ---------  --------  ----------  --------------  -------------------  ----------------------
+/opt/airflow/dags/vital_signs_dag.py                           1           0  0.48s           2025-04-16T15:39:06                      12
+================================================================================
+[2025-04-16T15:40:04.109+0000] {manager.py:997} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                             PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run               Last # of DB Queries
+------------------------------------  -----  ---------  --------  ----------  --------------  -------------------  ----------------------
+/opt/airflow/dags/vital_signs_dag.py                           1           0  0.50s           2025-04-16T15:39:37                      12
+================================================================================
+[2025-04-16T15:40:20.883+0000] {manager.py:465} INFO - Exiting gracefully upon receiving signal 15
