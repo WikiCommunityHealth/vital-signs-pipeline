@@ -15,12 +15,9 @@ services:
     restart: always
     environment: *airflow-env
     volumes:
-      - ./airflow.cfg:/opt/airflow/airflow.cfg
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
-      - ./databases:/opt/airflow/databases
-      - ./logs:/opt/airflow/logs
+
     ports:
       - "8080:8080"
     command: webserver
@@ -32,12 +29,9 @@ services:
     restart: always
     environment: *airflow-env
     volumes:
-      - ./airflow.cfg:/opt/airflow/airflow.cfg
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
-      - ./databases:/opt/airflow/databases
-      - ./logs:/opt/airflow/logs
+
     command: scheduler
     depends_on:
       - airflow_init
@@ -47,12 +41,9 @@ services:
     restart: on-failure
     environment: *airflow-env
     volumes:
-      - ./airflow.cfg:/opt/airflow/airflow.cfg
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
-      - ./databases:/opt/airflow/databases
-      - ./logs:/opt/airflow/logs
+
     entrypoint: >
       /bin/bash -c "
       airflow db init &&
