@@ -1,10 +1,14 @@
 from scripts import config
+from scripts.instrumentation import task_duration
 import os
 import sqlite3
 import csv
+import time
 
 
 def cross_wiki_editor_metrics(wikilanguagecodes):
+
+    start = time.time()
 
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
     cursor = conn.cursor()
@@ -19,8 +23,6 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
         cursor.execute(query)
         conn.commit()
         
-    print('Allwiki editors table filled')
-
     try:
         os.remove(config.databases_path + 'temporary_editor_metrics.txt')
     except:
@@ -96,12 +98,11 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
     edfile2.write(primarylang+'\t'+str(primary_ecount)+'\t'+str(totallangs_ecount)+'\t'+str(numberlangs) +
                   '\t' + primary_year_month_first_edit+'\t'+primary_lustrum_first_edit+'\t'+user_name+'\n')
 
-    print('All in the txt file')
+
 
     query = "DROP TABLE allwiki_editors;"
     cursor.execute(query)
     conn.commit()
-    print('Allwiki editors table deleted')
 
     ###
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
@@ -118,9 +119,11 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
         cursor.executemany(query, parameters)
         conn.commit()
 
-    print("All the original tables updated with the editors' primary language")
 
     try:
         os.remove(config.databases_path + 'temporary_editor_metrics.txt')
     except:
         pass
+
+    task_duration.record(time.time() - start, {"task": "cross_wiki_editor_metrics"})
+

@@ -1,5 +1,6 @@
 from scripts import utils
 from scripts import config
+from scripts.instrumentation import task_duration
 import sqlite3
 import datetime
 import time
@@ -12,17 +13,12 @@ from dateutil import relativedelta
 
 
 def process_editor_metrics_from_dump(languagecode):
+    start = time.time()
 
-    functionstartTime = time.time()
-    function_name = 'editor_metrics_dump_iterator '+languagecode
-    print(function_name)
 
     d_paths, cym = utils.get_mediawiki_paths(languagecode)
     cym_timestamp_dt = datetime.datetime.today().replace(
         day=1)
-
-    if (len(d_paths) == 0):
-        print('dump error. this language has no mediawiki_history dump: '+languagecode)
 
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
@@ -60,14 +56,9 @@ def process_editor_metrics_from_dump(languagecode):
 
     for dump_path in d_paths:
 
-        print('\n'+dump_path)
-        iterTime = time.time()
-
         dump_in = bz2.open(dump_path, 'r')
         line = 'something'
         line = dump_in.readline()
-
-        print('year_month here: '+str(last_year_month))
 
         while line != '':
 
@@ -138,19 +129,15 @@ def process_editor_metrics_from_dump(languagecode):
 
                         except:
                             old_ug_list = []
-#                        print (old_ug_list)
 
                         if ',' in cur_ug:
                             cur_ug_list = cur_ug.split(',')
                         else:
                             cur_ug_list = [cur_ug]
-#                        print (cur_ug_list)
 
                         i = 0
                         for x in cur_ug_list:
                             if x not in old_ug_list:
-                                #                                print ('granted flag: '+x+' for user: '+user_text+' timestamp: '+ event_timestamp)
-                                #                                input('')
                                 event_ts = event_timestamp[:len(
                                     event_timestamp)-i]
                                 editor_user_group_dict_timestamp[user_id, event_ts] = [
@@ -159,9 +146,6 @@ def process_editor_metrics_from_dump(languagecode):
 
                         for x in old_ug_list:
                             if x not in cur_ug_list:
-                                #                                print ('removed flag: '+x+' for user: '+user_text+' timestamp: '+ event_timestamp)
-                                #                                input('')
-
                                 event_ts = event_timestamp[:len(
                                     event_timestamp)-i]
                                 editor_user_group_dict_timestamp[user_id, event_ts] = [
@@ -357,7 +341,6 @@ def process_editor_metrics_from_dump(languagecode):
         survival_measures = []
 
         # MONTHLY EDITS/NAMESPACES INSERT (LAST ROUND)
-        print(last_year_month)
 
         try:
             lym = last_year_month.strftime('%Y-%m')
@@ -456,8 +439,6 @@ def process_editor_metrics_from_dump(languagecode):
                 except:
                     registration_date = None
 
-            print(f"Raw registration_date: {registration_date}")
-
             if registration_date != '' and registration_date != None:
                 year_month_registration = datetime.datetime.strptime(registration_date[:len(
                     registration_date)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
@@ -537,7 +518,6 @@ def process_editor_metrics_from_dump(languagecode):
         cursor.executemany(query, user_characteristics2)
         conn.commit()
 
-        print(len(user_characteristics1), len(user_characteristics2))
 
         user_characteristics1 = []
         user_characteristics2 = []
@@ -553,9 +533,6 @@ def process_editor_metrics_from_dump(languagecode):
         editor_first_edit_timestamp = {}
         editor_registration_date = {}
 
-        # keep only pending monthly edits
-        print('total number of stored user_ids at the end of the dump: ')
-        print(len(user_id_user_name_dict))
 
         user_id_user_name_dict2 = {}
         for k in editor_monthly_edits.keys():
@@ -570,38 +547,10 @@ def process_editor_metrics_from_dump(languagecode):
         for k in editor_user_group_dict_timestamp.keys():
             user_id_user_name_dict2[k[0]] = user_id_user_name_dict[k[0]]
 
-        print('updated number of necessary user_ids: ')
-        print(len(user_id_user_name_dict2))
-
         user_id_user_name_dict = user_id_user_name_dict2
         user_id_user_name_dict2 = {}
 
-        # END OF THE DUMP!!!!
-        print('end of the dump.')
-        print('*')
-        print(str(datetime.timedelta(seconds=time.time() - iterTime)))
-#        input('')
-
-    """
-    # AGGREGATED METRICS (EDIT COUNTS)
-    monthly_aggregated_metrics = {'monthly_edits':'edit_count'}
-    conn2 = sqlite3.connect(databases_path + vital_signs_editors_db); cursor2 = conn2.cursor()
-    for monthly_metric_name, metric_name in monthly_aggregated_metrics.items():
-        edit_counts = []
-        query = 'SELECT user_id, user_name, SUM(abs_value) FROM '+languagecode+'wiki_editor_metrics WHERE metric_name = "'+monthly_metric_name+'" GROUP BY 2;'
-        for row in cursor2.execute(query):
-            user_id = row[0]
-            user_name = row[1]
-            value = row[2]
-            edit_counts.append((value, user_name, user_id))
-
-    query = 'UPDATE '+languagecode+'wiki_editors SET edit_count = ? WHERE user_name = ? AND user_id = ?;'
-    cursor2.executemany(query,edit_counts)
-    conn2.commit()
-    print ('Updated the editors table with the edit count.')
-    """
-
-    # FLAGS UPDATE
+        
     # Getting the highest flag
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
@@ -625,9 +574,6 @@ def process_editor_metrics_from_dump(languagecode):
                 flags_count_dict[flags] += count
             except:
                 flags_count_dict[flags] = 1
-
-    print('Number of editors for each flag')
-    print(flags_count_dict)
 
     flag_ranks = {
         'confirmed': 1, 'ipblock-exempt': 1,
@@ -691,7 +637,6 @@ def process_editor_metrics_from_dump(languagecode):
         'wiki_editors SET highest_flag = ? WHERE user_name = ?;'
     cursor.executemany(query, params)
     conn.commit()
-    print('Updated the editors table with highest flag')
 
     # let's update the highest_flag_year_month
     query = 'SELECT year_month, user_id, user_name, abs_value FROM ' + \
@@ -722,8 +667,6 @@ def process_editor_metrics_from_dump(languagecode):
     cursor.executemany(query, params2)
     conn.commit()
 
-    print('Updated the editors table with the year month they obtained the highest flag.')
-
     # If an editor has been granted the 'bot' flag, even if it has been taken away, it must be a flag.
     query = 'SELECT user_id, user_name FROM '+languagecode + \
         'wiki_editor_metrics WHERE metric_name = "granted_flag" AND abs_value LIKE "%bot";'
@@ -741,42 +684,24 @@ def process_editor_metrics_from_dump(languagecode):
     cursor.executemany(query, params)
     conn.commit()
 
-    print('Updated the table with the bots from flag.')
-
-    duration = str(datetime.timedelta(seconds=time.time() - functionstartTime))
-    print(languagecode+' ' + function_name+' ' + duration)
-
-
+    task_duration.record(time.time() - start, {"task": f"{languagecode}wiki_process_editor_metrics_from_dump"})
 
 def calculate_editor_activity_streaks(languagecode):
 
-    functionstartTime = time.time()
-    function_name = 'editor_metrics_db_iterator '+languagecode
-    print(function_name)
-
-    d_paths, cym = utils.get_mediawiki_paths(languagecode)
-    cycle_year_month = cym
-    print(cycle_year_month)
-    conn = sqlite3.connect(config.databases_path + config.vital_signs_editors_db)
+    start = time.time()
+    
+    conn = sqlite3.connect(config.databases_path +
+                           config.vital_signs_editors_db)
     cursor = conn.cursor()
 
     # MONTHLY EDITS LOOP
     query = 'SELECT abs_value, year_month, user_id, user_name FROM '+languagecode + \
         'wiki_editor_metrics WHERE metric_name = "monthly_edits" ORDER BY user_name, year_month'
-   
-    # print (query)
-    user_count = 0
+
+    
     old_user_id = ''
-    old_edits = None
     expected_year_month_dt = ''
-
-    # parameters = []
-    # editors_edits_baseline_parameters = []
-
     active_months_row = 0
-
-    total_edits = []
-    edits_increase_decrease = 0
 
     try:
         os.remove(config.databases_path + 'temporary_editor_metrics.txt')
@@ -785,7 +710,6 @@ def calculate_editor_activity_streaks(languagecode):
 
     edfile2 = open(config.databases_path+'temporary_editor_metrics.txt', "w")
     for row in cursor.execute(query):
-        edits = row[0]
         current_year_month = row[1]
         cur_user_id = row[2]
         cur_user_name = row[3]
@@ -801,7 +725,7 @@ def calculate_editor_activity_streaks(languagecode):
         if expected_year_month_dt != current_year_month_dt and expected_year_month_dt != '' and old_user_id == cur_user_id:
 
             while expected_year_month_dt < current_year_month_dt:
-                # print (expected_year_month_dt, current_year_month_dt)
+                
 
                 expected_year_month_dt = (
                     expected_year_month_dt + relativedelta.relativedelta(months=1))
@@ -820,21 +744,11 @@ def calculate_editor_activity_streaks(languagecode):
         expected_year_month_dt = (datetime.datetime.strptime(
             old_year_month, '%Y-%m') + relativedelta.relativedelta(months=1))
 
-        old_user_id = cur_user_id
-        old_user_name = cur_user_name
 
-  #      print ('# update: ',old_user_id, old_user_name, active_months, max_active_months_row, max_inactive_months_row, total_months)
-        # input('')
 
-    cycle_year_month_dt = datetime.datetime.strptime(cycle_year_month, '%Y-%m')
 
-    try:
-        if current_year_month_dt == None:
-            print('The table is empty. ERROR.')
-    except:
-        return
-
-    conn = sqlite3.connect(config.databases_path + config.vital_signs_editors_db)
+    conn = sqlite3.connect(config.databases_path +
+                           config.vital_signs_editors_db)
     cursor = conn.cursor()
 
     a_file = open(config.databases_path+"temporary_editor_metrics.txt")
@@ -847,4 +761,6 @@ def calculate_editor_activity_streaks(languagecode):
     os.remove(config.databases_path + 'temporary_editor_metrics.txt')
     editors_metrics_parameters = []
 
-    print('done with the monthly edits.')
+    task_duration.record(time.time() - start, {"task": f"{languagecode}wiki_calculate_editor_activity_streaks"} )
+
+

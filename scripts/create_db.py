@@ -1,7 +1,10 @@
 from scripts import config
+from scripts.instrumentation import task_duration
 import sqlite3
+import time
 
 def create_db(wikilanguagecodes):
+    start = time.time()
     conn = sqlite3.connect(config.databases_path + config.vital_signs_editors_db)
     cursor = conn.cursor()
     conn2 = sqlite3.connect(config.databases_path + config.vital_signs_web_db)
@@ -46,6 +49,8 @@ def create_db(wikilanguagecodes):
         cursor2.execute(query)
     
         conn2.commit()
+
+        task_duration.record(time.time() - start, {"task": "create_db"})
 
 
 

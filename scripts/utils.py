@@ -23,10 +23,8 @@ def get_mediawiki_paths(languagecode):
     # Percorso del file all-time
     dumps_path = f'{config.dumps_path}/{languagecode}wiki/{cym}.{languagecode}wiki.all-time.tsv.bz2'
     if os.path.isfile(dumps_path):
-        print('Found all-time file.')
         d_paths.append(dumps_path)
     else:
-        print('Searching for multiple files.')
         # Cerca i file annuali
         for year in range(1999, cy):
             dumps_path = f'{config.dumps_path}/{languagecode}wiki/{year}.tsv.bz2'
@@ -41,8 +39,5 @@ def get_mediawiki_paths(languagecode):
                     dumps_path = f'{config.dumps_path}/{languagecode}wiki/{year}-{month_str}.tsv.bz2'
                     if os.path.isfile(dumps_path):
                         d_paths.append(dumps_path)
-
-    print(f"Found {len(d_paths)} files")
-    print(d_paths)
 
     return d_paths, cym
