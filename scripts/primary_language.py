@@ -1,14 +1,12 @@
 from scripts import config
-from scripts.instrumentation import task_duration
 import os
 import sqlite3
 import csv
-import time
 
 
 def cross_wiki_editor_metrics(wikilanguagecodes):
 
-    start = time.time()
+    
 
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
     cursor = conn.cursor()
@@ -125,5 +123,4 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
     except:
         pass
 
-    task_duration.record(time.time() - start, {"task": "cross_wiki_editor_metrics"})
-
+   

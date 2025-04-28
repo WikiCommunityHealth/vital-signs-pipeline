@@ -11,7 +11,7 @@ services:
     build:
       context: .
     image: custom-airflow:latest
-    container_name: airflow_main
+    container_name: airflow-main
     restart: always
     environment: *airflow-env
     volumes:
@@ -20,7 +20,14 @@ services:
 
     ports:
       - "8080:8080"
-    command: webserver
+      - "8000:8000"
+    command: >
+      bash -c "
+      opentelemetry-instrument \
+        --traces_exporter none \
+        --metrics_exporter prometheus \
+        airflow webserver
+      "
     depends_on:
       - airflow_init
 
@@ -32,7 +39,13 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
 
-    command: scheduler
+    command: >
+      bash -c "
+      opentelemetry-instrument \
+        --traces_exporter none \
+        --metrics_exporter prometheus \
+        airflow scheduler
+      "
     depends_on:
       - airflow_init
 

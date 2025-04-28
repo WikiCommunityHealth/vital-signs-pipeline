@@ -1,5 +1,5 @@
 from scripts import config
-from scripts.instrumentation import task_duration
+
 import os
 import shutil
 import requests
@@ -7,7 +7,6 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import time
 
 
 
@@ -40,19 +39,21 @@ def download_dumps():
                     f.write(chunk)
         return local_filename
     
-    start = time.time()
+    
     if os.path.exists(config.dumps_path):
         shutil.rmtree(config.dumps_path)
-    #current_YYYY_MM = datetime.now().strftime("%Y-%m")
-    #base_url = "https://dumps.wikimedia.org/other/mediawiki_history/"
-    #
-    ## Controllo se la directory del mese corrente esiste, altrimenti prendo quella del mese precedente
-    #if requests.head(f"{base_url}{current_YYYY_MM}/").status_code == 200:
-    #    correct_url = f"{base_url}{current_YYYY_MM}/"
-    #else:
-    #    previous_YYYY_MM = (datetime.now() - relativedelta(months=1)).strftime("%Y-%m")
-    #    correct_url = f"{base_url}{previous_YYYY_MM}/"
-    correct_url = "https://dumps.wikimedia.org/other/mediawiki_history/2025-02/"
+
+    
+    YYYY_MM = (datetime.now() - relativedelta(months=1)).strftime("%Y-%m")
+    base_url = "https://dumps.wikimedia.org/other/mediawiki_history/"
+    
+    # Controllo se la directory del mese corrente esiste, altrimenti prendo quella del mese precedente
+    if requests.head(f"{base_url}{YYYY_MM}/").status_code == 200:
+        correct_url = f"{base_url}{YYYY_MM}/"
+    else:
+        YYYY_MM = (datetime.now() - relativedelta(months=2)).strftime("%Y-%m")
+        correct_url = f"{base_url}{YYYY_MM}/"
+   
     os.makedirs(config.dumps_path, exist_ok=True)
 
     # Ottieni tutte le sottodirectory delle wiki
@@ -68,4 +69,4 @@ def download_dumps():
         for link in links:
             download_file(link, wiki_save_path)
 
-    task_duration.record(time.time() - start, {"task": "download_dumps"})
+   

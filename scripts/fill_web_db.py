@@ -1,12 +1,10 @@
 from scripts import config
-from scripts.instrumentation import task_duration
 import sqlite3
-import time
 
 
 def compute_wiki_vital_signs(languagecode):
 
-    start = time.time()
+   
 
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
@@ -487,5 +485,4 @@ def compute_wiki_vital_signs(languagecode):
 
     administrators()
 
-    task_duration.record(time.time() - start, {"task": f"{languagecode}wiki_compute_vital_signs"})
-
+   

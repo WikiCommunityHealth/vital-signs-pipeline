@@ -1,9 +1,8 @@
 from scripts import utils
 from scripts import config
-from scripts.instrumentation import task_duration
+
 import sqlite3
 import datetime
-import time
 import bz2
 import calendar
 import csv
@@ -13,7 +12,6 @@ from dateutil import relativedelta
 
 
 def process_editor_metrics_from_dump(languagecode):
-    start = time.time()
 
 
     d_paths, cym = utils.get_mediawiki_paths(languagecode)
@@ -684,11 +682,10 @@ def process_editor_metrics_from_dump(languagecode):
     cursor.executemany(query, params)
     conn.commit()
 
-    task_duration.record(time.time() - start, {"task": f"{languagecode}wiki_process_editor_metrics_from_dump"})
-
+  
 def calculate_editor_activity_streaks(languagecode):
 
-    start = time.time()
+ 
     
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
@@ -760,7 +757,3 @@ def calculate_editor_activity_streaks(languagecode):
     conn.commit()
     os.remove(config.databases_path + 'temporary_editor_metrics.txt')
     editors_metrics_parameters = []
-
-    task_duration.record(time.time() - start, {"task": f"{languagecode}wiki_calculate_editor_activity_streaks"} )
-
-

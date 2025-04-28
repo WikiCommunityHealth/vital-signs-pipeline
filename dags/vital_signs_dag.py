@@ -10,6 +10,8 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from prometheus_client import start_http_server
+start_http_server(8000)
 
 from scripts import utils
 from scripts import fill_editors_db
@@ -26,7 +28,7 @@ with DAG(
     default_args={
         'owner': 'andrea_denina',
         'depends_on_past': False,
-        'start_date': datetime(2025, 4, 3),
+        'start_date': datetime(2025, 4, 15),
         'retries': 1,
         'retry_delay': timedelta(minutes=5),
     },
