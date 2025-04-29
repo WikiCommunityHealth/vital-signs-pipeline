@@ -13,6 +13,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from prometheus_client import start_http_server
 start_http_server(8000)
 
+
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+exporter = OTLPMetricExporter(endpoint="otel-collector:4317", insecure=True)
+
 from scripts import utils
 from scripts import fill_editors_db
 from scripts.download_dumps import download_dumps
