@@ -4,6 +4,8 @@ x-airflow-env: &airflow-env
   AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
   AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
   AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"  # Send to OTel Collector
+  OTEL_METRIC_EXPORT_INTERVAL: 5000  # Export every 5s
 
 
 services:
@@ -25,7 +27,8 @@ services:
       bash -c "
       opentelemetry-instrument \
         --traces_exporter none \
-        --metrics_exporter prometheus \
+        --metrics_exporter otlp \
+        --service_name airflow-webserver \
         airflow webserver
       "
     depends_on:
@@ -43,7 +46,8 @@ services:
       bash -c "
       opentelemetry-instrument \
         --traces_exporter none \
-        --metrics_exporter prometheus \
+        --metrics_exporter otlp \
+        --service_name airflow-scheduler \
         airflow scheduler
       "
     depends_on:
@@ -64,6 +68,7 @@ services:
       "
     depends_on:
       - postgres
+
   postgres:
       image: postgres:15
       container_name: postgres
@@ -86,6 +91,7 @@ services:
         - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       ports:
         - "9090:9090"
+
   grafana:
       image: grafana/grafana
       container_name: grafana
@@ -97,14 +103,17 @@ services:
         - GF_SECURITY_ADMIN_USER=admin
         - GF_SECURITY_ADMIN_PASSWORD=admin
         - GF_INSTALL_PLUGINS=grafana-piechart-panel
+
   otel-collector:
     image: otel/opentelemetry-collector
     ports:
       - "4317:4317"   # OTLP receiver
+      - "8889:8889"
       - "8888:8888"   # Metrics debug
     volumes:
-      - ./otel-config.yaml:/etc/otel-config.yaml
+      - ./monitoring/otel-config.yaml:/etc/otel-config.yaml
     command: ["--config=/etc/otel-config.yaml"]
+
 volumes:
   postgres-db-volume:
   grafana-storage:

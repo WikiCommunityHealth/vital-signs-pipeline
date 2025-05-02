@@ -6,7 +6,8 @@ receivers:
 
 exporters:
   prometheus:
-    endpoint: "prometheus:9090"  # Prometheus service name in Docker
+    endpoint: "0.0.0.0:8889" # Prometheus service name in Docker
+    namespace: "airflow"  
 
 service:
   pipelines:
