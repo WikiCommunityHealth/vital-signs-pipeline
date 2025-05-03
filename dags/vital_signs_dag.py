@@ -1,3 +1,8 @@
+from datetime import datetime, timedelta
+
+import sys
+import os
+
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow import DAG
@@ -20,11 +25,6 @@ from scripts.create_db import create_db
 from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.fill_web_db import compute_wiki_vital_signs
 
-
-from datetime import datetime, timedelta
-
-import sys
-import os
 
 
 # from prometheus_client import start_http_server
