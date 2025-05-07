@@ -1,3 +1,9 @@
+from scripts.fill_web_db import compute_wiki_vital_signs
+from scripts.primary_language import cross_wiki_editor_metrics
+from scripts.create_db import create_db
+from scripts.download_dumps import download_dumps
+from scripts import fill_editors_db
+from scripts import utils
 from datetime import datetime, timedelta
 
 import sys
@@ -18,17 +24,6 @@ from opentelemetry.sdk.resources import Resource
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from scripts import utils
-from scripts import fill_editors_db
-from scripts.download_dumps import download_dumps
-from scripts.create_db import create_db
-from scripts.primary_language import cross_wiki_editor_metrics
-from scripts.fill_web_db import compute_wiki_vital_signs
-
-
-
-# from prometheus_client import start_http_server
-# start_http_server(8000)
 
 resource = Resource.create(attributes={"service.name": "airflow-dag"})
 exporter = OTLPMetricExporter(endpoint="otel-collector:4317", insecure=True)
@@ -38,16 +33,6 @@ metrics.set_meter_provider(provider)
 
 
 meter = metrics.get_meter(__name__)
-task_counter = meter.create_counter(
-    "airflow_task_runs", description="Counts Airflow task executions")
-
-
-def task_function(**kwargs):
-    # Increment counter when task runs
-    task_counter.add(
-        1, {"dag_id": kwargs["dag"].dag_id, "task_id": kwargs["task"].task_id})
-
-    download_dumps()
 
 
 wikilanguagecodes = utils.get_cleaned_subdirectories()
@@ -71,7 +56,7 @@ with DAG(
 
     download_dumps_task = PythonOperator(
         task_id="download_dumps",
-        python_callable=task_function,
+        python_callable=download_dumps,
 
     )
 
