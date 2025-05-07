@@ -1,13 +1,17 @@
-from scripts.fill_web_db import compute_wiki_vital_signs
-from scripts.primary_language import cross_wiki_editor_metrics
-from scripts.create_db import create_db
-from scripts.download_dumps import download_dumps
-from scripts import fill_editors_db
-from scripts import utils
-from datetime import datetime, timedelta
-
 import sys
 import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
+from scripts import utils
+from scripts import fill_editors_db
+from scripts.download_dumps import download_dumps
+from scripts.create_db import create_db
+from scripts.primary_language import cross_wiki_editor_metrics
+from scripts.fill_web_db import compute_wiki_vital_signs
+from datetime import datetime, timedelta
+import time
 
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
@@ -22,7 +26,6 @@ from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExp
 from opentelemetry.sdk.resources import Resource
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 resource = Resource.create(attributes={"service.name": "airflow-dag"})
@@ -33,9 +36,48 @@ metrics.set_meter_provider(provider)
 
 
 meter = metrics.get_meter(__name__)
+task_duration_histogram = meter.create_histogram(
+    name="task_duration_histogram",
+    unit="s",
+    description="task execution duration [s]"
+)
 
 
 wikilanguagecodes = utils.get_cleaned_subdirectories()
+
+
+def run_task_no_args(fn):
+    start = time.time()
+
+    fn()
+
+    duration = time.time() - start
+
+    task_duration_histogram.record(
+        duration, attributes={"task_name": fn.__name__, "dag_id": "vital_signs"})
+
+
+def run_task(fn):
+    start = time.time()
+
+    fn(wikilanguagecodes)
+
+    duration = time.time() - start
+
+    task_duration_histogram.record(duration, attributes={
+                                   "task_name": fn.__name__, "dag_id": "vital_signs"})
+
+
+def run_task_with_code(fn, code):
+    start = time.time()
+
+    fn(code)
+
+    duration = time.time() - start
+
+    task_duration_histogram.record(duration, attributes={
+                                   "task_name": code + "" + fn.__name__, "dag_id": "vital_signs"})
+
 
 with DAG(
     dag_id='vital_signs',
@@ -56,14 +98,15 @@ with DAG(
 
     download_dumps_task = PythonOperator(
         task_id="download_dumps",
-        python_callable=download_dumps,
+        python_callable=run_task_no_args,
+        op_args=[download_dumps]
 
     )
 
     create_db_task = PythonOperator(
         task_id="create_dbs",
-        python_callable=create_db,
-        op_args=[wikilanguagecodes]
+        python_callable=run_task,
+        op_args=[create_db]
     )
 
     editor_groups = []
@@ -73,14 +116,14 @@ with DAG(
 
             process_metrics_from_dumps_task = PythonOperator(
                 task_id=f"{code}_first_step",
-                python_callable=fill_editors_db.process_editor_metrics_from_dump,
-                op_args=[code]
+                python_callable=run_task_with_code,
+                op_args=[fill_editors_db.process_editor_metrics_from_dump, code]
             )
 
             calculate_streaks_task = PythonOperator(
                 task_id=f"{code}_second_step",
-                python_callable=fill_editors_db.calculate_editor_activity_streaks,
-                op_args=[code]
+                python_callable=run_task_with_code,
+                op_args=[fill_editors_db.calculate_editor_activity_streaks, code]
             )
 
             process_metrics_from_dumps_task >> calculate_streaks_task
@@ -88,8 +131,8 @@ with DAG(
 
     primary_language_task = PythonOperator(
         task_id="primary_language",
-        python_callable=cross_wiki_editor_metrics,
-        op_args=[wikilanguagecodes]
+        python_callable=run_task,
+        op_args=[cross_wiki_editor_metrics]
     )
 
     web_groups = []
@@ -99,8 +142,8 @@ with DAG(
 
             compute_vital_signs_task = PythonOperator(
                 task_id=f"{code}",
-                python_callable=compute_wiki_vital_signs,
-                op_args=[code],
+                python_callable=run_task_with_code,
+                op_args=[compute_wiki_vital_signs, code],
 
             )
 
