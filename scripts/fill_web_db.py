@@ -1,10 +1,10 @@
 from scripts import config
 import sqlite3
-
+import logging
 
 def compute_wiki_vital_signs(languagecode):
 
-   
+    logger = logging.getLogger(languagecode + '' + __name__)
 
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
@@ -117,8 +117,9 @@ def compute_wiki_vital_signs(languagecode):
 
         cursor2.executemany(query_cm, parameters)
         conn2.commit()
-
+    
     retention()
+    logger.info("Calculated editors retention")
 
     def stability_balance_special_global_flags_functions():
 
@@ -276,6 +277,7 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
+            logger.info("Calculated editors stability")
 
             # BALANCE
 
@@ -312,6 +314,7 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
+            logger.info("Calculated editors stability")
 
             # SPECIAL FUNCTIONS
             # TECHNICAL EDITORS
@@ -349,7 +352,7 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
-
+            logger.info("Calculated technical editors metrics")
             # COORDINATORS
 
             values = [5, 100]
@@ -385,6 +388,7 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
+            logger.info("Calculated coordinators metrics")
 
             # GLOBAL / PRIMARY
 
@@ -419,6 +423,7 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
+            logger.info("Calculated global metrics")
 
             # FLAGS AMONG ACTIVE EDITORS
 
@@ -453,9 +458,10 @@ def compute_wiki_vital_signs(languagecode):
 
             cursor2.executemany(query_cm, parameters)
             conn2.commit()
+            logger.info("Calculated flags among active editors")
 
     stability_balance_special_global_flags_functions()
-
+    
     def administrators():
 
         parameters = []
@@ -484,5 +490,6 @@ def compute_wiki_vital_signs(languagecode):
         conn2.commit()
 
     administrators()
+    logger.info("Calculated admin metrics")
 
    

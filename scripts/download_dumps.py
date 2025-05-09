@@ -8,6 +8,9 @@ from dateutil.relativedelta import relativedelta
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def download_dumps():
@@ -37,6 +40,8 @@ def download_dumps():
             with open(local_filename, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
+
+        logger.info(f"Downloaded {local_filename}")
         return local_filename
     
     
@@ -53,7 +58,9 @@ def download_dumps():
     else:
         YYYY_MM = (datetime.now() - relativedelta(months=2)).strftime("%Y-%m")
         correct_url = f"{base_url}{YYYY_MM}/"
-   
+
+    logger.info(f"Found dumps: {correct_url}")    
+
     os.makedirs(config.dumps_path, exist_ok=True)
 
     # Ottieni tutte le sottodirectory delle wiki
@@ -64,9 +71,11 @@ def download_dumps():
         os.makedirs(wiki_save_path, exist_ok=True) 
         links = get_dump_links(wiki_dir)
         if not links:
+            logger.warning(f"No file found in {wiki_dir}")
             continue
         
         for link in links:
             download_file(link, wiki_save_path)
+        
 
    

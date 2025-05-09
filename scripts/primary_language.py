@@ -2,7 +2,9 @@ from scripts import config
 import os
 import sqlite3
 import csv
+import logging
 
+logger = logging.getLogger(__name__)
 
 def cross_wiki_editor_metrics(wikilanguagecodes):
 
@@ -116,6 +118,8 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
 
         cursor.executemany(query, parameters)
         conn.commit()
+
+    logger.info("Calculated cross wiki metrics")
 
 
     try:

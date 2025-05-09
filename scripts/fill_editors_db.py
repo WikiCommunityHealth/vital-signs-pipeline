@@ -10,9 +10,11 @@ import os
 
 from dateutil import relativedelta
 
+import logging
+
 
 def process_editor_metrics_from_dump(languagecode):
-
+    logger = logging.getLogger(languagecode + '' + __name__)
 
     d_paths, cym = utils.get_mediawiki_paths(languagecode)
     cym_timestamp_dt = datetime.datetime.today().replace(
@@ -516,7 +518,6 @@ def process_editor_metrics_from_dump(languagecode):
         cursor.executemany(query, user_characteristics2)
         conn.commit()
 
-
         user_characteristics1 = []
         user_characteristics2 = []
 
@@ -530,7 +531,6 @@ def process_editor_metrics_from_dump(languagecode):
         # insert or ignore
         editor_first_edit_timestamp = {}
         editor_registration_date = {}
-
 
         user_id_user_name_dict2 = {}
         for k in editor_monthly_edits.keys():
@@ -548,7 +548,6 @@ def process_editor_metrics_from_dump(languagecode):
         user_id_user_name_dict = user_id_user_name_dict2
         user_id_user_name_dict2 = {}
 
-        
     # Getting the highest flag
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
@@ -681,12 +680,12 @@ def process_editor_metrics_from_dump(languagecode):
     query = 'UPDATE '+languagecode+'wiki_editors SET bot = ? WHERE user_name = ?;'
     cursor.executemany(query, params)
     conn.commit()
+    logger.info("Processed all dump's data")
 
-  
+
 def calculate_editor_activity_streaks(languagecode):
+    logger = logging.getLogger(languagecode + '' + __name__)
 
- 
-    
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
     cursor = conn.cursor()
@@ -695,7 +694,6 @@ def calculate_editor_activity_streaks(languagecode):
     query = 'SELECT abs_value, year_month, user_id, user_name FROM '+languagecode + \
         'wiki_editor_metrics WHERE metric_name = "monthly_edits" ORDER BY user_name, year_month'
 
-    
     old_user_id = ''
     expected_year_month_dt = ''
     active_months_row = 0
@@ -722,7 +720,6 @@ def calculate_editor_activity_streaks(languagecode):
         if expected_year_month_dt != current_year_month_dt and expected_year_month_dt != '' and old_user_id == cur_user_id:
 
             while expected_year_month_dt < current_year_month_dt:
-                
 
                 expected_year_month_dt = (
                     expected_year_month_dt + relativedelta.relativedelta(months=1))
@@ -741,9 +738,6 @@ def calculate_editor_activity_streaks(languagecode):
         expected_year_month_dt = (datetime.datetime.strptime(
             old_year_month, '%Y-%m') + relativedelta.relativedelta(months=1))
 
-
-
-
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
     cursor = conn.cursor()
@@ -757,3 +751,5 @@ def calculate_editor_activity_streaks(languagecode):
     conn.commit()
     os.remove(config.databases_path + 'temporary_editor_metrics.txt')
     editors_metrics_parameters = []
+
+    logger.info("Processed all activity streaks")
