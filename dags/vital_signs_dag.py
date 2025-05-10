@@ -2,12 +2,15 @@ import sys
 import os
 import logging
 
+logging.basicConfig(filename="vital_signs_pipeline.log", format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 from scripts import utils
 from scripts import fill_editors_db
 from scripts.download_dumps import download_dumps
+from scripts.download_dumps import test_download_dumps
 from scripts.create_db import create_db
 from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.fill_web_db import compute_wiki_vital_signs
@@ -43,8 +46,11 @@ task_duration_histogram = meter.create_histogram(
     description="task execution duration [s]"
 )
 
+#mock cross wiki metrics
 
-wikilanguagecodes = utils.get_cleaned_subdirectories()
+def mock_task(wikilanguagecodes): 
+    return
+
 
 
 def run_task_no_args(fn):
@@ -58,7 +64,7 @@ def run_task_no_args(fn):
         duration, attributes={"task_name": fn.__name__, "dag_id": "vital_signs"})
 
 
-def run_task(fn):
+def run_task(fn, wikilanguagecodes):
     start = time.time()
 
     fn(wikilanguagecodes)
@@ -100,14 +106,16 @@ with DAG(
     download_dumps_task = PythonOperator(
         task_id="download_dumps",
         python_callable=run_task_no_args,
-        op_args=[download_dumps]
+        op_args=[test_download_dumps]
 
     )
+
+    wikilanguagecodes = utils.get_cleaned_subdirectories()
 
     create_db_task = PythonOperator(
         task_id="create_dbs",
         python_callable=run_task,
-        op_args=[create_db]
+        op_args=[create_db, wikilanguagecodes]
     )
 
     editor_groups = []
@@ -133,7 +141,7 @@ with DAG(
     primary_language_task = PythonOperator(
         task_id="primary_language",
         python_callable=run_task,
-        op_args=[cross_wiki_editor_metrics]
+        op_args=[mock_task, wikilanguagecodes]
     )
 
     web_groups = []
