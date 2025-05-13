@@ -4,10 +4,10 @@ x-airflow-env: &airflow-env
   AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
   AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
   AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"  # Send to OTel Collector
-  OTEL_METRIC_EXPORT_INTERVAL: 5000  # Export every 5s
-
-
+  AIRFLOW__METRICS__STATSD_ON : 'True'
+  AIRFLOW__METRICS__STATSD_HOST : statsd-exporter
+  AIRFLOW__METRICS__STATSD_PORT : 9125
+  AIRFLOW__METRICS__STATSD_PREFIX : airflow
 
 services:
   airflow:
@@ -24,14 +24,7 @@ services:
     ports:
       - "8080:8080"
       - "8000:8000"
-    command: >
-      bash -c "
-      opentelemetry-instrument \
-        --traces_exporter none \
-        --metrics_exporter otlp \
-        --service_name airflow-webserver \
-        airflow webserver
-      "
+    command: webserver
     depends_on:
       - airflow_init
 
@@ -43,14 +36,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
 
-    command: >
-      bash -c "
-      opentelemetry-instrument \
-        --traces_exporter none \
-        --metrics_exporter otlp \
-        --service_name airflow-scheduler \
-        airflow scheduler
-      "
+    command: scheduler
     depends_on:
       - airflow_init
 
@@ -61,7 +47,6 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-
     entrypoint: >
       /bin/bash -c "
       airflow db init &&
@@ -105,20 +90,16 @@ services:
         - GF_SECURITY_ADMIN_PASSWORD=admin
         - GF_INSTALL_PLUGINS=grafana-piechart-panel
 
-  otel-collector:
-    image: otel/opentelemetry-collector
-    ports:
-      - "4317:4317"   # OTLP receiver
-      - "8889:8889"
-      - "13133:13133" # health check
+  statsd-exporter:
+    image: prom/statsd-exporter
     volumes:
-      - ./monitoring/otel-config.yaml:/etc/otel-config.yaml
-    command: ["--config=/etc/otel-config.yaml"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:13133"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - ./monitoring/statsd.yaml:/etc/statsd.yaml
+    entrypoint: ["/bin/sh", "-c", "--"]
+    command: ["statsd_exporter --log.level debug --statsd.mapping-config=//etc/statsd.yaml"]
+    ports:
+      - 9102:9102   # scrape port
+      - 9125:9125   # ingest port
+    restart: always
 
 volumes:
   postgres-db-volume:

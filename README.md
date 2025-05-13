@@ -15,9 +15,11 @@ This will:
 
 Build the custom Airflow image
 
-Start Airflow webserver and scheduler with OpenTelemetry metrics instrumentation
+Start Airflow webserver and scheduler
 
 Start PostgreSQL as Airflow backend
+
+Start statsd exporter to get all the airflow metrics
 
 Start Prometheus to scrape metrics
 
@@ -31,4 +33,4 @@ Start Grafana for dashboard visualization
 | Airflow    | http://localhost:8080 |	Username: admin, Password: admin |
 | Prometheus     |	http://localhost:9090   | |
 | Grafana	| http://localhost:3000 | Username: admin, Password: admin |
-| Metrics	| http://localhost:8889/metrics	| |
+| Metrics	| http://localhost:9102/metrics	| |
