@@ -34,3 +34,5 @@ Start Grafana for dashboard visualization
 | Prometheus     |	http://localhost:9090   | |
 | Grafana	| http://localhost:3000 | Username: admin, Password: admin |
 | Metrics	| http://localhost:9102/metrics	| |
+## Airflow DAG
+<img alt="DAG" src="./vital_signs.png" />
