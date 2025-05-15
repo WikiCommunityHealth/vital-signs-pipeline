@@ -36,3 +36,7 @@ Start Grafana for dashboard visualization
 | Metrics	| http://localhost:9102/metrics	| |
 ## Airflow DAG
 <img alt="DAG" src="./vital_signs.png" />
+### TODO
+[] migliorare il codice in vital_signs_dag.py
+[] testare l'integrazione con le vecchie dashboard
+[] refactoring pre-deployement (rimuovere dowload_dumps_task)
