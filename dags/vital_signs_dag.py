@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
+from scripts.config import wikilanguagecodes
 from scripts import utils
 from scripts import fill_editors_db
 from scripts.download_dumps import download_dumps
@@ -15,6 +16,7 @@ from scripts.download_dumps import test_download_dumps
 from scripts.create_db import create_db
 from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.fill_web_db import compute_wiki_vital_signs
+
 
 
 from airflow.operators.python import PythonOperator
@@ -51,9 +53,9 @@ with DAG(
 
     )
 
-    wikilanguagecodes = utils.get_cleaned_subdirectories()
+    
 
-    create_db_task = PythonOperator(
+    create_dbs_task = PythonOperator(
         task_id="create_dbs",
         python_callable=create_db,
         op_args=[wikilanguagecodes]
@@ -99,4 +101,4 @@ with DAG(
 
         web_groups.append(web_tg)
 
-    start >> download_dumps_task >> create_db_task >> editor_groups >> primary_language_task >> web_groups >> end
+    start >> download_dumps_task >> create_dbs_task >> editor_groups >> primary_language_task >> web_groups >> end

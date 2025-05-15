@@ -8,6 +8,7 @@ x-airflow-env: &airflow-env
   AIRFLOW__METRICS__STATSD_HOST : statsd-exporter
   AIRFLOW__METRICS__STATSD_PORT : 9125
   AIRFLOW__METRICS__STATSD_PREFIX : airflow
+  
 
 services:
   airflow:
@@ -85,6 +86,7 @@ services:
         - "3000:3000"
       volumes:
         - grafana-storage:/var/lib/grafana
+        - ./monitoring/grafana:/etc/grafana/provisioning/dashboards
       environment:
         - GF_SECURITY_ADMIN_USER=admin
         - GF_SECURITY_ADMIN_PASSWORD=admin
