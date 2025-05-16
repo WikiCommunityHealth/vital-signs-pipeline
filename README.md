@@ -39,6 +39,5 @@ Start Grafana for dashboard visualization
 
 ## 📝 TODO
 
-* migliorare il codice in vital_signs_dag.py
 * testare l'integrazione con le vecchie dashboard
 * refactoring pre-deployement (rimuovere dowload_dumps_task)
