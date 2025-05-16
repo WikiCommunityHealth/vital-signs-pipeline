@@ -1,13 +1,13 @@
+from airflow.operators.python import PythonOperator
+from airflow.operators.empty import EmptyOperator
+from airflow import DAG
+from airflow.utils.task_group import TaskGroup
+
 import sys
 import os
 import logging
 from datetime import datetime, timedelta
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-
 from scripts.config import wikilanguagecodes
 from scripts import utils
 from scripts import fill_editors_db
@@ -18,15 +18,25 @@ from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.fill_web_db import compute_wiki_vital_signs
 
 
-
-from airflow.operators.python import PythonOperator
-from airflow.operators.empty import EmptyOperator
-from airflow import DAG
-from airflow.utils.task_group import TaskGroup
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
-def mock_task(wikilanguagecodes): 
+def mock_task(wikilanguagecodes):
     return
+
+
+def log_task_end(**kwargs):
+    task_id = kwargs.get('task_instance').task_id
+    logger.info(f"[END] Task {task_id} finished")
+    return True
+
+
+def log_task_failure(context):
+    task_id = context.get('task_instance').task_id
+    logger.error(
+        f"[FAILURE] Task {task_id} failed with exception: {context.get('exception')}")
 
 
 with DAG(
@@ -38,44 +48,52 @@ with DAG(
         'retries': 1,
         'retry_delay': timedelta(minutes=5),
     },
-    description='',
-    schedule_interval='@monthly',  # Esecuzione mensile
+    description='Compute Community Health Metrics (CHM) from Wikipedia dumps for multiple languages',
+    schedule_interval='@monthly',
     catchup=False
 ) as dag:
 
-    start = EmptyOperator(task_id='start')
-    end = EmptyOperator(task_id='end')
+    start = EmptyOperator(task_id='start', dag=dag)
+    end = EmptyOperator(task_id='end', dag=dag)
 
     download_dumps_task = PythonOperator(
         task_id="download_dumps",
         python_callable=test_download_dumps,
-        op_args=[]
+        dag=dag,
+        op_args=[],
+        on_success_callback=log_task_end,
+        on_failure_callback=log_task_failure,
 
     )
-
-    
 
     create_dbs_task = PythonOperator(
         task_id="create_dbs",
         python_callable=create_db,
-        op_args=[wikilanguagecodes]
+        dag=dag,
+        op_args=[wikilanguagecodes],
+        on_success_callback=log_task_end,
+        on_failure_callback=log_task_failure,
     )
 
     editor_groups = []
 
     for code in wikilanguagecodes:
-        with TaskGroup(group_id=f"{code}wiki_editors_db") as editors_tg:
+        with TaskGroup(group_id=f"{code}wiki_editors_db", dag=dag) as editors_tg:
 
             process_metrics_from_dumps_task = PythonOperator(
                 task_id=f"{code}_first_step",
                 python_callable=fill_editors_db.process_editor_metrics_from_dump,
-                op_args=[code]
+                op_args=[code],
+                on_success_callback=log_task_end,
+                on_failure_callback=log_task_failure,
             )
 
             calculate_streaks_task = PythonOperator(
                 task_id=f"{code}_second_step",
-                python_callable= fill_editors_db.calculate_editor_activity_streaks,
-                op_args=[code]
+                python_callable=fill_editors_db.calculate_editor_activity_streaks,
+                op_args=[code],
+                on_success_callback=log_task_end,
+                on_failure_callback=log_task_failure,
             )
 
             process_metrics_from_dumps_task >> calculate_streaks_task
@@ -83,8 +101,11 @@ with DAG(
 
     primary_language_task = PythonOperator(
         task_id="primary_language",
-        python_callable= mock_task,
-        op_args=[wikilanguagecodes]
+        python_callable=mock_task,
+        op_args=[wikilanguagecodes],
+        on_success_callback=log_task_end,
+        on_failure_callback=log_task_failure,
+
     )
 
     web_groups = []
@@ -96,6 +117,8 @@ with DAG(
                 task_id=f"{code}",
                 python_callable=compute_wiki_vital_signs,
                 op_args=[code],
+                on_success_callback=log_task_end,
+                on_failure_callback=log_task_failure,
 
             )
 
