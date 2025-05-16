@@ -6,14 +6,6 @@ from dateutil import relativedelta
 year_month = (datetime.date.today() -
                         relativedelta.relativedelta(months=1)).strftime('%Y-%m')
 
-def get_cleaned_subdirectories(path=config.dumps_path):
-    current_path = path  ## devo poi aggiungere l'anno quando faccio il deploy + "/" + year_month
-    subdirs = [d for d in os.listdir(
-        current_path) if os.path.isdir(os.path.join(path, d))]
-    # Rimuove "wiki" dalla fine
-    cleaned_names = [d[:-4] for d in subdirs if d.endswith("wiki")]
-    return cleaned_names
-
 
 def get_mediawiki_paths(languagecode):
     current_path = config.dumps_path + "/" + year_month

@@ -7,12 +7,11 @@ import sys
 import os
 import logging
 from datetime import datetime, timedelta
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from scripts.config import wikilanguagecodes
-from scripts import utils
 from scripts import fill_editors_db
-from scripts.download_dumps import download_dumps
-from scripts.download_dumps import test_download_dumps
+
 from scripts.create_db import create_db
 from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.fill_web_db import compute_wiki_vital_signs
@@ -21,10 +20,6 @@ from scripts.fill_web_db import compute_wiki_vital_signs
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-
-def mock_task(wikilanguagecodes):
-    return
 
 
 def log_task_end(**kwargs):
@@ -55,16 +50,6 @@ with DAG(
 
     start = EmptyOperator(task_id='start', dag=dag)
     end = EmptyOperator(task_id='end', dag=dag)
-
-    download_dumps_task = PythonOperator(
-        task_id="download_dumps",
-        python_callable=test_download_dumps,
-        dag=dag,
-        op_args=[],
-        on_success_callback=log_task_end,
-        on_failure_callback=log_task_failure,
-
-    )
 
     create_dbs_task = PythonOperator(
         task_id="create_dbs",
@@ -101,7 +86,7 @@ with DAG(
 
     primary_language_task = PythonOperator(
         task_id="primary_language",
-        python_callable=mock_task,
+        python_callable=cross_wiki_editor_metrics,
         op_args=[wikilanguagecodes],
         on_success_callback=log_task_end,
         on_failure_callback=log_task_failure,
@@ -124,4 +109,4 @@ with DAG(
 
         web_groups.append(web_tg)
 
-    start >> download_dumps_task >> create_dbs_task >> editor_groups >> primary_language_task >> web_groups >> end
+    start >> create_dbs_task >> editor_groups >> primary_language_task >> web_groups >> end
