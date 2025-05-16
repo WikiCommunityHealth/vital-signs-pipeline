@@ -6,7 +6,6 @@ from dateutil import relativedelta
 year_month = (datetime.date.today() -
                         relativedelta.relativedelta(months=1)).strftime('%Y-%m')
 
-
 def get_mediawiki_paths(languagecode):
     current_path = config.dumps_path + "/" + year_month
     cy = datetime.datetime.now().year
