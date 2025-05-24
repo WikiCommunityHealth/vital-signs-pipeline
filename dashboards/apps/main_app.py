@@ -362,7 +362,7 @@ def main_app_build_layout(params):
                 apply_default_value(params)(dcc.Dropdown)(
                     id='admin',
                     options=[{'label': k, 'value': k} for k in admin_type],
-                    multi=False,
+                    multi=True,
                     value='sysop',
                     # style={'width': '390px'},
                     disabled=False,
@@ -373,6 +373,7 @@ def main_app_build_layout(params):
                     id='retention_rate',
                     options=[{'label': '24 hours', 'value': '24h'}, {'label': '30 days', 'value': '30d'}, {
                         'label': '60 days', 'value': '60d'}, {'label': '365 days', 'value': '365d'}, {'label': '730 days', 'value': '730d'}],
+                    multi= True,
                     value='60d',
                     # style={'width': '490px'},
                     disabled=False,
