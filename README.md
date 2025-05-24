@@ -73,10 +73,13 @@ Start Grafana for dashboard visualization
 
 | Service   | URL   | Notes |
 |---------    |-----  |-------|
+|   | Backend | |
 | Airflow    | http://localhost:8080 |	Username: admin, Password: admin |
 | Prometheus     |	http://localhost:9090   | |
 | Grafana	| http://localhost:3000 | Username: admin, Password: admin |
 | Metrics	| http://localhost:9102/metrics	| |
+|   | Frontend | |
+| Dashboards | http://localhost:8050 | |
 ## Airflow DAG
 <img alt="DAG" src="./vital_signs.png" />
 
