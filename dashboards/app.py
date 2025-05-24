@@ -17,7 +17,7 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     navbar,
     html.Div([
-        html.H1("Vital Signs Dashboards", style={'textAlign': 'center'})
+        html.H1(html.A("Vital Signs Dashboards",href="/"), style={'textAlign': 'center'})
     ]),
     html.Div(id='content'),
     footbar
