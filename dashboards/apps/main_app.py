@@ -339,7 +339,7 @@ def main_app_build_layout(params):
                     options=[{'label': k, 'value': k}
                              for k in language_names_list],
                     multi=True,
-                    value='English (en)',
+                    value='english (en)',
                     style={'width': '570px'}
                 ), style={'display': 'inline-block', 'width': '570px', 'padding': '0px 0px 0px 10px'}),
 
@@ -459,7 +459,7 @@ def main_app_build_layout(params):
                     options=[{'label': k, 'value': k}
                              for k in language_names_list],
                     multi=True,
-                    value='English (en)',
+                    value='english (en)',
 
                     style={'width': '570px'}
                 ), style={'display': 'inline-block', 'width': '570px', 'padding': '0px 0px 0px 10px'}),

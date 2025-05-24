@@ -12,7 +12,6 @@ wikilanguagecodes = ['it', 'es', 'fr', 'de', 'en']
 
 '''
     TODO:
-    - fare in modo che /databases sia accessibili anche al frontend
     - scaricare le dumps
     - copiare wikimedia_history_dumps 
     - runnare esperimenti
