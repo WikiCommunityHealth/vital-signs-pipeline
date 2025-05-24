@@ -1,11 +1,4 @@
-/mediawiki_history_dumps/
 /.venv/
-/databases/
-/logs/
-
-airflow.cfg
-airflow.db
-webserver_config.py
-
 /scripts/__pycache__
 /dags/__pycache__
+/dashboards/apps/__pycache__

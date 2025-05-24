@@ -40,4 +40,3 @@ Start Grafana for dashboard visualization
 ## 📝 TODO
 
 * testare l'integrazione con le vecchie dashboard
-* refactoring pre-deployement (rimuovere dowload_dumps_task)
