@@ -3,8 +3,6 @@ FROM apache/airflow:2.10.5-python3.12
 WORKDIR /opt/airflow
 
 USER root
-RUN sudo apt update
-RUN  apt install -y graphviz
 COPY requirements.txt /requirements.txt
 COPY --chown=airflow:root dags/ /opt/airflow/dags/
 COPY --chown=airflow:root scripts/ /opt/airflow/scripts/
