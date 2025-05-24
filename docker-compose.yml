@@ -21,6 +21,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - databases:/databases
 
     ports:
       - "8080:8080"
@@ -36,6 +37,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - databases:/databases
 
     command: scheduler
     depends_on:
@@ -48,6 +50,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - databases:/databases
     entrypoint: >
       /bin/bash -c "
       airflow db init &&
@@ -103,6 +106,16 @@ services:
       - 9125:9125   # ingest port
     restart: always
 
+  dash-app:
+    build:
+      context: ./dashboards
+      dockerfile: Dockerfile
+    volumes:
+      - databases:/databases
+    ports:
+      - "8050:8050"
+
 volumes:
   postgres-db-volume:
   grafana-storage:
+  databases:

@@ -7,8 +7,8 @@ COPY requirements.txt /requirements.txt
 COPY --chown=airflow:root dags/ /opt/airflow/dags/
 COPY --chown=airflow:root scripts/ /opt/airflow/scripts/
 
-RUN mkdir -p /databases  /opt/airflow/logs 
-RUN chown -R airflow: /databases /opt/airflow/logs
+RUN mkdir -p  /opt/airflow/logs 
+RUN chown -R airflow: /opt/airflow/logs
 
 USER airflow
 

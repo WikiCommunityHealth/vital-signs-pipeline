@@ -4,10 +4,8 @@ WORKDIR /app
 
 COPY . .
 
-COPY /home/pata/Scrivania/tirocinio/airflow/requirements.txt /requirements.txt
-
-RUN pip install --no-cache-dir -r /requirements.txt
+RUN pip install --no-cache-dir -r ./requirements.txt
 
 EXPOSE 8050
 
-CMD ["python", "app.py"]
+CMD ["python","app.py"]
