@@ -25,7 +25,7 @@ title_addenda = ' - Wikimedia Community Health Metrics'
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
 webtype = ''
-database = '/opt/airflow/databases/vital_signs_web.db'
+database = '/databases/vital_signs_web.db'
 metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
