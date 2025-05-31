@@ -8,11 +8,5 @@ dumps_path = '/mediawiki_history_dumps'
 # /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history/
 
 
-wikilanguagecodes = ['it', 'es', 'fr', 'de', 'en']
+wikilanguagecodes = ['it', 'es', 'fr', 'de']
 
-'''
-    TODO:
-    - scaricare le dumps
-    - copiare wikimedia_history_dumps 
-    - runnare esperimenti
-'''

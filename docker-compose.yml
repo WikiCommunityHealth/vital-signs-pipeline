@@ -22,6 +22,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - databases:/databases
+      - ./mediawiki_history_dumps:/mediawiki_history_dumps
 
     ports:
       - "8080:8080"
@@ -38,6 +39,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - databases:/databases
+      - ./mediawiki_history_dumps:/mediawiki_history_dumps
 
     command: scheduler
     depends_on:
@@ -51,6 +53,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - databases:/databases
+      - ./mediawiki_history_dumps:/mediawiki_history_dumps
     entrypoint: >
       /bin/bash -c "
       airflow db init &&

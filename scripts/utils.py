@@ -4,12 +4,12 @@ import datetime
 from dateutil import relativedelta
 
 year_month = (datetime.date.today() -
-                        relativedelta.relativedelta(months=1)).strftime('%Y-%m')
+              relativedelta.relativedelta(months=1)).strftime('%Y-%m')
+
 
 def get_mediawiki_paths(languagecode):
     cy = datetime.datetime.now().year
     d_paths = []
-
 
     # Percorso del file all-time
     dumps_path = f'{config.dumps_path}/{languagecode}wiki/{year_month}.{languagecode}wiki.all-time.tsv.bz2'
