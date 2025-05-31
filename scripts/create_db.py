@@ -1,7 +1,9 @@
-from scripts import config
 import sqlite3
-
 import logging
+import config
+
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +11,9 @@ logger = logging.getLogger(__name__)
 def create_db(wikilanguagecodes):
     conn = sqlite3.connect(config.databases_path + config.vital_signs_editors_db)
     cursor = conn.cursor()
+    print(f"{config.vital_signs_editors_db} created")
     conn2 = sqlite3.connect(config.databases_path + config.vital_signs_web_db)
+    print(f"{config.vital_signs_web_db} created")
     cursor2 = conn2.cursor()
     
     

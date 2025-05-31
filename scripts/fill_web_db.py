@@ -1,4 +1,4 @@
-from scripts import config
+import config
 import sqlite3
 import logging
 

@@ -1,5 +1,5 @@
-from scripts import utils
-from scripts import config
+import utils
+import config
 
 import sqlite3
 import datetime
