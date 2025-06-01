@@ -49,18 +49,17 @@ def create_db(wikilanguagecodes):
 
         logger.info(f"Created Table {table_name} inside {config.vital_signs_editors_db}")
     
-        # VITAL SIGNS DB
-        table_name = 'vital_signs_metrics'
-        try:
-            cursor2.execute("DROP TABLE "+table_name+";")
-        except:
-            pass
-        query = ("CREATE TABLE IF NOT EXISTS "+table_name+" (langcode text, year_year_month text, year_month text, topic text, m1 text, m1_calculation text, m1_value text, m2 text, m2_calculation text, m2_value text, m1_count float, m2_count float, PRIMARY KEY (langcode, year_year_month, year_month, topic, m1, m1_calculation, m1_value, m2, m2_calculation, m2_value))")
-        cursor2.execute(query)
+    # VITAL SIGNS DB
+    table_name = 'vital_signs_metrics'
+    try:
+        cursor2.execute("DROP TABLE "+table_name+";")
+    except:
+        pass
+    query = ("CREATE TABLE IF NOT EXISTS "+table_name+" (langcode text, year_year_month text, year_month text, topic text, m1 text, m1_calculation text, m1_value text, m2 text, m2_calculation text, m2_value text, m1_count float, m2_count float, PRIMARY KEY (langcode, year_year_month, year_month, topic, m1, m1_calculation, m1_value, m2, m2_calculation, m2_value))")
+    cursor2.execute(query)
+    logger.info(f"Created Table {table_name} inside {config.vital_signs_web_db}")
 
-        logger.info(f"Created Table {table_name} inside {config.vital_signs_web_db}")
-    
-        conn2.commit()
+    conn2.commit()
 
 
 

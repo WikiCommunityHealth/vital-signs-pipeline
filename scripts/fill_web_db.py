@@ -27,6 +27,7 @@ def compute_wiki_vital_signs(languagecode):
         query = 'SELECT count(distinct user_id), year_month_registration FROM ' + \
             languagecode+'wiki_editors GROUP BY 2 ORDER BY 2 ASC;'
         for row in cursor.execute(query):
+            logger.info(f'RETENTIONN: {row}')
             value = row[0]
             year_month = row[1]
             if year_month == '' or year_month == None:
@@ -37,7 +38,7 @@ def compute_wiki_vital_signs(languagecode):
                 pass
             parameters.append((languagecode, 'ym', year_month, 'retention',
                               'register', 'threshold', 1, None, None, None, value, None))
-
+        
         retention_baseline = {}
         query = 'SELECT count(distinct user_id), year_month_first_edit FROM ' + \
             languagecode+'wiki_editors GROUP BY 2 ORDER BY 2 ASC;'

@@ -32,8 +32,8 @@ metrics = ['activity', 'stability', 'balance',
 # languages
 
 languages = pd.DataFrame({
-    'Wikimedialanguagecode': ['it', 'es', 'de', 'fr'],
-    'languagename': ['italian', 'spanish', 'german', 'french']
+    'Wikimedialanguagecode': ['it', 'pms', 'lmo'],
+    'languagename': ['italian', 'piedmontese', 'lombard']
 }).set_index('Wikimedialanguagecode')
 
 wikilanguagecodes = list(languages.index.tolist())

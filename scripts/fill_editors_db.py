@@ -55,7 +55,7 @@ def process_editor_metrics_from_dump(languagecode):
         '2001-01-01 01:15:15', '%Y-%m-%d %H:%M:%S')
 
     for dump_path in d_paths:
-
+        logger.info(f"processing {dump_path}")
         dump_in = bz2.open(dump_path, 'r')
         line = 'something'
         line = dump_in.readline()
@@ -199,8 +199,7 @@ def process_editor_metrics_from_dump(languagecode):
 
             if last_year_month != current_year_month and last_year_month != 0:
                 lym = last_year_month.strftime('%Y-%m')
-                print('change of month / new: ',
-                      current_year_month, 'old: ', lym)
+                
 
                 lym_sp = lym.split('-')
                 ly = lym_sp[0]
@@ -705,6 +704,7 @@ def calculate_editor_activity_streaks(languagecode):
 
     edfile2 = open(config.databases_path + languagecode + 'temporary_editor_metrics.txt', "w")
     for row in cursor.execute(query):
+        edits=row[0]
         current_year_month = row[1]
         cur_user_id = row[2]
         cur_user_name = row[3]
@@ -737,7 +737,7 @@ def calculate_editor_activity_streaks(languagecode):
         old_year_month = current_year_month
         expected_year_month_dt = (datetime.datetime.strptime(
             old_year_month, '%Y-%m') + relativedelta.relativedelta(months=1))
-
+        old_user_id = cur_user_id
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
     cursor = conn.cursor()
