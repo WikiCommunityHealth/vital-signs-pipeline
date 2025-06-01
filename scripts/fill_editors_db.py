@@ -699,11 +699,11 @@ def calculate_editor_activity_streaks(languagecode):
     active_months_row = 0
 
     try:
-        os.remove(config.databases_path + 'temporary_editor_metrics.txt')
+        os.remove(config.databases_path + languagecode + 'temporary_editor_metrics.txt')
     except:
         pass
 
-    edfile2 = open(config.databases_path+'temporary_editor_metrics.txt', "w")
+    edfile2 = open(config.databases_path + languagecode + 'temporary_editor_metrics.txt', "w")
     for row in cursor.execute(query):
         current_year_month = row[1]
         cur_user_id = row[2]
@@ -742,7 +742,7 @@ def calculate_editor_activity_streaks(languagecode):
                            config.vital_signs_editors_db)
     cursor = conn.cursor()
 
-    a_file = open(config.databases_path+"temporary_editor_metrics.txt")
+    a_file = open(config.databases_path + languagecode + "temporary_editor_metrics.txt")
     editors_metrics_parameters = csv.reader(
         a_file, delimiter="\t", quotechar='|')
     query = 'INSERT OR IGNORE INTO '+languagecode + \
@@ -750,7 +750,7 @@ def calculate_editor_activity_streaks(languagecode):
     cursor.executemany(query, editors_metrics_parameters)
     conn.commit()
     try:
-        os.remove(config.databases_path + 'temporary_editor_metrics.txt')
+        os.remove(config.databases_path + languagecode + 'temporary_editor_metrics.txt')
     except:
         pass
     editors_metrics_parameters = []
