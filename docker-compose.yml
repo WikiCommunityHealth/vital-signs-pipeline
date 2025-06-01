@@ -8,6 +8,9 @@ x-airflow-env: &airflow-env
   AIRFLOW__METRICS__STATSD_HOST : statsd-exporter
   AIRFLOW__METRICS__STATSD_PORT : 9125
   AIRFLOW__METRICS__STATSD_PREFIX : airflow
+  AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+  AIRFLOW__LOGGING__REMOTE_LOGGING: 'False'
+
   
 
 services:
@@ -21,8 +24,9 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - databases:/opt/airflow/databases
+      - ./databases:/opt/airflow/databases
       - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - ./logs:/opt/airflow/logs
 
     ports:
       - "8080:8080"
@@ -38,8 +42,9 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - databases:/opt/airflow/databases
+      - ./databases:/opt/airflow/databases
       - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - ./logs:/opt/airflow/logs
 
     command: scheduler
     depends_on:
@@ -52,8 +57,9 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - databases:/opt/airflow/databases
+      - ./databases:/opt/airflow/databases
       - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - ./logs:/opt/airflow/logs
     entrypoint: >
       /bin/bash -c "
       airflow db init &&
@@ -114,11 +120,10 @@ services:
       context: ./dashboards
       dockerfile: Dockerfile
     volumes:
-      - databases:/databases
+      - ./databases:/databases
     ports:
       - "8050:8050"
 
 volumes:
   postgres-db-volume:
   grafana-storage:
-  databases:

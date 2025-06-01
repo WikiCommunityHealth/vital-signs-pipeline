@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-import config
+from scripts import config
 
 
 

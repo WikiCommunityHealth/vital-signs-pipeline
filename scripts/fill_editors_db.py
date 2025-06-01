@@ -1,5 +1,5 @@
-import utils
-import config
+from scripts import utils
+from scripts import config
 
 import sqlite3
 import datetime
@@ -749,7 +749,10 @@ def calculate_editor_activity_streaks(languagecode):
         'wiki_editor_metrics (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp) VALUES (?,?,?,?,?,?,?);'
     cursor.executemany(query, editors_metrics_parameters)
     conn.commit()
-    os.remove(config.databases_path + 'temporary_editor_metrics.txt')
+    try:
+        os.remove(config.databases_path + 'temporary_editor_metrics.txt')
+    except:
+        pass
     editors_metrics_parameters = []
 
     logger.info("Processed all activity streaks")
