@@ -51,9 +51,27 @@ git clone https://github.com/WikiCommunityHealth/vital-signs-pipeline
 cd vital-signs-pipeline
 ```
 ### 2. Build and Start All Services
+``` bash
+chmod +x start.sh
+./start.sh
+```
+start.sh
 ```bash
+#!/bin/bash
+
+set -e
+
+mkdir -p ./databases
+sudo chown -R 50000:0 ./databases
+sudo chmod -R 777 ./databases
+
+mkdir -p ./logs
+sudo chown -R 50000:0 ./logs
+sudo chmod -R 777 ./logs
+
 docker build -t custom-airflow .
-docker-compose up --build
+
+docker compose up --build
 ```
 This will:
 
