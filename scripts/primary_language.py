@@ -1,119 +1,114 @@
-from scripts import config
-import os
+import pandas as pd
 import sqlite3
 import csv
+import os
 
-import pandas as pd
-
+from scripts import config
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 def cross_wiki_editor_metrics(wikilanguagecodes):
-
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
     cursor = conn.cursor()
 
-    query = ("CREATE TABLE IF NOT EXISTS allwiki_editors (lang text, user_name text, edit_count integer, year_month_first_edit text, lustrum_first_edit text, PRIMARY KEY (lang, user_name));")
-    cursor.execute(query)
+    # create temporary table
+    try:
+        cursor.execute("DROP TABLE allwiki_editors;")
+    except:
+        pass
 
+    cursor.execute("""
+        CREATE TABLE allwiki_editors (
+            lang TEXT,
+            user_name TEXT,
+            edit_count INTEGER,
+            year_month_first_edit TEXT,
+            lustrum_first_edit TEXT
+        );
+    """)
+
+    # fill the tmp table with the data from the xwiki_editors tables
     for languagecode in wikilanguagecodes:
-        query = 'INSERT INTO allwiki_editors SELECT "'+languagecode + \
-            '", user_name, edit_count, year_month_first_edit, lustrum_first_edit FROM ' + \
-                languagecode+'wiki_editors WHERE user_name != "";'
+        query = f'''
+            INSERT INTO allwiki_editors
+            SELECT "{languagecode}", user_name, edit_count, year_month_first_edit, lustrum_first_edit
+            FROM {languagecode}wiki_editors
+            WHERE user_name != "";
+        '''
         cursor.execute(query)
         conn.commit()
+
+    # create a dataframe with all the data from the tmp table
+    df = pd.read_sql_query("SELECT * FROM allwiki_editors", conn)
+
+    # remove rows without username and the data from metawiki_editors (not a language)
+    df = df[df["user_name"] != ""]
+    df_filtered = df[df["lang"] != "meta"]
+
+    # calculate the total number of edits for every user
+    totals = df.groupby("user_name")["edit_count"].sum().reset_index()
+    totals = totals.rename(columns={"edit_count": "tot_ecount"})
+
+    # calculate the number of languages per user
+    langs_over_4 = df_filtered[df_filtered["edit_count"] > 4]
+    n_langs = langs_over_4.groupby(
+        "user_name").size().reset_index(name="n_langs")
+
+    # find the primary language
+    idx = df_filtered.groupby("user_name")["edit_count"].idxmax()
+    prim_lang_df = df_filtered.loc[idx, [
+        "user_name", "lang", "edit_count", "year_month_first_edit", "lustrum_first_edit"]]
+    prim_lang_df = prim_lang_df.rename(columns={
+        "lang": "prim_lang",
+        "edit_count": "prim_ecount",
+        "year_month_first_edit": "prim_ym_first_e",
+        "lustrum_first_edit": "prim_lus_first_e"
+    })
+
+    result = prim_lang_df.merge(totals, on="user_name").merge(
+        n_langs, on="user_name", how="left")
+    result["n_langs"] = result["n_langs"].fillna(1).astype(int)
 
     try:
         os.remove(config.databases_path + 'temporary_editor_metrics.txt')
     except:
         pass
-    edfile2 = open(config.databases_path+'temporary_editor_metrics.txt', "w")
 
-    query = 'SELECT user_name, lang, edit_count, year_month_first_edit, lustrum_first_edit FROM allwiki_editors ORDER BY user_name, edit_count DESC;'
-
-    columns = [
-        "user_name",          # string
-        "prim_lang",          # string (primary language)
-        "prim_ecount",        # int (number of edits in primary language)
-        "tot_ecount",        # int (total edit count)
-        "n_langs",           # int (number of languages used)
-        "prim_ym_first_e",   # ym first edit primary lang
-        "prim_lus_first_e"   # lustrum first edit prim
-    ]
-
-    df = pd.DataFrame(columns=columns)
-
-    for row in cursor.execute(query):
-
-        user_name = row[0]
-        lang = row[1]
-        try:
-            edit_count = int(row[2])
-        except:
-            edit_count = 0
-
-        try:
-            year_month_first_edit = str(row[3])
-        except:
-            year_month_first_edit = ''
-
-        try:
-            lustrum_first_edit = str(row[4])
-        except:
-            lustrum_first_edit = ''
-
-        if user_name in df['user_name'].values:
-            if edit_count > 4 and lang != "meta":
-                df.loc[df['user_name'] == user_name, 'n_langs'] += 1
-
-            if (edit_count >= df.loc[df['user_name'] == user_name, 'prim_ecount'] and lang != "meta"):
-                df.loc[df['user_name'] == user_name, 'prim_lang'] = lang
-                df.loc[df['user_name'] == user_name, 'prim_ecount'] = edit_count
-
-                df.loc[df['user_name'] == user_name,
-                       'prim_ym_first_e'] = year_month_first_edit
-                df.loc[df['user_name'] == user_name,
-                       'prim_lus_first_e'] = lustrum_first_edit
-
-            df.loc[df['user_name'] == user_name, 'tot_ecount'] += edit_count
-        else:
-            new_row = {
-                'user_name': user_name,
-                'prim_lang': lang,
-                'prim_ecount': edit_count,
-                'tot_ecount': edit_count,
-                'n_langs': 1,
-                'prim_ym_first_e': year_month_first_edit,
-                'prim_lus_first_e': lustrum_first_edit
-            }
-            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-
-    for row in df.itertuples(index=False):
-        edfile2.write(
+    edfile = open(config.databases_path + 'temporary_editor_metrics.txt', "w")
+    for row in result.itertuples(index=False):
+        edfile.write(
             f"{row.prim_lang}\t{row.prim_ecount}\t{row.tot_ecount}\t{row.n_langs}\t"
             f"{row.prim_ym_first_e}\t{row.prim_lus_first_e}\t{row.user_name}\n"
         )
+    edfile.close()
 
-    query = "DROP TABLE allwiki_editors;"
-    cursor.execute(query)
+    cursor.execute("DROP TABLE allwiki_editors;")
     conn.commit()
 
-    ###
+    # RIAPRI CONNESSIONE E AGGIORNA TABELLE ORIGINALI
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
     cursor = conn.cursor()
 
     for languagecode in wikilanguagecodes:
-        print(languagecode)
-        a_file = open(config.databases_path+"temporary_editor_metrics.txt")
-        parameters = csv.reader(a_file, delimiter="\t", quotechar='|')
+        with open(config.databases_path + "temporary_editor_metrics.txt") as a_file:
+            parameters = csv.reader(a_file, delimiter="\t", quotechar='|')
 
-        query = 'UPDATE '+languagecode + \
-            'wiki_editors SET (primarylang, primary_ecount, totallangs_ecount, numberlangs, primary_year_month_first_edit, primary_lustrum_first_edit) = (?,?,?,?,?,?) WHERE user_name = ?;'
-
-        cursor.executemany(query, parameters)
-        conn.commit()
+            query = f'''
+                UPDATE {languagecode}wiki_editors
+                SET (
+                    primarylang,
+                    primary_ecount,
+                    totallangs_ecount,
+                    numberlangs,
+                    primary_year_month_first_edit,
+                    primary_lustrum_first_edit
+                ) = (?, ?, ?, ?, ?, ?)
+                WHERE user_name = ?;
+            '''
+            cursor.executemany(query, parameters)
+            conn.commit()
 
     logger.info("Calculated cross wiki metrics")
 

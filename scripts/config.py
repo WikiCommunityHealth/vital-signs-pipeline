@@ -8,5 +8,5 @@ dumps_path = '/opt/airflow/mediawiki_history_dumps/'
 # /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history/
 
 
-wikilanguagecodes = ['it', 'pms', 'lmo']
+wikilanguagecodes = ['lij', 'pms', 'lmo', 'nap', 'sc', 'scn', 'vec']
 

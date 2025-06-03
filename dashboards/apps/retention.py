@@ -35,7 +35,7 @@ layout = html.Div([
             options=[{'label': k, 'value': k}
                      for k in language_names_list],
             multi=False,
-            value='italian (it)',
+            value='piedmontese (pms)',
             style={'width': '490px'}
         ), style={'display': 'inline-block', 'width': '500px'}),
 
