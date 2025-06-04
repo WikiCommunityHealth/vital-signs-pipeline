@@ -42,6 +42,9 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
 
     # create a dataframe with all the data from the tmp table
     df = pd.read_sql_query("SELECT * FROM allwiki_editors", conn)
+    # conversion from str to int
+    df["edit_count"] = pd.to_numeric(
+        df["edit_count"], errors="coerce").fillna(0).astype(int)
 
     # remove rows without username and the data from metawiki_editors (not a language)
     df = df[df["user_name"] != ""]
@@ -87,7 +90,7 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
     cursor.execute("DROP TABLE allwiki_editors;")
     conn.commit()
 
-    # RIAPRI CONNESSIONE E AGGIORNA TABELLE ORIGINALI
+    # update xwiki_editors 
     conn = sqlite3.connect(config.databases_path + 'vital_signs_editors.db')
     cursor = conn.cursor()
 

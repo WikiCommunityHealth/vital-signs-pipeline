@@ -18,7 +18,7 @@ mappings:
       state: "$4"
   # === Gauges ===
 
-  - match: "*.executor.queued_tasks" #quante task sono in coda "Qual è la durata del task sotto la quale cadono il 95% delle esecuzioni negli ultimi 60 secondi?"
+  - match: "*.executor.queued_tasks" #quante task sono in coda 
     match_metric_type: gauge
     name: "queued_tasks"
     labels:

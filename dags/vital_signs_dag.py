@@ -96,17 +96,15 @@ with DAG(
     web_groups = []
 
     for code in wikilanguagecodes:
-        with TaskGroup(group_id=f"{code}wiki_web_db") as web_tg:
 
-            compute_vital_signs_task = PythonOperator(
-                task_id=f"{code}",
-                python_callable=compute_wiki_vital_signs,
-                op_args=[code],
-                on_success_callback=log_task_end,
-                on_failure_callback=log_task_failure,
+        compute_vital_signs_task = PythonOperator(
+            task_id=f"{code}",
+            python_callable=compute_wiki_vital_signs,
+            op_args=[code],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
 
-            )
-
-        web_groups.append(web_tg)
+        web_groups.append(compute_vital_signs_task)
 
     start >> create_dbs_task >> editor_groups >> primary_language_task >> web_groups >> end
