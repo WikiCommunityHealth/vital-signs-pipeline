@@ -20,8 +20,27 @@
 │   ├── config.py
 │   ├── Dockerfile
 │   └── requirements.txt
+├── databases
+│   ├── vital_signs_editors.db
+│   └── vital_signs_web.db
 ├── docker-compose.yml
 ├── Dockerfile
+├── logs
+├── mediawiki_history_dumps
+│   ├── lijwiki
+│   │   └── 2025-04.lijwiki.all-time.tsv.bz2
+│   ├── lmowiki
+│   │   └── 2025-04.lmowiki.all-time.tsv.bz2
+│   ├── napwiki
+│   │   └── 2025-04.napwiki.all-time.tsv.bz2
+│   ├── pmswiki
+│   │   └── 2025-04.pmswiki.all-time.tsv.bz2
+│   ├── scnwiki
+│   │   └── 2025-04.scnwiki.all-time.tsv.bz2
+│   ├── scwiki
+│   │   └── 2025-04.scwiki.all-time.tsv.bz2
+│   └── vecwiki
+│       └── 2025-04.vecwiki.all-time.tsv.bz2
 ├── monitoring
 │   ├── grafana
 │   │   ├── dashboards.yaml
@@ -36,10 +55,12 @@
 │   ├── fill_editors_db.py
 │   ├── fill_web_db.py
 │   ├── primary_language.py
+│   ├── test_db.py
 │   └── utils.py
+├── start.sh
 └── vital_signs.png
 
-8 directories, 30 files
+18 directories, 41 files
 ````
 
 # Getting Started
@@ -101,7 +122,3 @@ Start Grafana for dashboard visualization
 | Dashboards | http://localhost:8050 | |
 ## Airflow DAG
 <img alt="DAG" src="./vital_signs.png" />
-
-## 📝 TODO
-
-* testare l'integrazione con le vecchie dashboard
