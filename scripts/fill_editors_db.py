@@ -546,8 +546,12 @@ def process_editor_metrics_from_dump(languagecode):
 
         user_id_user_name_dict = user_id_user_name_dict2
         user_id_user_name_dict2 = {}
+    
+    logger.info("Processed all dump's data")
 
-    # Getting the highest flag
+
+
+def calculate_editors_flag(languagecode):
     conn = sqlite3.connect(config.databases_path +
                            config.vital_signs_editors_db)
     cursor = conn.cursor()
@@ -679,7 +683,6 @@ def process_editor_metrics_from_dump(languagecode):
     query = 'UPDATE '+languagecode+'wiki_editors SET bot = ? WHERE user_name = ?;'
     cursor.executemany(query, params)
     conn.commit()
-    logger.info("Processed all dump's data")
 
 
 def calculate_editor_activity_streaks(languagecode):

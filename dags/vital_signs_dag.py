@@ -1,8 +1,6 @@
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow import DAG
-from airflow.utils.task_group import TaskGroup
-
 import sys
 import os
 import logging
@@ -11,7 +9,6 @@ from datetime import datetime, timedelta
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from scripts.config import wikilanguagecodes
 from scripts import fill_editors_db
-
 from scripts.create_db import create_db
 from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.fill_web_db import compute_wiki_vital_signs
@@ -43,7 +40,7 @@ with DAG(
         'retries': 1,
         'retry_delay': timedelta(minutes=5),
     },
-    description='Compute Community Health Metrics (CHM) from Wikipedia dumps for multiple languages',
+    description='Compute Community Health Metrics (CHM) from MediaWiki History dumps for multiple languages',
     schedule_interval='@monthly',
     catchup=False
 ) as dag:
@@ -60,32 +57,38 @@ with DAG(
         on_failure_callback=log_task_failure,
     )
 
-    editor_groups = []
+    editors_db_group = []
 
     for code in wikilanguagecodes:
-        with TaskGroup(group_id=f"{code}wiki_editors_db", dag=dag) as editors_tg:
-
-            process_metrics_from_dumps_task = PythonOperator(
-                task_id=f"{code}_first_step",
-                python_callable=fill_editors_db.process_editor_metrics_from_dump,
-                op_args=[code],
-                on_success_callback=log_task_end,
-                on_failure_callback=log_task_failure,
-            )
-
-            calculate_streaks_task = PythonOperator(
-                task_id=f"{code}_second_step",
-                python_callable=fill_editors_db.calculate_editor_activity_streaks,
-                op_args=[code],
-                on_success_callback=log_task_end,
-                on_failure_callback=log_task_failure,
-            )
-
-            process_metrics_from_dumps_task >> calculate_streaks_task
-        editor_groups.append(editors_tg)
+        process_metrics_from_dumps_task = PythonOperator(
+            task_id=f"{code}_process_dump",
+            python_callable=fill_editors_db.process_editor_metrics_from_dump,
+            op_args=[code],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
+        
+        calculate_flags_task = PythonOperator(
+            task_id=f"{code}_calc_flags",
+            python_callable=fill_editors_db.calculate_editors_flag,
+            op_args=[code],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
+        calculate_streaks_task = PythonOperator(
+            task_id=f"{code}_calc_streaks",
+            python_callable=fill_editors_db.calculate_editor_activity_streaks,
+            op_args=[code],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
+        process_metrics_from_dumps_task >> calculate_flags_task >> calculate_streaks_task
+        editors_db_group.append(process_metrics_from_dumps_task)
+        editors_db_group.append(calculate_flags_task)
+        editors_db_group.append(calculate_streaks_task)
 
     primary_language_task = PythonOperator(
-        task_id="primary_language",
+        task_id="calc_primary_language",
         python_callable=cross_wiki_editor_metrics,
         op_args=[wikilanguagecodes],
         on_success_callback=log_task_end,
@@ -93,18 +96,17 @@ with DAG(
 
     )
 
-    web_groups = []
+    web_db_group = []
 
     for code in wikilanguagecodes:
-
         compute_vital_signs_task = PythonOperator(
-            task_id=f"{code}",
+            task_id=f"{code}_calc_vs",
             python_callable=compute_wiki_vital_signs,
             op_args=[code],
             on_success_callback=log_task_end,
             on_failure_callback=log_task_failure,
         )
 
-        web_groups.append(compute_vital_signs_task)
+        web_db_group.append(compute_vital_signs_task)
 
-    start >> create_dbs_task >> editor_groups >> primary_language_task >> web_groups >> end
+    start >> create_dbs_task >> editors_db_group >> primary_language_task >> web_db_group >> end
