@@ -6,7 +6,7 @@ from dateutil import relativedelta
 year_month = (datetime.date.today() -
               relativedelta.relativedelta(months=2)).strftime('%Y-%m')
 
-
+# modificare se si utilizza con tutte le wiki
 def get_mediawiki_paths(languagecode):
     dir_name = languagecode + "wiki/"
     cy = datetime.datetime.now().year
@@ -28,3 +28,4 @@ def get_mediawiki_paths(languagecode):
             d_paths.append(dumps_path)
 
     return d_paths, year_month
+

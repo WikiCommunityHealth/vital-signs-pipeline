@@ -262,7 +262,7 @@
         "type": "prometheus",
         "uid": "aelv56v0ykj5sc"
       },
-      "description": "resources used by airflow",
+      "description": "mean resource usage per task (inside the container)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -314,7 +314,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum by(dag_id) (cpu_usage{dag_id=\"vital_signs\"})",
+          "expr": "avg by(dag_id) (cpu_usage{dag_id=\"vital_signs\"})",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "CPU USAGE",
@@ -329,7 +329,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum by(dag_id) (mem_usage{dag_id=\"vital_signs\"})",
+          "expr": "avg by(dag_id) (mem_usage{dag_id=\"vital_signs\"})",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -472,12 +472,12 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "histogram_quantile(0.95, sum by(le) (rate(task_duration_bucket{dag_id=\"vital_signs\"}[5m])))",
+          "expr": "histogram_quantile(0.9, sum by(le) (rate(task_duration_bucket{dag_id=\"vital_signs\", task_id=\"$task\"}[5m])))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
           "interval": "",
-          "legendFormat": "P95",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -572,9 +572,9 @@
       "targets": [
         {
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(task_duration_sum{dag_id=\"vital_signs\"}[5m]) / rate(task_duration_count{dag_id=\"vital_signs\"}[5m])",
+          "expr": "task_duration_sum{dag_id=\"vital_signs\", task_id=\"$task\"} / task_duration_count{dag_id=\"vital_signs\", task_id=\"$task\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
@@ -594,7 +594,27 @@
   "schemaVersion": 41,
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "text": "create_dbs",
+          "value": "create_dbs"
+        },
+        "definition": "label_values(task_id)",
+        "description": "",
+        "label": "Task",
+        "name": "task",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(task_id)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-3h",
@@ -604,5 +624,5 @@
   "timezone": "browser",
   "title": "vital_signs",
   "uid": "0f48a213-4c3e-48e4-b02e-41cb2331287c",
-  "version": 13
+  "version": 15
 }

@@ -47,6 +47,8 @@ mappings:
   - match: "*.dag.*.*.duration" # durata delle task
     observer_type: histogram
     name: "task_duration"
+    histogram_options:
+      buckets: [0.5, 1, 2.5, 5, 10, 30, 60, 120]
     labels:
       airflow_id: "$1"
       dag_id: "$2"
