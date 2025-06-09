@@ -25,7 +25,9 @@
 │   └── vital_signs_web.db
 ├── docker-compose.yml
 ├── Dockerfile
+├── download_dumps.py
 ├── logs
+├── init.sh
 ├── mediawiki_history_dumps
 │   ├── lijwiki
 │   │   └── 2025-04.lijwiki.all-time.tsv.bz2
@@ -73,10 +75,10 @@ cd vital-signs-pipeline
 ```
 ### 2. Build and Start All Services
 ``` bash
-chmod +x start.sh
-./start.sh
+chmod +x init.sh start.sh
+./init.sh && ./start.sh
 ```
-start.sh
+init.sh
 ```bash
 #!/bin/bash
 
@@ -90,9 +92,33 @@ mkdir -p ./logs
 sudo chown -R 50000:0 ./logs
 sudo chmod -R 777 ./logs
 
+if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
+fi
+source .venv/bin/activate
+
+if [ ! -f "requirements_download.txt" ]; then
+cat <<EOL > requirements_download.txt
+requests
+beautifulsoup4
+python-dateutil
+EOL
+fi
+
+pip install --upgrade pip
+pip install -r requirements_download.txt
+
+
+python download_dumps.py
+```
+
+start.sh
+```bash
+#!/bin/bash
+
 docker build -t custom-airflow .
 
-docker compose up --build
+docker compose up --build 
 ```
 This will:
 
