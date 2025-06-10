@@ -75,3 +75,6 @@ def download_dumps():
 
         for link in links:
             download_file(link, wiki_save_path)
+
+if __name__ == "__main__":
+    download_dumps()
