@@ -9,7 +9,6 @@ cd vital-signs-pipeline
 ```
 ### 2. Build and Start All Services
 ``` bash
-chmod +x init.sh start.sh
 ./init.sh && ./start.sh
 ```
 init.sh
