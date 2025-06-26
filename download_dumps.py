@@ -1,3 +1,4 @@
+import time
 import os
 import shutil
 import requests
@@ -11,41 +12,47 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def download_dumps():
-    def get_wiki_directories(base_url):
-        response = requests.get(base_url)
-        if response.status_code != 200:
-            return []
-        wikis = ['pmswiki/', 'lmowiki/', 'lijwiki/',
-                 'vecwiki/', 'scwiki/', 'scnwiki/', 'napwiki/']
-        soup = BeautifulSoup(response.text, 'html.parser')
-        directories = [urljoin(base_url, wiki) for wiki in wikis]
-        return directories
+def download_file(url, save_path):
+    local_filename = os.path.join(save_path, url.split('/')[-1])
 
-    def get_dump_links(wiki_url):
-        response = requests.get(wiki_url)
-        if response.status_code != 200:
-            return []
+    with requests.get(url, stream=True) as response:
+        response.raise_for_status()
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded_size = 0
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        links = [urljoin(wiki_url, a['href']) for a in soup.find_all(
-            'a', href=True) if a['href'].endswith('.bz2')]
-        return links
+        with open(local_filename, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024*1024):
+                f.write(chunk)
+                downloaded_size += len(chunk)
 
-    def download_file(url, save_path):
-        local_filename = os.path.join(save_path, url.split('/')[-1])
+                if total_size > 0:
+                    print(
+                        f"Downloaded {downloaded_size}/{total_size} bytes", end="\r")
+    print("\nDownload complete.")
+    return local_filename
 
-        with requests.get(url, stream=True) as response:
-            response.raise_for_status()
-            with open(local_filename, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
 
-        logger.info(f"Downloaded {local_filename}")
-        return local_filename
+def get_dump_links(url):
+    response = requests.get(url)
+    if response.status_code != 200:
+        return []
 
-    if os.path.exists("./mediawiki_history_dumps/"):
-        shutil.rmtree("./mediawiki_history_dumps/")
+    soup = BeautifulSoup(response.text, 'html.parser')
+    links = [urljoin(url, a['href']) for a in soup.find_all(
+        'a', href=True) if a['href'].endswith('.bz2')]
+    return links
+
+
+def main():
+    wiki_names = ['pmswiki/', 'lmowiki/', 'lijwiki/',
+                  'vecwiki/', 'scwiki/', 'scnwiki/', 'napwiki/']
+
+    dumps_path = "./mediawiki_history_dumps/"
+
+    if os.path.exists(dumps_path):
+        shutil.rmtree(dumps_path)
+
+    os.makedirs(dumps_path, exist_ok=True)
 
     YYYY_MM = (datetime.now() - relativedelta(months=1)).strftime("%Y-%m")
     base_url = "https://dumps.wikimedia.org/other/mediawiki_history/"
@@ -57,24 +64,32 @@ def download_dumps():
         YYYY_MM = (datetime.now() - relativedelta(months=2)).strftime("%Y-%m")
         correct_url = f"{base_url}{YYYY_MM}/"
 
-    logger.info(f"Found dumps: {correct_url}")
+    for wiki_name in wiki_names:
+        start = time.time()
 
-    os.makedirs("./mediawiki_history_dumps/", exist_ok=True)
+        url = correct_url + wiki_name + "/"
 
-    # Ottieni tutte le sottodirectory delle wiki
-    wiki_dirs = get_wiki_directories(correct_url)
-    for wiki_dir in wiki_dirs:
-        # Estrai il nome della wiki
-        wiki_name = wiki_dir.rstrip('/').split('/')[-1]
-        wiki_save_path = os.path.join("./mediawiki_history_dumps/", wiki_name)
+        print(f"Downloading wiki dumps for: {wiki_name}")
+
+        wiki_save_path = os.path.join(dumps_path, wiki_name)
+
         os.makedirs(wiki_save_path, exist_ok=True)
-        links = get_dump_links(wiki_dir)
+
+        links = get_dump_links(url)
         if not links:
-            logger.warning(f"No file found in {wiki_dir}")
-            continue
+            print("No .bz2 files found at the specified URL.")
+
+        print(f"Found {len(links)} files to download")
 
         for link in links:
-            download_file(link, wiki_save_path)
+            print(f"Downloading {link}")
+            downloaded_file = download_file(link, wiki_save_path)
+            print(f"Saved as: {downloaded_file}")
+
+        end = time.time() - start
+
+        print(f"Total execution time: {end:.2f} seconds")
+
 
 if __name__ == "__main__":
-    download_dumps()
+    main()

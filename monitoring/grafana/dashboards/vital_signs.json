@@ -94,6 +94,10 @@
       "pluginVersion": "12.0.1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "aelv56v0ykj5sc"
+          },
           "disableTextWrap": false,
           "editorMode": "builder",
           "expr": "sum(ti_start{dag_id=\"vital_signs\"})",
@@ -362,7 +366,7 @@
         "type": "prometheus",
         "uid": "aelv56v0ykj5sc"
       },
-      "description": "what's the task duration under which fall 95% of the tasks",
+      "description": "I percentili definiscono dei bucket che contengono rispettivamente il 50% dei tempi di esecuzione, il 90% e il 95%.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -472,7 +476,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "histogram_quantile(0.9, sum by(le) (rate(task_duration_bucket{dag_id=\"vital_signs\", task_id=\"$task\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by(le) (rate(task_duration_bucket[$__rate_interval])))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -481,9 +485,43 @@
           "range": true,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "aelv56v0ykj5sc"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "histogram_quantile(0.9, sum by(le) (rate(task_duration_bucket[$__rate_interval])))",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "aelv56v0ykj5sc"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "histogram_quantile(0.5, sum by(le) (rate(task_duration_bucket[$__rate_interval])))",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "C",
+          "useBackend": false
         }
       ],
-      "title": "0.95 percetile ",
+      "title": "Istogramma con percentili (0.5, 0.9, 0.95)",
       "transparent": true,
       "type": "timeseries"
     },
@@ -624,5 +662,5 @@
   "timezone": "browser",
   "title": "vital_signs",
   "uid": "0f48a213-4c3e-48e4-b02e-41cb2331287c",
-  "version": 15
+  "version": 19
 }
