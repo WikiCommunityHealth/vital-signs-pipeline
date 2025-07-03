@@ -38,7 +38,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aelv56v0ykj5sc"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "How many tasks have been started and how many have been finished",
       "fieldConfig": {
@@ -91,12 +91,12 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.1",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -111,7 +111,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -128,7 +128,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -150,7 +150,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aelv56v0ykj5sc"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -230,7 +230,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.1",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "disableTextWrap": false,
@@ -264,7 +264,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aelv56v0ykj5sc"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "mean resource usage per task (inside the container)",
       "fieldConfig": {
@@ -313,7 +313,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.0.1",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "disableTextWrap": false,
@@ -329,7 +329,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -364,7 +364,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aelv56v0ykj5sc"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "I percentili definiscono dei bucket che contengono rispettivamente il 50% dei tempi di esecuzione, il 90% e il 95%.",
       "fieldConfig": {
@@ -466,12 +466,12 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.1",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -489,7 +489,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -506,7 +506,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "aelv56v0ykj5sc"
+            "uid": "PBFA97CFB590B2093"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -528,7 +528,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aelv56v0ykj5sc"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "mean task duration",
       "fieldConfig": {
@@ -606,7 +606,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.1",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "disableTextWrap": false,
@@ -638,6 +638,10 @@
           "text": "create_dbs",
           "value": "create_dbs"
         },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
         "definition": "label_values(task_id)",
         "description": "",
         "label": "Task",
@@ -662,5 +666,5 @@
   "timezone": "browser",
   "title": "vital_signs",
   "uid": "0f48a213-4c3e-48e4-b02e-41cb2331287c",
-  "version": 19
+  "version": 21
 }
