@@ -6,3 +6,4 @@
 /databases/
 /mediawiki_history_dumps
 /logs/
+.env

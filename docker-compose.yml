@@ -1,5 +1,5 @@
 x-airflow-env: &airflow-env
-  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
   AIRFLOW__CORE__EXECUTOR: LocalExecutor
   AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
   AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
@@ -17,7 +17,7 @@ services:
   airflow:
     build:
       context: .
-    image: custom-airflow:latest
+    image: custom-airflow:v1
     container_name: airflow-main
     restart: always
     environment: *airflow-env
@@ -36,7 +36,7 @@ services:
       - airflow_init
 
   scheduler:
-    image: custom-airflow:latest
+    image: custom-airflow:v1
     restart: always
     environment: *airflow-env
     volumes:
@@ -51,7 +51,7 @@ services:
       - airflow_init
 
   airflow_init:
-    image: custom-airflow:latest
+    image: custom-airflow:v1
     restart: on-failure
     environment: *airflow-env
     volumes:
@@ -63,7 +63,7 @@ services:
     entrypoint: >
       /bin/bash -c "
       airflow db init &&
-      airflow users create --username admin --password admin --firstname Andrea --lastname Denina --role Admin --email andredeninaf@gmail.com
+      airflow users create --username ${AIRFLOW_USER} --password ${AIRFLOW_PASSWORD} --firstname Andrea --lastname Denina --role Admin --email andredeninaf@gmail.com
       "
     depends_on:
       - postgres
@@ -73,11 +73,11 @@ services:
       container_name: postgres
       restart: always
       environment:
-        POSTGRES_USER: airflow
-        POSTGRES_PASSWORD: airflow
-        POSTGRES_DB: airflow
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_DB: ${POSTGRES_DB}
       volumes:
-        - postgres-db-volume:/var/lib/postgresql/data
+        - ./postgres-data:/var/lib/postgresql/data
       healthcheck:
         test: ["CMD-SHELL", "pg_isready -U airflow"]
         interval: 10s
@@ -97,12 +97,12 @@ services:
       ports:
         - "3000:3000"
       volumes:
-        - grafana-storage:/var/lib/grafana
+        - ./grafana-data:/var/lib/grafana
         - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
         - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
       environment:
-        - GF_SECURITY_ADMIN_USER=admin
-        - GF_SECURITY_ADMIN_PASSWORD=admin
+        - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+        - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
         - GF_INSTALL_PLUGINS=grafana-piechart-panel
 
   statsd-exporter:
@@ -124,7 +124,3 @@ services:
       - ./databases:/databases
     ports:
       - "8050:8050"
-
-volumes:
-  postgres-db-volume:
-  grafana-storage:
