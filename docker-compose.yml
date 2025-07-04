@@ -25,7 +25,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./databases:/opt/airflow/databases
-      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
 
     ports:
@@ -43,7 +43,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./databases:/opt/airflow/databases
-      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
 
     command: scheduler
@@ -58,7 +58,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
       - ./databases:/opt/airflow/databases
-      - ./mediawiki_history_dumps:/opt/airflow/mediawiki_history_dumps
+      - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
     entrypoint: >
       /bin/bash -c "
