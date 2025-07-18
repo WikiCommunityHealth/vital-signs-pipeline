@@ -113,7 +113,7 @@ services:
         - GF_INSTALL_PLUGINS=grafana-piechart-panel
 
   statsd-exporter:
-    image: prom/statsd-exporter:0.28.0
+    image: prom/statsd-exporter:0.27.2
     volumes:
       - ./monitoring/statsd.yaml:/etc/statsd.yaml
     entrypoint: ["/bin/sh", "-c", "--"]
