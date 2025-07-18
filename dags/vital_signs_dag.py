@@ -41,7 +41,7 @@ with DAG(
         'retry_delay': timedelta(minutes=5),
     },
     description='Compute Community Health Metrics (CHM) from MediaWiki History dumps for multiple languages',
-    schedule_interval='@monthly',
+    schedule_interval='0 0 10 * *', #cron expresion: make the dag run every 10 of the month (usually the dumps are uploaded betwen the 2 and the 10)
     catchup=False
 ) as dag:
 
