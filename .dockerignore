@@ -3,6 +3,4 @@ README.md
 Dockerfile 
 docker-compose.yml
 ./.venv/
-download_dumps.py  
-init.sh
 start.sh
