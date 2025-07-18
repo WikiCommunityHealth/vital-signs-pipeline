@@ -17,7 +17,8 @@ services:
   airflow:
     build:
       context: .
-    image: custom-airflow:1
+      dockerfile: Dockerfile
+    image: custom-airflow:v1
     container_name: airflow-main
     restart: always
     environment: *airflow-env
@@ -36,7 +37,10 @@ services:
       - airflow_init
 
   scheduler:
-    image: custom-airflow:1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: custom-airflow:v1
     restart: always
     environment: *airflow-env
     volumes:
@@ -51,7 +55,10 @@ services:
       - airflow_init
 
   airflow_init:
-    image: custom-airflow:1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: custom-airflow:v1
     restart: on-failure
     environment: *airflow-env
     volumes:
