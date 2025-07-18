@@ -17,7 +17,7 @@ services:
   airflow:
     build:
       context: .
-    image: custom-airflow:v1
+    image: custom-airflow:1
     container_name: airflow-main
     restart: always
     environment: *airflow-env
@@ -36,7 +36,7 @@ services:
       - airflow_init
 
   scheduler:
-    image: custom-airflow:v1
+    image: custom-airflow:1
     restart: always
     environment: *airflow-env
     volumes:
@@ -51,7 +51,7 @@ services:
       - airflow_init
 
   airflow_init:
-    image: custom-airflow:v1
+    image: custom-airflow:1
     restart: on-failure
     environment: *airflow-env
     volumes:
@@ -84,7 +84,7 @@ services:
         retries: 5
 
   prometheus:
-      image: prom/prometheus:v3.4.2
+      image: prom/prometheus:3.4.2
       container_name: prometheus
       volumes:
         - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -92,7 +92,7 @@ services:
         - "9090:9090"
 
   grafana:
-      image: grafana/grafana:v12.0.2
+      image: grafana/grafana:12.0.2
       container_name: grafana
       ports:
         - "3000:3000"
@@ -106,7 +106,7 @@ services:
         - GF_INSTALL_PLUGINS=grafana-piechart-panel
 
   statsd-exporter:
-    image: prom/statsd-exporter:v0.28.0
+    image: prom/statsd-exporter:0.28.0
     volumes:
       - ./monitoring/statsd.yaml:/etc/statsd.yaml
     entrypoint: ["/bin/sh", "-c", "--"]
