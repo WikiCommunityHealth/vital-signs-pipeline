@@ -17,7 +17,7 @@ def get_mediawiki_paths(languagecode):
         path = os.path.join(config.dumps_path, year_month)
 
     dir_name = languagecode + "wiki"
-    path_dir = os.path.join(path, dir)
+    path_dir = os.path.join(path, dir_name)
     cy = datetime.datetime.now().year
     d_paths = []
 
