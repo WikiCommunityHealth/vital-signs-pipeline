@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-from sqlalchemy import engine, text
+from sqlalchemy import create_engine, text
 from scripts import config
 
 
@@ -11,10 +11,10 @@ def create_db(wikilanguagecodes):
 
     
 
-    engine_editors = engine.create(config.db_uri_editors)
-    engine_web = engine.create(config.db_uri_web)
+    engine_editors = create_engine(config.db_uri_editors)
+    engine_web = create_engine(config.db_uri_web)
 
-    with engine_editors.connect() as conn:
+    with engine_editors.begin() as conn:
 
         # EDITORS DB
         for languagecode in wikilanguagecodes:
