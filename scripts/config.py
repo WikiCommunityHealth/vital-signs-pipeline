@@ -1,7 +1,9 @@
 # '/home/pata/Scrivania/tirocinio/airflow/databases/'
-databases_path = '/opt/airflow/databases/'
-vital_signs_editors_db = 'vital_signs_editors.db'
-vital_signs_web_db = 'vital_signs_web.db'
+#databases_path = '/opt/airflow/databases/'
+#vital_signs_editors_db = 'vital_signs_editors.db'
+#vital_signs_web_db = 'vital_signs_web.db'
+databases_uri_editors = ''#'postgresql+psycopg2://user:password@postgres:5432/vital_signs_editors'
+databases_uri_web = ''#'postgresql+psycopg2://user:password@postgres:5432/vital_signs_web'
 # '/home/pata/Scrivania/tirocinio/airflow/mediawiki_history_dumps'
 dumps_path = '/opt/airflow/mediawiki_history/'
 
