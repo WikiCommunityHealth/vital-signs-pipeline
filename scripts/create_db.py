@@ -11,8 +11,8 @@ def create_db(wikilanguagecodes):
 
     
 
-    engine_editors = engine.create(config.databases_uri_editors)
-    engine_web = engine.create(config.databases_uri_web)
+    engine_editors = engine.create(config.db_uri_editors)
+    engine_web = engine.create(config.db_uri_web)
 
     with engine_editors.connect() as conn:
 
@@ -56,7 +56,7 @@ def create_db(wikilanguagecodes):
             conn.execute(text(query))
 
             logger.info(
-                f"Created Table {table_name} inside editors db")
+                f"Created Table {table_name} inside vital signs db")
 
             table_name2 = languagecode+'wiki_editor_metrics'
 
@@ -80,7 +80,7 @@ def create_db(wikilanguagecodes):
             conn.execute(text(query))
 
             logger.info(
-                f"Created Table {table_name} inside editors db")
+                f"Created Table {table_name} inside vital signs db")
 
     with engine_web.connect() as conn2:
         # VITAL SIGNS DB
@@ -108,4 +108,4 @@ def create_db(wikilanguagecodes):
         """
         conn2.execute(text(query))
         logger.info(
-            f"Created Table {table_name} inside web db")
+            f"Created Table {table_name} inside vital signs db")
