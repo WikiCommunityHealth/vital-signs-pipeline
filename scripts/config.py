@@ -1,13 +1,12 @@
-# '/home/pata/Scrivania/tirocinio/airflow/databases/'
-#databases_path = '/opt/airflow/databases/'
-#vital_signs_editors_db = 'vital_signs_editors.db'
-#vital_signs_web_db = 'vital_signs_web.db'
-db_uri_editors = ''#'postgresql+psycopg2://user:password@postgres:5432/vital_signs_editors'
-db_uri_web = ''#'postgresql+psycopg2://user:password@postgres:5432/vital_signs_web'
-# '/home/pata/Scrivania/tirocinio/airflow/mediawiki_history_dumps'
+import os
+
+POSTGRES_USER = os.getenv('POSTGRES_USER')
+POSTGRES_PASS = os.getenv('POSTGRES_PASSWORD')
+
+db_uri_editors = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres/vital_signs_editors'
+db_uri_web = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres/vital_signs_web'
 dumps_path = '/opt/airflow/mediawiki_history/'
 
-# /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history/
 
 
 wikilanguagecodes = ['aa', 'ab', 'ace', 'ady', 'af', 'ak', 'als', 'alt', 'ami', 'am', 'ang', 'ann', 'anp', 'an', 'arc', 'ar', 'ary', 'arz', 'ast', 'as', 'atj',
