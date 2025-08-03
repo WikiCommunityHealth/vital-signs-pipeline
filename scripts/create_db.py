@@ -1,4 +1,3 @@
-import sqlite3
 import logging
 from sqlalchemy import create_engine, text
 from scripts import config
@@ -8,8 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 def create_db(wikilanguagecodes):
-
-    
 
     engine_editors = create_engine(config.db_uri_editors)
     engine_web = create_engine(config.db_uri_web)

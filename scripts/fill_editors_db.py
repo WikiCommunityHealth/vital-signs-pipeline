@@ -1,14 +1,11 @@
+from collections import defaultdict
 from scripts import utils
 from scripts import config
 import datetime
 import bz2
 import calendar
-import csv
-import os
 from sqlalchemy import create_engine, text
-
 from dateutil import relativedelta
-
 import logging
 
 
@@ -249,7 +246,6 @@ def process_editor_metrics_from_dump(languagecode):
                     conn.execute(query, monthly_edits)
                     conn.execute(query, namespaces)
 
-                    conn.commit()
 
                     monthly_edits = []
                     namespaces = []
@@ -590,214 +586,201 @@ ON CONFLICT DO NOTHING
 
 
 def calculate_editors_flag(languagecode):
-    conn = sqlite3.connect(config.databases_path +
-                           config.vital_signs_editors_db)
-    cursor = conn.cursor()
-    query = 'SELECT user_flags, count(user_id) FROM '+languagecode + \
-        'wiki_editors WHERE user_flags != "" GROUP BY 1;'
-    flags_count_dict = {}
-    for row in cursor.execute(query):
-        flags = row[0]
-        count = row[1]
-
-        if ',' in flags:
-            fs = flags.split(',')
-            for x in fs:
-                try:
+    engine = create_engine(config.db_uri_editors)
+    with engine.begin() as conn:  # begin() -> transaction
+        # 1. Conta le flags
+        query = text(f'''
+            SELECT user_flags, count(user_id)
+            FROM {languagecode}wiki_editors
+            WHERE user_flags != ''
+            GROUP BY 1;
+        ''')
+        flags_count_dict = defaultdict(int)
+        for row in conn.execute(query):
+            flags, count = row
+            if ',' in flags:
+                for x in flags.split(','):
                     flags_count_dict[x] += count
-                except:
-                    flags_count_dict[x] = 1
-        else:
-            try:
+            else:
                 flags_count_dict[flags] += count
-            except:
-                flags_count_dict[flags] = 1
 
-    flag_ranks = {
-        'confirmed': 1, 'ipblock-exempt': 1,
-        'filemover': 2, 'accountcreator': 2, 'autopatrolled': 2, 'reviewer': 2, 'autoreviewer': 2, 'rollbacker': 2, 'abusefilter': 2, 'abusefilter-ehlper': 2, 'interface-admin': 2, 'eventcoordinator': 2, 'extendedconfirmed': 2, 'extendedmover': 2, 'filemover': 2, 'massmessage-sender': 2, 'patroller': 2, 'researcher': 2, 'templateeditor': 2,
-        'sysop': 3, 'bureaucrat': 3.5,
-        'checkuser': 4, 'oversight': 4.5,
-        'steward': 5.5, 'import': 5,
-        'founder': 6
-    }
+        flag_ranks = {
+            'confirmed': 1, 'ipblock-exempt': 1,
+            'filemover': 2, 'accountcreator': 2, 'autopatrolled': 2, 'reviewer': 2, 'autoreviewer': 2, 'rollbacker': 2, 'abusefilter': 2, 'abusefilter-ehlper': 2, 'interface-admin': 2, 'eventcoordinator': 2, 'extendedconfirmed': 2, 'extendedmover': 2, 'filemover': 2, 'massmessage-sender': 2, 'patroller': 2, 'researcher': 2, 'templateeditor': 2,
+            'sysop': 3, 'bureaucrat': 3.5,
+            'checkuser': 4, 'oversight': 4.5,
+            'steward': 5.5, 'import': 5,
+            'founder': 6
+        }
 
-    query = 'SELECT user_id, user_flags, user_name FROM ' + \
-        languagecode+'wiki_editors WHERE user_flags != "";'
-    params = []
-    user_id_flag = {}
-    for row in cursor.execute(query):
-        user_id = row[0]
-        user_flags = row[1]
-        user_name = row[2]
+        # 2. Assegna la highest_flag per ogni user_name
+        query = text(f'''
+            SELECT user_id, user_flags, user_name
+            FROM {languagecode}wiki_editors
+            WHERE user_flags != '';
+        ''')
+        params = []
+        user_id_flag = {}
+        for row in conn.execute(query):
+            user_id, user_flags, user_name = row
+            highest_rank = {}
+            highest_count = {}
 
-        highest_rank = {}
-        highest_count = {}
-
-        if ',' in user_flags:
-            uf = user_flags.split(',')
-
-            for x in uf:
-                if x in flag_ranks and 'bot' not in x:
-                    val = flag_ranks[x]
-                    highest_rank[x] = val
-
-            if len(highest_rank) > 1:
-                maxval = max(highest_rank.values())
-                # we are choosing the flag of highest rank.
-                highest_rank = {key: val for key,
-                                val in highest_rank.items() if val == maxval}
+            if ',' in user_flags:
+                uf = user_flags.split(',')
+                for x in uf:
+                    if x in flag_ranks and 'bot' not in x:
+                        val = flag_ranks[x]
+                        highest_rank[x] = val
 
                 if len(highest_rank) > 1:
-                    for x in highest_rank.keys():
-                        val = flags_count_dict[x]
-                        highest_count[x] = val
+                    maxval = max(highest_rank.values())
+                    highest_rank = {key: val for key,
+                                    val in highest_rank.items() if val == maxval}
 
-                    maxval = max(highest_count.values())
-                    # we are choosing the flag that exists more in the community.
-                    highest_count = {
-                        key: val for key, val in highest_count.items() if val == maxval}
+                    if len(highest_rank) > 1:
+                        for x in highest_rank.keys():
+                            val = flags_count_dict[x]
+                            highest_count[x] = val
 
-                    f = list(highest_count.keys())[0]
-                    params.append((f, user_name))
-                    user_id_flag[user_id] = f
-                else:
-                    f = list(highest_rank.keys())[0]
-                    params.append((f, user_name))
-                    user_id_flag[user_id] = f
+                        maxval = max(highest_count.values())
+                        highest_count = {
+                            key: val for key, val in highest_count.items() if val == maxval}
 
-        else:
-            if user_flags in flag_ranks and 'bot' not in user_flags:
-                params.append((user_flags, user_name))
-                user_id_flag[user_id] = user_flags
+                        f = list(highest_count.keys())[0]
+                        params.append({'f': f, 'user_name': user_name})
+                        user_id_flag[user_id] = f
+                    else:
+                        f = list(highest_rank.keys())[0]
+                        params.append({'f': f, 'user_name': user_name})
+                        user_id_flag[user_id] = f
 
-    query = 'UPDATE '+languagecode + \
-        'wiki_editors SET highest_flag = ? WHERE user_name = ?;'
-    cursor.executemany(query, params)
-    conn.commit()
+            else:
+                if user_flags in flag_ranks and 'bot' not in user_flags:
+                    params.append({'f': user_flags, 'user_name': user_name})
+                    user_id_flag[user_id] = user_flags
 
-    # let's update the highest_flag_year_month
-    query = 'SELECT year_month, user_id, user_name, abs_value FROM ' + \
-        languagecode+'wiki_editor_metrics WHERE metric_name = "granted_flag";'
-    params2 = []
+        update_query = text(f'''
+            UPDATE {languagecode}wiki_editors
+            SET highest_flag = :f
+            WHERE user_name = :user_name
+        ''')
+        if params:
+            conn.execute(update_query, params)
 
-    conn = sqlite3.connect(config.databases_path +
-                           config.vital_signs_editors_db)
-    cursor = conn.cursor()
+        # 3. Aggiorna highest_flag_year_month
+        query = text(f'''
+            SELECT year_month, user_id, user_name, abs_value
+            FROM {languagecode}wiki_editor_metrics
+            WHERE metric_name = 'granted_flag';
+        ''')
+        params2 = []
+        for row in conn.execute(query):
+            year_month, user_id, user_name, flag = row
+            ex_flag = user_id_flag.get(user_id)
+            if ex_flag and ex_flag in flag:
+                params2.append(
+                    {'year_month': year_month, 'user_name': user_name})
 
-    for row in cursor.execute(query):
-        year_month = row[0]
-        user_id = row[1]
-        user_name = row[2]
-        flag = row[3]
+        update_query2 = text(f'''
+            UPDATE {languagecode}wiki_editors
+            SET highest_flag_year_month = :year_month
+            WHERE user_name = :user_name
+        ''')
+        if params2:
+            conn.execute(update_query2, params2)
 
-        try:
-            ex_flag = user_id_flag[user_id]
-        except:
-            continue
+        # 4. Se un editor ha avuto il flag 'bot'
+        query = text(f'''
+            SELECT user_id, user_name
+            FROM {languagecode}wiki_editor_metrics
+            WHERE metric_name = 'granted_flag' AND abs_value LIKE '%bot';
+        ''')
+        params3 = []
+        for row in conn.execute(query):
+            username = row[1]
+            bottype = 'name,group' if 'bot' in username else 'group'
+            params3.append({'bottype': bottype, 'user_name': username})
 
-        if ex_flag in flag:
-
-            params2.append((year_month, user_name))
-
-    query = 'UPDATE '+languagecode + \
-        'wiki_editors SET highest_flag_year_month = ? WHERE user_name = ?;'
-    cursor.executemany(query, params2)
-    conn.commit()
-
-    # If an editor has been granted the 'bot' flag, even if it has been taken away, it must be a flag.
-    query = 'SELECT user_id, user_name FROM '+languagecode + \
-        'wiki_editor_metrics WHERE metric_name = "granted_flag" AND abs_value LIKE "%bot";'
-    params = []
-    for row in cursor.execute(query):
-        username = row[1]
-
-        if 'bot' in username:
-            bottype = 'name,group'
-        else:
-            bottype = 'group'
-        params.append((bottype, username))
-
-    query = 'UPDATE '+languagecode+'wiki_editors SET bot = ? WHERE user_name = ?;'
-    cursor.executemany(query, params)
-    conn.commit()
+        update_query3 = text(f'''
+            UPDATE {languagecode}wiki_editors
+            SET bot = :bottype
+            WHERE user_name = :user_name
+        ''')
+        if params3:
+            conn.execute(update_query3, params3)
 
 
-def calculate_editor_activity_streaks(languagecode):
-    logger = logging.getLogger(languagecode + '' + __name__)
 
-    conn = sqlite3.connect(config.databases_path +
-                           config.vital_signs_editors_db)
-    cursor = conn.cursor()
+def calculate_editor_activity_streaks(languagecode, engine):
+    logger = logging.getLogger(__name__)
+    engine = create_engine(config.db_uri_editors)
+    with engine.begin() as conn:
+        # Ottieni tutti i record ordinati
+        query = text(f'''
+            SELECT abs_value, year_month, user_id, user_name
+            FROM {languagecode}wiki_editor_metrics
+            WHERE metric_name = 'monthly_edits'
+            ORDER BY user_name, year_month
+        ''')
 
-    # MONTHLY EDITS LOOP
-    query = 'SELECT abs_value, year_month, user_id, user_name FROM '+languagecode + \
-        'wiki_editor_metrics WHERE metric_name = "monthly_edits" ORDER BY user_name, year_month'
+        results = list(conn.execute(query))
 
-    old_user_id = ''
-    expected_year_month_dt = ''
-    active_months_row = 0
+        to_insert = []
 
-    try:
-        os.remove(config.databases_path + languagecode +
-                  'temporary_editor_metrics.txt')
-    except:
-        pass
+        old_user_id = None
+        expected_year_month_dt = None
+        active_months_row = 0
 
-    edfile2 = open(config.databases_path + languagecode +
-                   'temporary_editor_metrics.txt', "w")
-    for row in cursor.execute(query):
-        edits = row[0]
-        current_year_month = row[1]
-        cur_user_id = row[2]
-        cur_user_name = row[3]
+        for row in results:
+            edits, current_year_month, cur_user_id, cur_user_name = row
 
-        if cur_user_id != old_user_id and old_user_id != '':
-            active_months_row = 0
+            if cur_user_id != old_user_id and old_user_id is not None:
+                active_months_row = 0
+                expected_year_month_dt = None
 
-        current_year_month_dt = datetime.datetime.strptime(
-            current_year_month, '%Y-%m')
+            current_year_month_dt = datetime.datetime.strptime(
+                current_year_month, '%Y-%m'
+            )
 
-        # here there is a change of month
-        # if the month is not the expected one
-        if expected_year_month_dt != current_year_month_dt and expected_year_month_dt != '' and old_user_id == cur_user_id:
+            if (
+                expected_year_month_dt is not None and
+                expected_year_month_dt != current_year_month_dt and
+                old_user_id == cur_user_id
+            ):
+                # Skip i mesi mancanti (reset della streak)
+                while expected_year_month_dt < current_year_month_dt:
+                    expected_year_month_dt = (
+                        expected_year_month_dt + relativedelta.relativedelta(months=1)
+                    )
+                active_months_row = 1
+            else:
+                active_months_row += 1
+                if active_months_row > 1:
+                    # Prepara la riga per l'inserimento
+                    to_insert.append({
+                        'user_id': cur_user_id,
+                        'user_name': cur_user_name,
+                        'abs_value': active_months_row,
+                        'rel_value': None,
+                        'metric_name': 'active_months_row',
+                        'year_month': current_year_month,
+                        'timestamp': None
+                    })
 
-            while expected_year_month_dt < current_year_month_dt:
+            expected_year_month_dt = current_year_month_dt + relativedelta.relativedelta(months=1)
+            old_user_id = cur_user_id
 
-                expected_year_month_dt = (
-                    expected_year_month_dt + relativedelta.relativedelta(months=1))
+        # Inserisci direttamente nel database
+        if to_insert:
+            insert_query = text(f'''
+                INSERT INTO {languagecode}wiki_editor_metrics
+                    (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
+                VALUES
+                    (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
+                ON CONFLICT DO NOTHING
+            ''')
+            conn.execute(insert_query, to_insert)
 
-            active_months_row = 1
+        logger.info("Processed all activity streaks")
 
-        else:
-            active_months_row = active_months_row + 1
-
-            if active_months_row > 1:
-
-                edfile2.write(str(cur_user_id)+'\t'+cur_user_name+'\t'+str(active_months_row) +
-                              '\t'+" "+'\t'+"active_months_row"+'\t'+current_year_month+'\t'+" "+'\n')
-
-        old_year_month = current_year_month
-        expected_year_month_dt = (datetime.datetime.strptime(
-            old_year_month, '%Y-%m') + relativedelta.relativedelta(months=1))
-        old_user_id = cur_user_id
-    conn = sqlite3.connect(config.databases_path +
-                           config.vital_signs_editors_db)
-    cursor = conn.cursor()
-
-    a_file = open(config.databases_path + languagecode +
-                  "temporary_editor_metrics.txt")
-    editors_metrics_parameters = csv.reader(
-        a_file, delimiter="\t", quotechar='|')
-    query = 'INSERT OR IGNORE INTO '+languagecode + \
-        'wiki_editor_metrics (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp) VALUES (?,?,?,?,?,?,?);'
-    cursor.executemany(query, editors_metrics_parameters)
-    conn.commit()
-    try:
-        os.remove(config.databases_path + languagecode +
-                  'temporary_editor_metrics.txt')
-    except:
-        pass
-    editors_metrics_parameters = []
-
-    logger.info("Processed all activity streaks")
