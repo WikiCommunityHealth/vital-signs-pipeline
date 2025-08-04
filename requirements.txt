@@ -56,7 +56,6 @@ Flask-WTF==1.2.2
 frozenlist==1.5.0
 fsspec==2025.2.0
 google-re2==1.1.20240702
-googleapis-common-protos==1.66.0
 greenlet==3.1.1
 grpcio==1.65.5
 gunicorn==23.0.0
@@ -104,7 +103,7 @@ pluggy==1.5.0
 prison==0.2.1
 prometheus_client==0.21.1
 propcache==0.2.1
-protobuf==5.29.4
+
 psutil==6.1.1
 psycopg2-binary==2.9.10
 pycparser==2.22
