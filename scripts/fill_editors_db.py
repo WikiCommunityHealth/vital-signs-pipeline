@@ -206,15 +206,18 @@ def process_editor_metrics_from_dump(languagecode):
                     namespaces = []
 
                     for user_id, edits in editor_monthly_edits.items():
-                        monthly_edits.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
+                        try:
+                            monthly_edits.append({
+                                'user_id': user_id,
+                                'user_name': user_id_user_name_dict[user_id],
+                                'abs_value': edits,
+                                'rel_value': None,
+                                'metric_name': 'monthly_edits',
+                                'year_month': lym,
+                                'timestamp': ''
+                            })
+                        except:
+                            pass
 
                     for user_id, edits in editor_monthly_namespace_coordination.items():
                         try:
@@ -406,15 +409,19 @@ def process_editor_metrics_from_dump(languagecode):
 
                 monthly_edits = []
                 for event_user_id, edits in editor_monthly_edits.items():
-                    monthly_edits.append({
-                        'user_id': event_user_id,
-                        'user_name': user_id_user_name_dict[event_user_id],
-                        'abs_value': edits,
-                        'rel_value': None,
-                        'metric_name': 'monthly_edits',
-                        'year_month': lym,
-                        'timestamp': ''
-                    })
+
+                    try:
+                        monthly_edits.append({
+                            'user_id': event_user_id,
+                            'user_name': user_id_user_name_dict[event_user_id],
+                            'abs_value': edits,
+                            'rel_value': None,
+                            'metric_name': 'monthly_edits',
+                            'year_month': lym,
+                            'timestamp': ''
+                        })
+                    except:
+                        pass
 
                 query = text(f"""
                     INSERT INTO {languagecode}wiki_editor_metrics
