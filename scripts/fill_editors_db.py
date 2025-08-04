@@ -167,7 +167,7 @@ def process_editor_metrics_from_dump(languagecode):
                         editor_registration_date[event_user_id] = event_user_creation_date
 
                 # ---------
-
+                logger.info("here")
                 # MONTHLY EDITS COUNTER
                 try:
                     editor_monthly_edits[event_user_id] = editor_monthly_edits[event_user_id]+1
