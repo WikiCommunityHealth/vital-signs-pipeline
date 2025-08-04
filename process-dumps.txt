@@ -1,14 +1,3 @@
-from collections import defaultdict
-from scripts import utils
-from scripts import config
-import datetime
-import bz2
-import calendar
-from sqlalchemy import create_engine, text
-from dateutil import relativedelta
-import logging
-
-
 def process_editor_metrics_from_dump(languagecode):
     logger = logging.getLogger(languagecode + '' + __name__)
 
@@ -206,41 +195,20 @@ def process_editor_metrics_from_dump(languagecode):
                     namespaces = []
 
                     for user_id, edits in editor_monthly_edits.items():
-                        monthly_edits.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
+                        monthly_edits.append(
+                            (user_id, user_id_user_name_dict[user_id], edits, None, 'monthly_edits', lym, ''))
 
                     for user_id, edits in editor_monthly_namespace_coordination.items():
                         try:
-                            namespaces.append({
-                                'user_id': user_id,
-                                'user_name': user_id_user_name_dict[user_id],
-                                'abs_value': edits,
-                                'rel_value': None,
-                                'metric_name': 'monthly_edits_coordination',
-                                'year_month': lym,
-                                'timestamp': ''
-                            })
+                            namespaces.append(
+                                (user_id, user_id_user_name_dict[user_id], edits, None, 'monthly_edits_coordination', lym, ''))
                         except:
                             pass
 
                     for user_id, edits in editor_monthly_namespace_technical.items():
                         try:
-                            namespaces.append({
-                                'user_id': user_id,
-                                'user_name': user_id_user_name_dict[user_id],
-                                'abs_value': edits,
-                                'rel_value': None,
-                                'metric_name': 'monthly_edits_technical',
-                                'year_month': lym,
-                                'timestamp': ''
-                            })
+                            namespaces.append(
+                                (user_id, user_id_user_name_dict[user_id], edits, None, 'monthly_edits_technical', lym, ''))
                         except:
                             pass
 
@@ -252,15 +220,9 @@ def process_editor_metrics_from_dump(languagecode):
                         flags = data[1]
 
                         try:
-                            namespaces.append({
-                                'user_id': user_id,
-                                'user_name': user_id_user_name_dict[user_id],
-                                'abs_value': flags,
-                                'rel_value': None,
-                                'metric_name': metric_name,
-                                'year_month': lym,
-                                'timestamp': timestamp
-                            })
+                            namespaces.append(
+                                (user_id, user_id_user_name_dict[user_id], flags, None, metric_name, lym, timestamp))
+
                         except:
                             pass
 
@@ -317,51 +279,23 @@ def process_editor_metrics_from_dump(languagecode):
                     # at 1 day
                     if event_timestamp_dt >= first_edit_timestamp_1day_dt:
 
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_24h',
-                            'year_month': first_edit_timestamp_1day_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_1day_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        survival_measures.append((event_user_id, event_user_text, ec, None, 'edit_count_24h', first_edit_timestamp_1day_dt.strftime(
+                            '%Y-%m'), first_edit_timestamp_1day_dt.strftime('%Y-%m-%d %H:%M:%S')))
 
                     # at 7 days
                     if event_timestamp_dt >= first_edit_timestamp_7days_dt:
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_7d',
-                            'year_month': first_edit_timestamp_7days_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_7days_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        survival_measures.append((event_user_id, event_user_text, ec, None, 'edit_count_7d', first_edit_timestamp_7days_dt.strftime(
+                            '%Y-%m'), first_edit_timestamp_7days_dt.strftime('%Y-%m-%d %H:%M:%S')))
 
                     # at 1 month
                     if event_timestamp_dt >= first_edit_timestamp_1months_dt:
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_30d',
-                            'year_month': first_edit_timestamp_1months_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_1months_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        survival_measures.append((event_user_id, event_user_text, ec, None, 'edit_count_30d', first_edit_timestamp_1months_dt.strftime(
+                            '%Y-%m'), first_edit_timestamp_1months_dt.strftime('%Y-%m-%d %H:%M:%S')))
 
                     # at 2 months
                     if event_timestamp_dt >= first_edit_timestamp_2months_dt:
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_60d',
-                            'year_month': first_edit_timestamp_2months_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_2months_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        survival_measures.append((event_user_id, event_user_text, ec, None, 'edit_count_60d', first_edit_timestamp_2months_dt.strftime(
+                            '%Y-%m'), first_edit_timestamp_2months_dt.strftime('%Y-%m-%d %H:%M:%S')))
                         survived_dict[event_user_id] = event_user_text
 
                         try:
@@ -406,22 +340,14 @@ def process_editor_metrics_from_dump(languagecode):
 
                 monthly_edits = []
                 for event_user_id, edits in editor_monthly_edits.items():
-                    monthly_edits.append({
-                        'user_id': event_user_id,
-                        'user_name': user_id_user_name_dict[event_user_id],
-                        'abs_value': edits,
-                        'rel_value': None,
-                        'metric_name': 'monthly_edits',
-                        'year_month': lym,
-                        'timestamp': ''
-                    })
-
+                    monthly_edits.append(
+                        (event_user_id, user_id_user_name_dict[event_user_id], edits, None, 'monthly_edits', lym, ''))
                 query = text(f"""
-                    INSERT INTO {languagecode}wiki_editor_metrics
-                    (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
-                    VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
-                    ON CONFLICT DO NOTHING
-                """)
+                        INSERT INTO {languagecode}wiki_editor_metrics
+                        (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
+                        VALUES(:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
+                        ON CONFLICT DO NOTHING
+                    """)
                 conn.execute(query, monthly_edits)
 
                 namespaces = []
@@ -433,43 +359,22 @@ def process_editor_metrics_from_dump(languagecode):
                     flags = data[1]
 
                     try:
-                        namespaces.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': flags,
-                            'rel_value': None,
-                            'metric_name': metric_name,
-                            'year_month': lym,
-                            'timestamp': timestamp
-                        })
+                        namespaces.append(
+                            (user_id, user_id_user_name_dict[user_id], flags, None, metric_name, lym, timestamp))
                     except:
                         pass
 
                 for user_id, edits in editor_monthly_namespace_coordination.items():
                     try:
-                        namespaces.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits_coordination',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
+                        namespaces.append(
+                            (user_id, user_id_user_name_dict[user_id], edits, None, 'monthly_edits_coordination', lym, ''))
                     except:
                         pass
 
                 for user_id, edits in editor_monthly_namespace_technical.items():
                     try:
-                        namespaces.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits_technical',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
+                        namespaces.append(
+                            (user_id, user_id_user_name_dict[user_id], edits, None, 'monthly_edits_technical', lym, ''))
                     except:
                         pass
 
@@ -586,36 +491,12 @@ def process_editor_metrics_from_dump(languagecode):
                 else:
                     lifetime_days = None
 
-                user_characteristics1.append({
-                    'user_id': user_id,
-                    'user_name': user_name,
-                    'registration_date': registration_date,
-                    'year_month_registration': year_month_registration,
-                    'first_edit_timestamp': fe,
-                    'year_month_first_edit': year_month,
-                    'year_first_edit': year_first_edit,
-                    'lustrum_first_edit': lustrum_first_edit
-                })
+                user_characteristics1.append((user_id, user_name, registration_date,
+                                             year_month_registration,  fe, year_month, year_first_edit, lustrum_first_edit))
 
                 if le != None:
-                    user_characteristics2.append({
-                        'user_id': user_id,
-                        'user_name': user_name,
-                        'registration_date': registration_date,
-                        'year_month_registration': year_month_registration,
-                        'first_edit_timestamp': fe,
-                        'year_month_first_edit': year_month,
-                        'year_first_edit': year_first_edit,
-                        'lustrum_first_edit': lustrum_first_edit,
-                        'bot': bot,
-                        'user_flags': user_flags,
-                        'last_edit_timestamp': le,
-                        'year_last_edit': year_last_edit,
-                        'lifetime_days': lifetime_days,
-                        'days_since_last_edit': days_since_last_edit,
-                        'survived60d': survived60d,
-                        'edit_count': edit_count
-                    })
+                    user_characteristics2.append((bot, user_flags, le, year_last_edit, lifetime_days,
+                                                 days_since_last_edit, survived60d, edit_count, user_id, user_name))
 
             query = text(f"""
                 INSERT INTO {languagecode}wiki_editors 
@@ -689,204 +570,3 @@ def process_editor_metrics_from_dump(languagecode):
             user_id_user_name_dict2 = {}
 
     logger.info("Processed all dump's data")
-
-
-def calculate_editors_flag(languagecode):
-    engine = create_engine(config.db_uri_editors)
-    with engine.begin() as conn:  # begin() -> transaction
-        # 1. Conta le flags
-        query = text(f'''
-            SELECT user_flags, count(user_id)
-            FROM {languagecode}wiki_editors
-            WHERE user_flags != ''
-            GROUP BY 1;
-        ''')
-        flags_count_dict = defaultdict(int)
-        for row in conn.execute(query):
-            flags, count = row
-            if ',' in flags:
-                for x in flags.split(','):
-                    flags_count_dict[x] += count
-            else:
-                flags_count_dict[flags] += count
-
-        flag_ranks = {
-            'confirmed': 1, 'ipblock-exempt': 1,
-            'filemover': 2, 'accountcreator': 2, 'autopatrolled': 2, 'reviewer': 2, 'autoreviewer': 2, 'rollbacker': 2, 'abusefilter': 2, 'abusefilter-ehlper': 2, 'interface-admin': 2, 'eventcoordinator': 2, 'extendedconfirmed': 2, 'extendedmover': 2, 'filemover': 2, 'massmessage-sender': 2, 'patroller': 2, 'researcher': 2, 'templateeditor': 2,
-            'sysop': 3, 'bureaucrat': 3.5,
-            'checkuser': 4, 'oversight': 4.5,
-            'steward': 5.5, 'import': 5,
-            'founder': 6
-        }
-
-        # 2. Assegna la highest_flag per ogni user_name
-        query = text(f'''
-            SELECT user_id, user_flags, user_name
-            FROM {languagecode}wiki_editors
-            WHERE user_flags != '';
-        ''')
-        params = []
-        user_id_flag = {}
-        for row in conn.execute(query):
-            user_id, user_flags, user_name = row
-            highest_rank = {}
-            highest_count = {}
-
-            if ',' in user_flags:
-                uf = user_flags.split(',')
-                for x in uf:
-                    if x in flag_ranks and 'bot' not in x:
-                        val = flag_ranks[x]
-                        highest_rank[x] = val
-
-                if len(highest_rank) > 1:
-                    maxval = max(highest_rank.values())
-                    highest_rank = {key: val for key,
-                                    val in highest_rank.items() if val == maxval}
-
-                    if len(highest_rank) > 1:
-                        for x in highest_rank.keys():
-                            val = flags_count_dict[x]
-                            highest_count[x] = val
-
-                        maxval = max(highest_count.values())
-                        highest_count = {
-                            key: val for key, val in highest_count.items() if val == maxval}
-
-                        f = list(highest_count.keys())[0]
-                        params.append({'f': f, 'user_name': user_name})
-                        user_id_flag[user_id] = f
-                    else:
-                        f = list(highest_rank.keys())[0]
-                        params.append({'f': f, 'user_name': user_name})
-                        user_id_flag[user_id] = f
-
-            else:
-                if user_flags in flag_ranks and 'bot' not in user_flags:
-                    params.append({'f': user_flags, 'user_name': user_name})
-                    user_id_flag[user_id] = user_flags
-
-        update_query = text(f'''
-            UPDATE {languagecode}wiki_editors
-            SET highest_flag = :f
-            WHERE user_name = :user_name
-        ''')
-        if params:
-            conn.execute(update_query, params)
-
-        # 3. Aggiorna highest_flag_year_month
-        query = text(f'''
-            SELECT year_month, user_id, user_name, abs_value
-            FROM {languagecode}wiki_editor_metrics
-            WHERE metric_name = 'granted_flag';
-        ''')
-        params2 = []
-        for row in conn.execute(query):
-            year_month, user_id, user_name, flag = row
-            ex_flag = user_id_flag.get(user_id)
-            if ex_flag and ex_flag in flag:
-                params2.append(
-                    {'year_month': year_month, 'user_name': user_name})
-
-        update_query2 = text(f'''
-            UPDATE {languagecode}wiki_editors
-            SET highest_flag_year_month = :year_month
-            WHERE user_name = :user_name
-        ''')
-        if params2:
-            conn.execute(update_query2, params2)
-
-        # 4. Se un editor ha avuto il flag 'bot'
-        query = text(f'''
-            SELECT user_id, user_name
-            FROM {languagecode}wiki_editor_metrics
-            WHERE metric_name = 'granted_flag' AND abs_value LIKE '%bot';
-        ''')
-        params3 = []
-        for row in conn.execute(query):
-            username = row[1]
-            bottype = 'name,group' if 'bot' in username else 'group'
-            params3.append({'bottype': bottype, 'user_name': username})
-
-        update_query3 = text(f'''
-            UPDATE {languagecode}wiki_editors
-            SET bot = :bottype
-            WHERE user_name = :user_name
-        ''')
-        if params3:
-            conn.execute(update_query3, params3)
-
-
-def calculate_editor_activity_streaks(languagecode, engine):
-    logger = logging.getLogger(__name__)
-    engine = create_engine(config.db_uri_editors)
-    with engine.begin() as conn:
-        # Ottieni tutti i record ordinati
-        query = text(f'''
-            SELECT abs_value, year_month, user_id, user_name
-            FROM {languagecode}wiki_editor_metrics
-            WHERE metric_name = 'monthly_edits'
-            ORDER BY user_name, year_month
-        ''')
-
-        results = list(conn.execute(query))
-
-        to_insert = []
-
-        old_user_id = None
-        expected_year_month_dt = None
-        active_months_row = 0
-
-        for row in results:
-            edits, current_year_month, cur_user_id, cur_user_name = row
-
-            if cur_user_id != old_user_id and old_user_id is not None:
-                active_months_row = 0
-                expected_year_month_dt = None
-
-            current_year_month_dt = datetime.datetime.strptime(
-                current_year_month, '%Y-%m'
-            )
-
-            if (
-                expected_year_month_dt is not None and
-                expected_year_month_dt != current_year_month_dt and
-                old_user_id == cur_user_id
-            ):
-                # Skip i mesi mancanti (reset della streak)
-                while expected_year_month_dt < current_year_month_dt:
-                    expected_year_month_dt = (
-                        expected_year_month_dt +
-                        relativedelta.relativedelta(months=1)
-                    )
-                active_months_row = 1
-            else:
-                active_months_row += 1
-                if active_months_row > 1:
-                    # Prepara la riga per l'inserimento
-                    to_insert.append({
-                        'user_id': cur_user_id,
-                        'user_name': cur_user_name,
-                        'abs_value': active_months_row,
-                        'rel_value': None,
-                        'metric_name': 'active_months_row',
-                        'year_month': current_year_month,
-                        'timestamp': None
-                    })
-
-            expected_year_month_dt = current_year_month_dt + \
-                relativedelta.relativedelta(months=1)
-            old_user_id = cur_user_id
-
-        # Inserisci direttamente nel database
-        if to_insert:
-            insert_query = text(f'''
-                INSERT INTO {languagecode}wiki_editor_metrics
-                    (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
-                VALUES
-                    (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
-                ON CONFLICT DO NOTHING
-            ''')
-            conn.execute(insert_query, to_insert)
-
-        logger.info("Processed all activity streaks")
