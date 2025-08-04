@@ -206,7 +206,7 @@ def process_editor_metrics_from_dump(languagecode):
                     namespaces = []
 
                     for user_id, edits in editor_monthly_edits.items():
-                        try:
+                        if user_id in user_id_user_name_dict:
                             monthly_edits.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -216,11 +216,9 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': ''
                             })
-                        except:
-                            pass
 
                     for user_id, edits in editor_monthly_namespace_coordination.items():
-                        try:
+                        if user_id in user_id_user_name_dict:
                             namespaces.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -230,11 +228,10 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': ''
                             })
-                        except:
-                            pass
+                    
 
                     for user_id, edits in editor_monthly_namespace_technical.items():
-                        try:
+                        if user_id in user_id_user_name_dict:
                             namespaces.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -244,8 +241,7 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': ''
                             })
-                        except:
-                            pass
+                        
 
                     for key, data in editor_user_group_dict_timestamp.items():
                         user_id = key[0]
@@ -254,7 +250,7 @@ def process_editor_metrics_from_dump(languagecode):
                         metric_name = data[0]
                         flags = data[1]
 
-                        try:
+                        if user_id in user_id_user_name_dict:
                             namespaces.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -264,8 +260,7 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': timestamp
                             })
-                        except:
-                            pass
+                        
 
                     query = text(f"""
                         INSERT INTO {languagecode}wiki_editor_metrics
@@ -439,7 +434,7 @@ def process_editor_metrics_from_dump(languagecode):
                     metric_name = data[0]
                     flags = data[1]
 
-                    try:
+                    if user_id in user_id_user_name_dict:
                         namespaces.append({
                             'user_id': user_id,
                             'user_name': user_id_user_name_dict[user_id],
@@ -449,11 +444,10 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': timestamp
                         })
-                    except:
-                        pass
+                    
 
                 for user_id, edits in editor_monthly_namespace_coordination.items():
-                    try:
+                    if user_id in user_id_user_name_dict:
                         namespaces.append({
                             'user_id': user_id,
                             'user_name': user_id_user_name_dict[user_id],
@@ -463,11 +457,10 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': ''
                         })
-                    except:
-                        pass
+                    
 
                 for user_id, edits in editor_monthly_namespace_technical.items():
-                    try:
+                    if user_id in user_id_user_name_dict:
                         namespaces.append({
                             'user_id': user_id,
                             'user_name': user_id_user_name_dict[user_id],
@@ -477,8 +470,7 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': ''
                         })
-                    except:
-                        pass
+                    
 
                 query = text(f"""
                         INSERT INTO {languagecode}wiki_editor_metrics
