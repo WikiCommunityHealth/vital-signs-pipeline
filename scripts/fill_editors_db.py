@@ -263,14 +263,13 @@ def process_editor_metrics_from_dump(languagecode):
                         
 
 
-                        logger.info(f"DEBUG: Processing month {lym}")
-                        logger.info(f"DEBUG: Monthly edits count: {len(monthly_edits)}")
-                        logger.info(f"DEBUG: Namespaces count: {len(namespaces)}")
-                        if monthly_edits:
-                            logger.info(f"DEBUG: Sample monthly_edits: {monthly_edits[:3]}")
-                        if namespaces:
-                            logger.info(f"DEBUG: Sample namespaces: {namespaces[:3]}")
-
+                    logger.info(f"DEBUG: Processing month {lym}")
+                    logger.info(f"DEBUG: Monthly edits count: {len(monthly_edits)}")
+                    logger.info(f"DEBUG: Namespaces count: {len(namespaces)}")
+                    if monthly_edits:
+                        logger.info(f"DEBUG: Sample monthly_edits: {monthly_edits[:3]}")
+                    if namespaces:
+                        logger.info(f"DEBUG: Sample namespaces: {namespaces[:3]}")
                     query = text(f"""
                         INSERT INTO {languagecode}wiki_editor_metrics
                         (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
