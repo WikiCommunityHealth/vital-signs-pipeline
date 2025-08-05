@@ -47,71 +47,88 @@ def process_editor_metrics_from_dump(languagecode):
         editor_monthly_edits = {}
 
         last_year_month = 0
-        first_date = datetime.datetime.strptime(
-            '2001-01-01 01:15:15', '%Y-%m-%d %H:%M:%S')
+       
 
         for dump_path in d_paths:
             logger.info(f"processing {dump_path}")
             dump_in = bz2.open(dump_path, 'r')
-            line = 'something'
-            line = dump_in.readline()
 
-            while line != '':
-
+            while True:
                 line = dump_in.readline()
-                line = line.rstrip().decode('utf-8')[:-1]
+                if line == b'':
+                    break
+                line = line.rstrip().decode('utf-8')
+                if not line:
+                    continue
                 values = line.split('\t')
                 if len(values) == 1:
                     continue
 
-                event_entity = values[1]
+                event_entity = values[1]  # user, page, revision
+                # diversi tipi di evento per ogni entità
                 event_type = values[2]
 
+                # id dell'utente che ha causato l'evento
                 event_user_id = values[5]
-                try:
-                    int(event_user_id)
-                except:
+
+                event_user_is_anonymous = values[17]
+                if event_user_is_anonymous == True or event_user_id == '':
                     continue
 
+                if event_user_id.isdigit():
+                    event_user_id = int(event_user_id)
+                else:
+                    continue
+
+                # username dell'utente che ha causato l'evento
                 event_user_text = values[7]
+
                 if event_user_text != '':
                     user_id_user_name_dict[event_user_id] = event_user_text
                 else:
                     continue
 
-                try:
-                    editor_last_edit = editor_last_edit_timestamp[event_user_id]
-                    last_edit_date_dt = datetime.datetime.strptime(
-                        editor_last_edit[:len(editor_last_edit)-2], '%Y-%m-%d %H:%M:%S')
-                    last_edit_year_month_day = datetime.datetime.strptime(
-                        last_edit_date_dt.strftime('%Y-%m-%d'), '%Y-%m-%d')
-                except:
-                    last_edit_year_month_day = ''
+                # try:
+                #    editor_last_edit = editor_last_edit_timestamp[event_user_id]
+                #    last_edit_date_dt = datetime.datetime.strptime(
+                #        editor_last_edit[:len(editor_last_edit)-2], '%Y-%m-%d %H:%M:%S')
+                #    last_edit_year_month_day = datetime.datetime.strptime(
+                #        last_edit_date_dt.strftime('%Y-%m-%d'), '%Y-%m-%d')
+                # except:
+                #    last_edit_year_month_day = ''
 
+                # stringa con la data e l'ora dell'evento
                 event_timestamp = values[3]
+
                 event_timestamp_dt = datetime.datetime.strptime(
+                    # conversione in datetime
                     event_timestamp[:len(event_timestamp)-2], '%Y-%m-%d %H:%M:%S')
+
                 editor_last_edit_timestamp[event_user_id] = event_timestamp
 
-                editor_edit_count[event_user_id] = values[21]
+                # could be a problem
+                editor_edit_count[event_user_id] = values[23]
 
                 event_user_groups = values[11]
+
                 if event_user_groups != '':
                     user_id_user_groups_dict[event_user_id] = event_user_groups
 
-                page_namespace = values[28]
+                page_namespace = values[30]
 
-                if event_entity == 'user':
+                if event_entity == 'user':  # vado a vedere se sono stati cambiati gli usergroup dell'utente
 
-                    user_text = str(values[38])  # this is target of the event
+                    user_text = str(values[40])  # this is target of the event
 
                     if event_type == 'altergroups':
 
-                        user_id = values[36]
-                        cur_ug = values[41]
+                        if values[38] == '':
+                            continue
 
-                        user_text = values[38]
-                        if user_text != '':
+                        user_id = int(values[38])
+                        cur_ug = values[44]
+
+                        if user_text != '' and user_id != '':
                             user_id_user_name_dict[user_id] = user_text
 
                         if cur_ug != '' and cur_ug != None:
@@ -150,14 +167,11 @@ def process_editor_metrics_from_dump(languagecode):
 
                             editor_user_group_dict[user_id] = cur_ug
 
-                event_is_bot_by = values[13]
+                event_is_bot_by = values[13]  # aggiungo i dati dei bot
                 if event_is_bot_by != '':
                     user_id_bot_dict[event_user_id] = event_is_bot_by
 
-                event_user_is_anonymous = values[17]
-                if event_user_is_anonymous == True or event_user_id == '':
-                    continue
-
+                # aggiungo data di registrazione dell'utente
                 event_user_registration_date = values[20]
                 event_user_creation_date = values[21]
                 if event_user_id not in editor_registration_date:
@@ -167,7 +181,7 @@ def process_editor_metrics_from_dump(languagecode):
                         editor_registration_date[event_user_id] = event_user_creation_date
 
                 # ---------
-                logger.info("here")
+
                 # MONTHLY EDITS COUNTER
                 try:
                     editor_monthly_edits[event_user_id] = editor_monthly_edits[event_user_id]+1
@@ -175,13 +189,13 @@ def process_editor_metrics_from_dump(languagecode):
                     editor_monthly_edits[event_user_id] = 1
 
                 # MONTHLY NAMESPACES EDIT COUNTER
-                if page_namespace == '4' or page_namespace == '12':
+                if page_namespace == '4' or page_namespace == '12':  # namespaces di coordinamento
                     try:
                         editor_monthly_namespace_coordination[
                             event_user_id] = editor_monthly_namespace_coordination[event_user_id]+1
                     except:
                         editor_monthly_namespace_coordination[event_user_id] = 1
-                elif page_namespace == '8' or page_namespace == '10':
+                elif page_namespace == '8' or page_namespace == '10':  # namespaces tecnici
                     try:
                         editor_monthly_namespace_technical[event_user_id] = editor_monthly_namespace_technical[event_user_id]+1
                     except:
@@ -194,13 +208,8 @@ def process_editor_metrics_from_dump(languagecode):
                     event_timestamp_dt.strftime('%Y-%m'), '%Y-%m')
 
                 if last_year_month != current_year_month and last_year_month != 0:
+                    # ad ogni cambio di mese viene aggiunto al db per ogni utente il numero di edit e il mese
                     lym = last_year_month.strftime('%Y-%m')
-
-                    lym_sp = lym.split('-')
-                    ly = lym_sp[0]
-                    lm = lym_sp[1]
-
-                    lym_days = calendar.monthrange(int(ly), int(lm))[1]
 
                     monthly_edits = []
                     namespaces = []
@@ -228,7 +237,6 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': ''
                             })
-                    
 
                     for user_id, edits in editor_monthly_namespace_technical.items():
                         if user_id in user_id_user_name_dict:
@@ -241,7 +249,6 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': ''
                             })
-                        
 
                     for key, data in editor_user_group_dict_timestamp.items():
                         user_id = key[0]
@@ -260,16 +267,18 @@ def process_editor_metrics_from_dump(languagecode):
                                 'year_month': lym,
                                 'timestamp': timestamp
                             })
-                        
-
 
                     logger.info(f"DEBUG: Processing month {lym}")
-                    logger.info(f"DEBUG: Monthly edits count: {len(monthly_edits)}")
+                    logger.info(
+                        f"DEBUG: Monthly edits count: {len(monthly_edits)}")
                     logger.info(f"DEBUG: Namespaces count: {len(namespaces)}")
                     if monthly_edits:
-                        logger.info(f"DEBUG: Sample monthly_edits: {monthly_edits[:3]}")
+                        logger.info(
+                            f"DEBUG: Sample monthly_edits: {monthly_edits[:3]}")
                     if namespaces:
-                        logger.info(f"DEBUG: Sample namespaces: {namespaces[:3]}")
+                        logger.info(
+                            f"DEBUG: Sample namespaces: {namespaces[:3]}")
+
                     query = text(f"""
                         INSERT INTO {languagecode}wiki_editor_metrics
                         (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
@@ -294,16 +303,25 @@ def process_editor_metrics_from_dump(languagecode):
                 # ---------
 
                 # SURVIVAL MEASURES
-                event_user_first_edit_timestamp = values[20]
-                if event_user_id not in editor_first_edit_timestamp:
+                # Get first edit timestamp from dump
+                event_user_first_edit_timestamp = values[22]
+
+                # Store first edit timestamp if not already recorded
+                if event_user_id not in editor_first_edit_timestamp and event_user_first_edit_timestamp:
                     editor_first_edit_timestamp[event_user_id] = event_user_first_edit_timestamp
 
-                if event_user_first_edit_timestamp == '' or event_user_first_edit_timestamp == None:
-                    event_user_first_edit_timestamp = editor_first_edit_timestamp[event_user_id]
+                # Use stored timestamp if current one is empty
+                if not event_user_first_edit_timestamp:
+                    event_user_first_edit_timestamp = editor_first_edit_timestamp.get(
+                        event_user_id)
 
-                if event_user_first_edit_timestamp != '' and event_user_id not in survived_dict:
+                # Process survival measures if we have a valid timestamp and user hasn't survived yet
+                if event_user_first_edit_timestamp and event_user_id not in survived_dict:
+                    # Remove microseconds (.0) from timestamp string
+                    timestamp_str = event_user_first_edit_timestamp.rsplit('.', 1)[
+                        0]
                     event_user_first_edit_timestamp_dt = datetime.datetime.strptime(
-                        event_user_first_edit_timestamp[:len(event_user_first_edit_timestamp)-2], '%Y-%m-%d %H:%M:%S')
+                        timestamp_str, '%Y-%m-%d %H:%M:%S')
 
                     # thresholds
                     first_edit_timestamp_1day_dt = (
@@ -379,7 +397,7 @@ def process_editor_metrics_from_dump(languagecode):
                 if event_user_id not in survived_dict:
 
                     # EDIT COUNT, ADD ONE MORE EDIT.
-                    event_user_revision_count = values[21]
+                    event_user_revision_count = values[23]
                     if event_user_revision_count != '':
                         user_id_edit_count[event_user_id] = event_user_revision_count
                     elif event_user_id in user_id_edit_count:
@@ -392,11 +410,12 @@ def process_editor_metrics_from_dump(languagecode):
 
             # SURVIVAL MEASURES INSERT
             query = text(f"""
-    INSERT INTO {languagecode}wiki_editor_metrics
-    (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
-    VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
-    ON CONFLICT DO NOTHING
-""")
+                            INSERT INTO {languagecode}wiki_editor_metrics
+                            (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
+                            VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
+                            ON CONFLICT DO NOTHING
+                        """)
+            
             conn.execute(query, survival_measures)
 
             survival_measures = []
@@ -452,7 +471,6 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': timestamp
                         })
-                    
 
                 for user_id, edits in editor_monthly_namespace_coordination.items():
                     if user_id in user_id_user_name_dict:
@@ -465,7 +483,6 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': ''
                         })
-                    
 
                 for user_id, edits in editor_monthly_namespace_technical.items():
                     if user_id in user_id_user_name_dict:
@@ -478,7 +495,6 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': ''
                         })
-                    
 
                 query = text(f"""
                         INSERT INTO {languagecode}wiki_editor_metrics
@@ -486,7 +502,7 @@ def process_editor_metrics_from_dump(languagecode):
                         VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                         ON CONFLICT DO NOTHING
                     """)
-                conn.execute(query, monthly_edits)
+                
                 conn.execute(query, namespaces)
 
                 namespaces = []
@@ -524,7 +540,6 @@ def process_editor_metrics_from_dump(languagecode):
 
                 try:
                     registration_date = editor_registration_date[user_id]
-
                 except:
                     registration_date = None
 
@@ -550,7 +565,6 @@ def process_editor_metrics_from_dump(languagecode):
                     le = editor_last_edit_timestamp[user_id]
                     year_last_edit = datetime.datetime.strptime(
                         le[:len(le)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
-
                 except:
                     le = None
                     year_last_edit = None
