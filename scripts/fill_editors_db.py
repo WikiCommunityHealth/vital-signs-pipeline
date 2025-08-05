@@ -838,7 +838,7 @@ def calculate_editors_flag(languagecode):
             conn.execute(update_query3, params3)
 
 
-def calculate_editor_activity_streaks(languagecode, engine):
+def calculate_editor_activity_streaks(languagecode):
     logger = logging.getLogger(__name__)
     engine = create_engine(config.db_uri_editors)
     with engine.begin() as conn:
