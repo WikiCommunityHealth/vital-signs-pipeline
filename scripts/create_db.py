@@ -66,7 +66,7 @@ def create_db(wikilanguagecodes):
             CREATE TABLE IF NOT EXISTS {table_name2} (
                 user_id INTEGER,
                 user_name TEXT,
-                abs_value REAL,
+                abs_value TEXT,
                 rel_value REAL,
                 metric_name TEXT,
                 year_month TEXT,
