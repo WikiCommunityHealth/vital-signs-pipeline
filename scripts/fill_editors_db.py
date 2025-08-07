@@ -3,7 +3,6 @@ from scripts import utils
 from scripts import config
 import datetime
 import bz2
-import calendar
 from sqlalchemy import create_engine, text
 from dateutil import relativedelta
 import logging
@@ -206,7 +205,7 @@ def process_editor_metrics_from_dump(languagecode):
                     namespaces = []
 
                     for user_id, edits in editor_monthly_edits.items():
-                        if user_id in user_id_user_name_dict:
+                        if user_id and user_id in user_id_user_name_dict:
                             monthly_edits.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -218,7 +217,7 @@ def process_editor_metrics_from_dump(languagecode):
                             })
 
                     for user_id, edits in editor_monthly_namespace_coordination.items():
-                        if user_id in user_id_user_name_dict:
+                        if user_id and user_id in user_id_user_name_dict:
                             namespaces.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -230,7 +229,7 @@ def process_editor_metrics_from_dump(languagecode):
                             })
 
                     for user_id, edits in editor_monthly_namespace_technical.items():
-                        if user_id in user_id_user_name_dict:
+                        if user_id and user_id in user_id_user_name_dict:
                             namespaces.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -248,7 +247,7 @@ def process_editor_metrics_from_dump(languagecode):
                         metric_name = data[0]
                         flags = data[1]
 
-                        if user_id in user_id_user_name_dict:
+                        if user_id and user_id in user_id_user_name_dict:
                             namespaces.append({
                                 'user_id': user_id,
                                 'user_name': user_id_user_name_dict[user_id],
@@ -331,58 +330,60 @@ def process_editor_metrics_from_dump(languagecode):
 
                     # at 1 day
                     if event_timestamp_dt >= first_edit_timestamp_1day_dt:
-
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_24h',
-                            'year_month': first_edit_timestamp_1day_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_1day_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        if event_user_id:
+                            survival_measures.append({
+                                'user_id': event_user_id,
+                                'user_name': event_user_text,
+                                'abs_value': ec,
+                                'rel_value': None,
+                                'metric_name': 'edit_count_24h',
+                                'year_month': first_edit_timestamp_1day_dt.strftime('%Y-%m'),
+                                'timestamp': first_edit_timestamp_1day_dt.strftime('%Y-%m-%d %H:%M:%S')
+                            })
 
                     # at 7 days
                     if event_timestamp_dt >= first_edit_timestamp_7days_dt:
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_7d',
-                            'year_month': first_edit_timestamp_7days_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_7days_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        if event_user_id:
+                            survival_measures.append({
+                                'user_id': event_user_id,
+                                'user_name': event_user_text,
+                                'abs_value': ec,
+                                'rel_value': None,
+                                'metric_name': 'edit_count_7d',
+                                'year_month': first_edit_timestamp_7days_dt.strftime('%Y-%m'),
+                                'timestamp': first_edit_timestamp_7days_dt.strftime('%Y-%m-%d %H:%M:%S')
+                            })
 
                     # at 1 month
                     if event_timestamp_dt >= first_edit_timestamp_1months_dt:
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_30d',
-                            'year_month': first_edit_timestamp_1months_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_1months_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
+                        if event_user_id:
+                            survival_measures.append({
+                                'user_id': event_user_id,
+                                'user_name': event_user_text,
+                                'abs_value': ec,
+                                'rel_value': None,
+                                'metric_name': 'edit_count_30d',
+                                'year_month': first_edit_timestamp_1months_dt.strftime('%Y-%m'),
+                                'timestamp': first_edit_timestamp_1months_dt.strftime('%Y-%m-%d %H:%M:%S')
+                            })
 
-                    # at 2 months
+                    # at     2 months
                     if event_timestamp_dt >= first_edit_timestamp_2months_dt:
-                        survival_measures.append({
-                            'user_id': event_user_id,
-                            'user_name': event_user_text,
-                            'abs_value': ec,
-                            'rel_value': None,
-                            'metric_name': 'edit_count_60d',
-                            'year_month': first_edit_timestamp_2months_dt.strftime('%Y-%m'),
-                            'timestamp': first_edit_timestamp_2months_dt.strftime('%Y-%m-%d %H:%M:%S')
-                        })
-                        survived_dict[event_user_id] = event_user_text
+                        if event_user_id:
+                            survival_measures.append({
+                                'user_id': event_user_id,
+                                'user_name': event_user_text,
+                                'abs_value': ec,
+                                'rel_value': None,
+                                'metric_name': 'edit_count_60d',
+                                'year_month': first_edit_timestamp_2months_dt.strftime('%Y-%m'),
+                                'timestamp': first_edit_timestamp_2months_dt.strftime('%Y-%m-%d %H:%M:%S')
+                            })
+                            survived_dict[event_user_id] = event_user_text
 
-                        try:
-                            del user_id_edit_count[event_user_id]
-                        except:
-                            pass
+                        
+                           
+                       
 
                 # USER PAGE EDIT COUNT, ADD ONE MORE EDIT.
                 if event_user_id not in survived_dict:
@@ -523,9 +524,9 @@ def process_editor_metrics_from_dump(languagecode):
                     survived60d = '0'
 
                 try:
-                    edit_count = editor_edit_count[user_id]
+                    edit_count = int(editor_edit_count[user_id])
                 except:
-                    edit_count = None
+                    edit_count = 0
 
                 try:
                     registration_date = editor_registration_date[user_id]
@@ -558,7 +559,7 @@ def process_editor_metrics_from_dump(languagecode):
                     le = None
                     year_last_edit = None
 
-                if fe != None and fe != '':
+                if fe:
                     year_month = datetime.datetime.strptime(
                         fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
                     year_first_edit = datetime.datetime.strptime(
@@ -583,7 +584,7 @@ def process_editor_metrics_from_dump(languagecode):
                     lustrum_first_edit = None
                     fe_d = None
 
-                if le != None:
+                if le:
                     le_d = datetime.datetime.strptime(
                         le[:len(le)-2], '%Y-%m-%d %H:%M:%S')
                     days_since_last_edit = (cym_timestamp_dt - le_d).days
@@ -591,7 +592,7 @@ def process_editor_metrics_from_dump(languagecode):
                     le_d = None
                     days_since_last_edit = None
 
-                if fe != None and fe != '' and le != None:
+                if fe and le:
                     lifetime_days = (le_d - fe_d).days
                 else:
                     lifetime_days = None
@@ -607,7 +608,7 @@ def process_editor_metrics_from_dump(languagecode):
                     'lustrum_first_edit': lustrum_first_edit
                 })
 
-                if le != None:
+                if le:
                     user_characteristics2.append({
                         'user_id': user_id,
                         'user_name': user_name,
