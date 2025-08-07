@@ -72,7 +72,7 @@ def process_editor_metrics_from_dump(languagecode):
                 event_user_id = values[5]
 
                 event_user_is_anonymous = values[17]
-                if event_user_is_anonymous == True or event_user_id == '':
+                if event_user_is_anonymous == True or not event_user_id:
                     continue
 
                 if event_user_id.isdigit():
@@ -83,19 +83,10 @@ def process_editor_metrics_from_dump(languagecode):
                 # username dell'utente che ha causato l'evento
                 event_user_text = values[7]
 
-                if event_user_text != '':
+                if event_user_text:
                     user_id_user_name_dict[event_user_id] = event_user_text
                 else:
                     continue
-
-                # try:
-                #    editor_last_edit = editor_last_edit_timestamp[event_user_id]
-                #    last_edit_date_dt = datetime.datetime.strptime(
-                #        editor_last_edit[:len(editor_last_edit)-2], '%Y-%m-%d %H:%M:%S')
-                #    last_edit_year_month_day = datetime.datetime.strptime(
-                #        last_edit_date_dt.strftime('%Y-%m-%d'), '%Y-%m-%d')
-                # except:
-                #    last_edit_year_month_day = ''
 
                 # stringa con la data e l'ora dell'evento
                 event_timestamp = values[3]
@@ -111,7 +102,7 @@ def process_editor_metrics_from_dump(languagecode):
 
                 event_user_groups = values[11]
 
-                if event_user_groups != '':
+                if event_user_groups:
                     user_id_user_groups_dict[event_user_id] = event_user_groups
 
                 page_namespace = values[30]
@@ -122,16 +113,16 @@ def process_editor_metrics_from_dump(languagecode):
 
                     if event_type == 'altergroups':
 
-                        if values[38] == '':
+                        if not values[38]:
                             continue
 
                         user_id = int(values[38])
                         cur_ug = values[44]
 
-                        if user_text != '' and user_id != '':
+                        if user_text and user_id:
                             user_id_user_name_dict[user_id] = user_text
 
-                        if cur_ug != '' and cur_ug != None:
+                        if cur_ug:
 
                             try:
                                 old_ug = editor_user_group_dict[user_id]
@@ -168,16 +159,16 @@ def process_editor_metrics_from_dump(languagecode):
                             editor_user_group_dict[user_id] = cur_ug
 
                 event_is_bot_by = values[13]  # aggiungo i dati dei bot
-                if event_is_bot_by != '':
+                if event_is_bot_by:
                     user_id_bot_dict[event_user_id] = event_is_bot_by
 
                 # aggiungo data di registrazione dell'utente
                 event_user_registration_date = values[20]
                 event_user_creation_date = values[21]
                 if event_user_id not in editor_registration_date:
-                    if event_user_registration_date != '':
+                    if event_user_registration_date:
                         editor_registration_date[event_user_id] = event_user_registration_date
-                    elif event_user_creation_date != '':
+                    elif event_user_creation_date:
                         editor_registration_date[event_user_id] = event_user_creation_date
 
                 # ---------
@@ -427,12 +418,12 @@ def process_editor_metrics_from_dump(languagecode):
             except:
                 lym = ''
 
-            if lym != cym and lym != '':
+            if lym != cym and lym:
 
                 monthly_edits = []
                 for event_user_id, edits in editor_monthly_edits.items():
 
-                    try:
+                    if event_user_id in user_id_user_name_dict:
                         monthly_edits.append({
                             'user_id': event_user_id,
                             'user_name': user_id_user_name_dict[event_user_id],
@@ -442,8 +433,6 @@ def process_editor_metrics_from_dump(languagecode):
                             'year_month': lym,
                             'timestamp': ''
                         })
-                    except:
-                        pass
 
                 query = text(f"""
                     INSERT INTO {languagecode}wiki_editor_metrics
