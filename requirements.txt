@@ -87,13 +87,13 @@ more-itertools==10.6.0
 multidict==6.1.0
 narwhals==1.40.0
 nest-asyncio==1.6.0
-numpy==2.3.2
+numpy==2.2.6
 openlineage-integration-common==1.31.0
 openlineage-python==1.31.0
 openlineage_sql==1.31.0
 ordered-set==4.1.0
 packaging==24.2
-pandas==2.3.1
+pandas==2.2.3
 pathspec==0.12.1
 pendulum==3.0.0
 pip-tools==7.4.1
