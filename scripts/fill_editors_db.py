@@ -275,8 +275,10 @@ def process_editor_metrics_from_dump(languagecode):
                         VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                         ON CONFLICT DO NOTHING
                     """)
-                    conn.execute(query, monthly_edits)
-                    conn.execute(query, namespaces)
+                    if monthly_edits:
+                        conn.execute(query, monthly_edits)
+                    if namespaces:
+                        conn.execute(query, namespaces)
 
                     monthly_edits = []
                     namespaces = []
@@ -407,8 +409,8 @@ def process_editor_metrics_from_dump(languagecode):
                             VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                             ON CONFLICT DO NOTHING
                         """)
-            
-            conn.execute(query, survival_measures)
+            if survival_measures:
+                conn.execute(query, survival_measures)
 
             survival_measures = []
 
@@ -441,7 +443,8 @@ def process_editor_metrics_from_dump(languagecode):
                     VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                     ON CONFLICT DO NOTHING
                 """)
-                conn.execute(query, monthly_edits)
+                if monthly_edits:
+                    conn.execute(query, monthly_edits)
 
                 namespaces = []
                 for key, data in editor_user_group_dict_timestamp.items():
@@ -492,8 +495,8 @@ def process_editor_metrics_from_dump(languagecode):
                         VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                         ON CONFLICT DO NOTHING
                     """)
-                
-                conn.execute(query, namespaces)
+                if namespaces:
+                    conn.execute(query, namespaces)
 
                 namespaces = []
                 monthly_edits = []
@@ -634,7 +637,8 @@ def process_editor_metrics_from_dump(languagecode):
                 VALUES (:user_id, :user_name, :registration_date, :year_month_registration, :first_edit_timestamp, :year_month_first_edit, :year_first_edit, :lustrum_first_edit)
                 ON CONFLICT DO NOTHING
             """)
-            conn.execute(query, user_characteristics1)
+            if user_characteristics1:
+                conn.execute(query, user_characteristics1)
 
             # upsert
             query = text(f"""
@@ -666,8 +670,8 @@ def process_editor_metrics_from_dump(languagecode):
         year_first_edit = EXCLUDED.year_first_edit,
         lustrum_first_edit = EXCLUDED.lustrum_first_edit
 """)
-
-            conn.execute(query, user_characteristics2)
+            if user_characteristics2:
+                conn.execute(query, user_characteristics2)
 
             user_characteristics1 = []
             user_characteristics2 = []
