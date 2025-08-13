@@ -19,7 +19,7 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
                 FROM {languagecode}wiki_editors
                 WHERE user_name != '';
             """
-            df = pd.read_sql(text(query), engine, params={"lang": languagecode})
+            df = pd.read_sql(query, engine, params={"lang": languagecode})
             all_rows.append(df)
 
         df = pd.concat(all_rows, ignore_index=True)
