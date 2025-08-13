@@ -886,7 +886,7 @@ def calculate_editor_activity_streaks(languagecode):
                         'rel_value': None,
                         'metric_name': 'active_months_row',
                         'year_month': current_year_month,
-                        'timestamp': None
+                        'timestamp': ''
                     })
 
             expected_year_month_dt = current_year_month_dt + \

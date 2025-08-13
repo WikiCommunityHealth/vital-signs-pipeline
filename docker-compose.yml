@@ -1,4 +1,5 @@
 x-airflow-env: &airflow-env
+  TMPDIR: /opt/airflow/tmp
   POSTGRES_USER: ${POSTGRES_USER}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
@@ -49,6 +50,7 @@ services:
       - ./scripts:/opt/airflow/scripts
       - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
+      - ./airflow-tmp:/opt/airflow/tmp
 
     command: scheduler
     depends_on:
