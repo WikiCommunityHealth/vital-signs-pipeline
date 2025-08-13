@@ -18,7 +18,7 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
             SELECT :lang AS lang, user_name, edit_count, year_month_first_edit, lustrum_first_edit
             FROM somewiki_editors
             WHERE user_name != '';
-            """), {"lang": "en"})
+            """), {"lang": languagecode})
             df = pd.DataFrame(res.mappings().all())
             all_rows.append(df)
 
