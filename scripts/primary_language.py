@@ -1,13 +1,15 @@
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import text, create_engine
 import logging
 
 from scripts import config
 
 logger = logging.getLogger(__name__)
 
-def cross_wiki_editor_metrics(wikilanguagecodes, engine):
+
+def cross_wiki_editor_metrics(wikilanguagecodes):
     all_rows = []
+    engine = create_engine(config.db_uri_editors)
 
     with engine.begin() as conn:
         # Estrai i dati da tutte le tabelle wiki_editors in un unico DataFrame
@@ -21,7 +23,8 @@ def cross_wiki_editor_metrics(wikilanguagecodes, engine):
             all_rows.append(df)
 
         df = pd.concat(all_rows, ignore_index=True)
-        df["edit_count"] = pd.to_numeric(df["edit_count"], errors="coerce").fillna(0).astype(int)
+        df["edit_count"] = pd.to_numeric(
+            df["edit_count"], errors="coerce").fillna(0).astype(int)
         df = df[df["user_name"] != ""]
         df_filtered = df[df["lang"] != "meta"]
 
@@ -29,7 +32,8 @@ def cross_wiki_editor_metrics(wikilanguagecodes, engine):
         totals = totals.rename(columns={"edit_count": "tot_ecount"})
 
         langs_over_4 = df_filtered[df_filtered["edit_count"] > 4]
-        n_langs = langs_over_4.groupby("user_name").size().reset_index(name="n_langs")
+        n_langs = langs_over_4.groupby(
+            "user_name").size().reset_index(name="n_langs")
 
         idx = df_filtered.groupby("user_name")["edit_count"].idxmax()
         prim_lang_df = df_filtered.loc[idx, [
