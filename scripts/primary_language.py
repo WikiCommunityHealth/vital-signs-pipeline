@@ -15,11 +15,11 @@ def cross_wiki_editor_metrics(wikilanguagecodes):
         # Estrai i dati da tutte le tabelle wiki_editors in un unico DataFrame
         for languagecode in wikilanguagecodes:
             table = f"{languagecode}wiki_editors"
-            res = conn.execute(text("""
+            res = conn.execute(text(f"""
             SELECT :lang AS lang, user_name, edit_count, year_month_first_edit, lustrum_first_edit
-            FROM :table
+            FROM {table}
             WHERE user_name != '';
-            """), {"lang": languagecode, table: table})
+            """), {"lang": languagecode})
             df = pd.DataFrame(res.mappings().all())
             all_rows.append(df)
 
