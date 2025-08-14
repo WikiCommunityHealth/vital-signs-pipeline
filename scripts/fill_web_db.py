@@ -87,7 +87,7 @@ def compute_wiki_vital_signs(languagecode):
             parameters.append(dict(
                 langcode=languagecode, year_year_month='ym', year_month=year_month,
                 topic='retention', m1='first_edit', m1_calculation='threshold', m1_value=1,
-                m2=None, m2_calculation=None, m2_value=None, m1_count=value, m2_count=None
+                m2='', m2_calculation='', m2_value='', m1_count=value, m2_count=0
             ))
             m1_count = registered_baseline.get(year_month, 0)
             parameters.append(dict(
@@ -217,8 +217,11 @@ def compute_wiki_vital_signs(languagecode):
                     if year_month == '' or year_month == None:
                         continue
 
-                    parameters.append((languagecode, t, year_month, 'active_editors',
-                                      'monthly_edits', 'threshold', v, None, None, None, m1_count, None))
+                    parameters.append(dict(
+                        langcode=languagecode, year_year_month=t, year_month=year_month,
+                        topic='active_editors', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                        m2='', m2_calculation='', m2_value='', m1_count=m1_count, m2_count=0
+                    ))
 
             conn_web.execute(query_cm, parameters)
 
@@ -277,8 +280,11 @@ def compute_wiki_vital_signs(languagecode):
                     year_month = row[1]
                     if year_month == '':
                         continue
-                    parameters.append((languagecode, t, year_month, 'active_editors', 'monthly_edits', 'bin', str(
-                        v)+'_'+str(w), None, None, None, m1_count, None))
+                    parameters.append(dict(
+                        langcode=languagecode, year_year_month=t, year_month=year_month,
+                        topic='active_editors', m1='monthly_edits', m1_calculation='bin', m1_value=str(v)+'_'+str(w),
+                        m2='', m2_calculation='', m2_value='', m1_count=m1_count, m2_count=0
+                    ))
 
             conn_web.execute(query_cm, parameters)
 
@@ -331,8 +337,12 @@ def compute_wiki_vital_signs(languagecode):
 
                         if v == 5:
                             try:
-                                parameters.append((languagecode, t, year_month, 'stability', 'monthly_edits', 'threshold', v,
-                                                  "active_months_row", 'bin', m2_value, active_editors_5_year_month[year_month], m2_count))
+                                parameters.append(dict(
+                                    langcode=languagecode, year_year_month=t, year_month=year_month,
+                                    topic='stability', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                                    m2='active_months_row', m2_calculation='bin', m2_value=m2_value,
+                                    m1_count=active_editors_5_year_month[year_month], m2_count=m2_count
+                                ))
                             except:
                                 continue
 
@@ -343,8 +353,12 @@ def compute_wiki_vital_signs(languagecode):
 
                         if v == 100:
                             try:
-                                parameters.append((languagecode, t, year_month, 'stability', 'monthly_edits', 'threshold', v,
-                                                  "active_months_row", 'bin', m2_value, active_editors_100_year_month[year_month], m2_count))
+                                parameters.append(dict(
+                                    langcode=languagecode, year_year_month=t, year_month=year_month,
+                                    topic='stability', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                                    m2='active_months_row', m2_calculation='bin', m2_value=m2_value,
+                                    m1_count=active_editors_100_year_month[year_month], m2_count=m2_count
+                                ))
                             except:
                                 continue
 
@@ -354,12 +368,21 @@ def compute_wiki_vital_signs(languagecode):
                                 stability_active_editors_100[year_month] = m2_count
 
             for year_month, value in stability_active_editors_5.items():
-                parameters.append((languagecode, t, year_month, 'stability', 'monthly_edits', 'threshold', 5, "active_months_row",
-                                  'bin', '1', active_editors_5_year_month[year_month], active_editors_5_year_month[year_month] - value))
+                parameters.append(dict(
+                    langcode=languagecode, year_year_month=t, year_month=year_month,
+                    topic='stability', m1='monthly_edits', m1_calculation='threshold', m1_value=5,
+                    m2='active_months_row', m2_calculation='bin', m2_value='1',
+                    m1_count=active_editors_5_year_month[year_month], m2_count=active_editors_5_year_month[year_month] - value
+                ))
 
             for year_month, value in stability_active_editors_100.items():
-                parameters.append((languagecode, t, year_month, 'stability', 'monthly_edits', 'threshold', 100, "active_months_row",
-                                  'bin', '1', active_editors_100_year_month[year_month], active_editors_100_year_month[year_month] - value))
+                parameters.append(dict(
+                    langcode=languagecode, year_year_month=t, year_month=year_month,
+                    topic='stability', m1='monthly_edits', m1_calculation='threshold', m1_value=100,
+                    m2='active_months_row', m2_calculation='bin', m2_value='1',
+                    m1_count=active_editors_100_year_month[
+                        year_month], m2_count=active_editors_100_year_month[year_month] - value
+                ))
 
             conn_web.execute(query_cm, parameters)
 
@@ -402,11 +425,19 @@ def compute_wiki_vital_signs(languagecode):
                         continue
 
                     if v == 5:
-                        parameters.append((languagecode, t, year_month, 'balance', 'monthly_edits', 'threshold', v,
-                                          'lustrum_first_edit', 'bin', lustrum_first_edit, active_editors_5_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='balance', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                            m2='lustrum_first_edit', m2_calculation='bin', m2_value=lustrum_first_edit,
+                            m1_count=active_editors_5_year_month[year_month], m2_count=m2_count
+                        ))
                     if v == 100:
-                        parameters.append((languagecode, t, year_month, 'balance', 'monthly_edits', 'threshold', v,
-                                          'lustrum_first_edit', 'bin', lustrum_first_edit, active_editors_100_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='balance', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                            m2='lustrum_first_edit', m2_calculation='bin', m2_value=lustrum_first_edit,
+                            m1_count=active_editors_100_year_month[year_month], m2_count=m2_count
+                        ))
 
             conn_web.execute(query_cm, parameters)
             logger.info("Calculated editors stability")
@@ -449,11 +480,19 @@ def compute_wiki_vital_signs(languagecode):
                         continue
 
                     if v == 5:
-                        parameters.append((languagecode, t, year_month, 'technical_editors', 'monthly_edits_technical', 'threshold',
-                                          v, 'lustrum_first_edit', 'bin', lustrum_first_edit, active_editors_5_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='technical_editors', m1='monthly_edits_technical', m1_calculation='threshold', m1_value=v,
+                            m2='lustrum_first_edit', m2_calculation='bin', m2_value=lustrum_first_edit,
+                            m1_count=active_editors_5_year_month[year_month], m2_count=m2_count
+                        ))
                     if v == 100:
-                        parameters.append((languagecode, t, year_month, 'technical_editors', 'monthly_edits_technical', 'threshold',
-                                          v, 'lustrum_first_edit', 'bin', lustrum_first_edit, active_editors_100_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='technical_editors', m1='monthly_edits_technical', m1_calculation='threshold', m1_value=v,
+                            m2='lustrum_first_edit', m2_calculation='bin', m2_value=lustrum_first_edit,
+                            m1_count=active_editors_100_year_month[year_month], m2_count=m2_count
+                        ))
 
             conn_web.execute(query_cm, parameters)
 
@@ -495,11 +534,19 @@ def compute_wiki_vital_signs(languagecode):
                         continue
 
                     if v == 5:
-                        parameters.append((languagecode, t, year_month, 'coordinators', 'monthly_edits_coordination', 'threshold',
-                                          v, 'lustrum_first_edit', 'bin', lustrum_first_edit, active_editors_5_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='coordinators', m1='monthly_edits_coordination', m1_calculation='threshold', m1_value=v,
+                            m2='lustrum_first_edit', m2_calculation='bin', m2_value=lustrum_first_edit,
+                            m1_count=active_editors_5_year_month[year_month], m2_count=m2_count
+                        ))
                     if v == 100:
-                        parameters.append((languagecode, t, year_month, 'coordinators', 'monthly_edits_coordination', 'threshold',
-                                          v, 'lustrum_first_edit', 'bin', lustrum_first_edit, active_editors_100_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='coordinators', m1='monthly_edits_coordination', m1_calculation='threshold', m1_value=v,
+                            m2='lustrum_first_edit', m2_calculation='bin', m2_value=lustrum_first_edit,
+                            m1_count=active_editors_100_year_month[year_month], m2_count=m2_count
+                        ))
 
             conn_web.execute(query_cm, parameters)
 
@@ -540,11 +587,19 @@ def compute_wiki_vital_signs(languagecode):
                         continue
 
                     if v == 5:
-                        parameters.append((languagecode, t, year_month, 'primary_editors', 'monthly_edits', 'threshold',
-                                          v, 'primarylang', 'bin', primarylang, active_editors_5_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='primary_editors', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                            m2='primarylang', m2_calculation='bin', m2_value=primarylang,
+                            m1_count=active_editors_5_year_month[year_month], m2_count=m2_count
+                        ))
                     if v == 100:
-                        parameters.append((languagecode, t, year_month, 'primary_editors', 'monthly_edits', 'threshold',
-                                          v, 'primarylang', 'bin', primarylang, active_editors_100_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='primary_editors', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
+                            m2='primarylang', m2_calculation='bin', m2_value=primarylang,
+                            m1_count=active_editors_100_year_month[year_month], m2_count=m2_count
+                        ))
 
             conn_web.execute(query_cm, parameters)
             logger.info("Calculated global metrics")
@@ -584,11 +639,19 @@ def compute_wiki_vital_signs(languagecode):
                         continue
 
                     if v == 5:
-                        parameters.append((languagecode, t, year_month, 'flags', 'monthly_edits', 'threshold', 5,
-                                          'highest_flag', 'name', m2_value, active_editors_5_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='flags', m1='monthly_edits', m1_calculation='threshold', m1_value=5,
+                            m2='highest_flag', m2_calculation='name', m2_value=m2_value,
+                            m1_count=active_editors_5_year_month[year_month], m2_count=m2_count
+                        ))
                     if v == 100:
-                        parameters.append((languagecode, t, year_month, 'flags', 'monthly_edits', 'threshold', 5,
-                                          'highest_flag', 'name', m2_value, active_editors_100_year_month[year_month], m2_count))
+                        parameters.append(dict(
+                            langcode=languagecode, year_year_month=t, year_month=year_month,
+                            topic='flags', m1='monthly_edits', m1_calculation='threshold', m1_value=100,
+                            m2='highest_flag', m2_calculation='name', m2_value=m2_value,
+                            m1_count=active_editors_100_year_month[year_month], m2_count=m2_count
+                        ))
 
             conn_web.execute(query_cm, parameters)
             logger.info("Calculated flags among active editors")
@@ -626,8 +689,12 @@ def compute_wiki_vital_signs(languagecode):
                 year_month = row[2]
                 m2_value = row[3]
 
-                parameters.append((languagecode, 'y', year_month, 'flags', metric_name,
-                                  'name', m1_value, 'lustrum_first_edit', 'bin', m2_value, None, m2_count))
+                parameters.append(dict(
+                    langcode=languagecode, year_year_month='y', year_month=year_month,
+                    topic='flags', m1=metric_name, m1_calculation='name', m1_value=m1_value,
+                    m2='lustrum_first_edit', m2_calculation='bin', m2_value=m2_value,
+                    m1_count=0, m2_count=m2_count
+                ))
 
         conn_web.execute(query_cm, parameters)
 
