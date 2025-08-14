@@ -103,48 +103,48 @@ def compute_wiki_vital_signs(languagecode):
         parameters = []
         queries_retention_dict = {
             '24h': text(f'''
-                SELECT count(distinct ch.user_id), ch.year_month_first_edit
-                FROM {languagecode}wiki_editors ch
-                INNER JOIN {languagecode}wiki_editor_metrics ce
-                ON ch.user_id = ce.user_id
-                WHERE ce.metric_name = 'edit_count_24h' AND ce.abs_value > 0 AND ch.bot = 'editor'
-                GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
+            SELECT count(distinct ch.user_id), ch.year_month_first_edit
+            FROM {languagecode}wiki_editors ch
+            INNER JOIN {languagecode}wiki_editor_metrics ce
+            ON ch.user_id = ce.user_id
+            WHERE ce.metric_name = 'edit_count_24h' AND CAST(ce.abs_value AS REAL) > 0 AND ch.bot = 'editor'
+            GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
             '''),
             '7d': text(f'''
-                SELECT count(distinct ch.user_id), ch.year_month_first_edit
-                FROM {languagecode}wiki_editors ch
-                INNER JOIN {languagecode}wiki_editor_metrics ce
-                ON ch.user_id = ce.user_id
-                WHERE ce.metric_name = 'edit_count_7d' AND ce.abs_value > 0 AND ch.bot = 'editor'
-                GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
+            SELECT count(distinct ch.user_id), ch.year_month_first_edit
+            FROM {languagecode}wiki_editors ch
+            INNER JOIN {languagecode}wiki_editor_metrics ce
+            ON ch.user_id = ce.user_id
+            WHERE ce.metric_name = 'edit_count_7d' AND CAST(ce.abs_value AS REAL) > 0 AND ch.bot = 'editor'
+            GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
             '''),
             '30d': text(f'''
-                SELECT count(distinct ch.user_id), ch.year_month_first_edit
-                FROM {languagecode}wiki_editors ch
-                INNER JOIN {languagecode}wiki_editor_metrics ce
-                ON ch.user_id = ce.user_id
-                WHERE ce.metric_name = 'edit_count_30d' AND ce.abs_value > 0 AND ch.bot = 'editor'
-                GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
+            SELECT count(distinct ch.user_id), ch.year_month_first_edit
+            FROM {languagecode}wiki_editors ch
+            INNER JOIN {languagecode}wiki_editor_metrics ce
+            ON ch.user_id = ce.user_id
+            WHERE ce.metric_name = 'edit_count_30d' AND CAST(ce.abs_value AS REAL) > 0 AND ch.bot = 'editor'
+            GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
             '''),
             '60d': text(f'''
-                SELECT count(distinct ch.user_id), ch.year_month_first_edit
-                FROM {languagecode}wiki_editors ch
-                INNER JOIN {languagecode}wiki_editor_metrics ce
-                ON ch.user_id = ce.user_id
-                WHERE ce.metric_name = 'edit_count_60d' AND ce.abs_value > 0 AND ch.bot = 'editor'
-                GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
+            SELECT count(distinct ch.user_id), ch.year_month_first_edit
+            FROM {languagecode}wiki_editors ch
+            INNER JOIN {languagecode}wiki_editor_metrics ce
+            ON ch.user_id = ce.user_id
+            WHERE ce.metric_name = 'edit_count_60d' AND CAST(ce.abs_value AS REAL) > 0 AND ch.bot = 'editor'
+            GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
             '''),
             '365d': text(f'''
-                SELECT count(distinct user_id), year_month_first_edit
-                FROM {languagecode}wiki_editors
-                WHERE lifetime_days >= 365 AND bot = 'editor'
-                GROUP BY year_month_first_edit ORDER BY year_month_first_edit
+            SELECT count(distinct user_id), year_month_first_edit
+            FROM {languagecode}wiki_editors
+            WHERE lifetime_days >= 365 AND bot = 'editor'
+            GROUP BY year_month_first_edit ORDER BY year_month_first_edit
             '''),
             '730d': text(f'''
-                SELECT count(distinct user_id), year_month_first_edit
-                FROM {languagecode}wiki_editors
-                WHERE lifetime_days >= 730 AND bot = 'editor'
-                GROUP BY year_month_first_edit ORDER BY year_month_first_edit
+            SELECT count(distinct user_id), year_month_first_edit
+            FROM {languagecode}wiki_editors
+            WHERE lifetime_days >= 730 AND bot = 'editor'
+            GROUP BY year_month_first_edit ORDER BY year_month_first_edit
             ''')
         }
 
@@ -192,7 +192,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), e1.year_month 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND CAST (e1.abs_value AS REAL) >= {v}
                         GROUP BY e1.year_month ORDER BY e1.year_month
                     ''')
                 else:
@@ -200,7 +200,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4) 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND CAST (e1.abs_value AS REAL) >= {v}
                         GROUP BY 2 ORDER BY 2
                     ''')
 
@@ -239,7 +239,7 @@ def compute_wiki_vital_signs(languagecode):
                             FROM {languagecode}wiki_editor_metrics e1 
                             INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
                             WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" 
-                            AND e1.abs_value >= {v} AND e1.abs_value < {w}
+                            AND CAST(e1.abs_value AS REAL) >= {v} AND CAST(e1.abs_value AS REAL) < {w}
                             GROUP BY e1.year_month ORDER BY e1.year_month
                         ''')
                     else:
@@ -248,7 +248,7 @@ def compute_wiki_vital_signs(languagecode):
                             FROM {languagecode}wiki_editor_metrics e1 
                             INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
                             WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" 
-                            AND e1.abs_value >= {v} AND e1.abs_value < {w}
+                            AND CAST(e1.abs_value AS REAL) >= {v} AND CAST(e1.abs_value AS REAL) < {w}
                             GROUP BY 2 ORDER BY 2
                         ''')
 
@@ -261,7 +261,7 @@ def compute_wiki_vital_signs(languagecode):
                             SELECT count(distinct e1.user_id), e1.year_month 
                             FROM {languagecode}wiki_editor_metrics e1 
                             INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                            WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                            WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                             GROUP BY e1.year_month ORDER BY e1.year_month
                         ''')
                     else:
@@ -269,7 +269,7 @@ def compute_wiki_vital_signs(languagecode):
                             SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4) 
                             FROM {languagecode}wiki_editor_metrics e1 
                             INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                            WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                            WHERE e2.bot = "editor" AND e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                             GROUP BY 2 ORDER BY 2
                         ''')
 
@@ -309,8 +309,8 @@ def compute_wiki_vital_signs(languagecode):
                             FROM {languagecode}wiki_editor_metrics e1 
                             INNER JOIN {languagecode}wiki_editor_metrics e2 ON e1.user_id = e2.user_id 
                             INNER JOIN {languagecode}wiki_editors e3 ON e1.user_id = e3.user_id 
-                            WHERE e3.bot = "editor" AND e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
-                            AND e2.metric_name = "active_months_row" AND e2.abs_value BETWEEN {interval[0]} AND {interval[1]} 
+                            WHERE e3.bot = "editor" AND e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
+                            AND e2.metric_name = "active_months_row" AND CAST(e2.abs_value AS REAL) BETWEEN {interval[0]} AND {interval[1]} 
                             AND e1.year_month = e2.year_month 
                             GROUP BY e2.year_month
                         ''')
@@ -320,8 +320,8 @@ def compute_wiki_vital_signs(languagecode):
                             FROM {languagecode}wiki_editor_metrics e1 
                             INNER JOIN {languagecode}wiki_editor_metrics e2 ON e1.user_id = e2.user_id  
                             INNER JOIN {languagecode}wiki_editors e3 ON e1.user_id = e3.user_id 
-                            WHERE e3.bot = "editor" AND e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
-                            AND e2.metric_name = "active_months_row" AND e2.abs_value BETWEEN {interval[0]} AND {interval[1]} 
+                            WHERE e3.bot = "editor" AND e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
+                            AND e2.metric_name = "active_months_row" AND CAST(e2.abs_value AS REAL) BETWEEN {interval[0]} AND {interval[1]} 
                             AND e1.year_month = e2.year_month 
                             GROUP BY 2
                         ''')
@@ -395,13 +395,12 @@ def compute_wiki_vital_signs(languagecode):
             for v in values:
 
                 # active_editors    monthly_edits   threshold   5   lustrum_first_edit  bin 2001, 2006, 2011, 2016, 2021
-
                 if t == 'ym':
                     query = text(f'''
                         SELECT count(distinct e1.user_id), e1.year_month, e2.lustrum_first_edit 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.lustrum_first_edit IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY e1.year_month, e2.lustrum_first_edit
                     ''')
@@ -410,7 +409,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), e2.lustrum_first_edit 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.lustrum_first_edit IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY 2, 3
                     ''')
@@ -456,7 +455,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), e1.year_month, e2.lustrum_first_edit 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits_technical" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits_technical" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.lustrum_first_edit IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY e1.year_month, e2.lustrum_first_edit
                     ''')
@@ -465,7 +464,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), e2.lustrum_first_edit 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits_technical" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits_technical" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.lustrum_first_edit IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY 2, 3
                     ''')
@@ -504,13 +503,12 @@ def compute_wiki_vital_signs(languagecode):
             for v in values:
 
                 # active_editors    monthly_edits   threshold   5   lustrum_first_edit  bin 2001, 2006, 2011, 2016, 2021
-
                 if t == 'ym':
                     query = text(f'''
                         SELECT count(distinct e1.user_id), e1.year_month, e2.lustrum_first_edit 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits_coordination" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits_coordination" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.lustrum_first_edit IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY e1.year_month, e2.lustrum_first_edit
                     ''')
@@ -519,7 +517,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), e2.lustrum_first_edit 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits_coordination" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits_coordination" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.lustrum_first_edit IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY 2, 3
                     ''')
@@ -563,7 +561,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), e1.year_month, e2.primarylang 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.bot = "editor" 
                         GROUP BY e1.year_month, e2.primarylang
                     ''')
@@ -572,7 +570,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), e2.primarylang 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.bot = "editor" 
                         GROUP BY 2, 3
                     ''')
@@ -616,7 +614,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), e1.year_month, e2.highest_flag 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.highest_flag IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY e1.year_month, e2.highest_flag
                     ''')
@@ -625,7 +623,7 @@ def compute_wiki_vital_signs(languagecode):
                         SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), e2.highest_flag 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                        WHERE e1.metric_name = "monthly_edits" AND e1.abs_value >= {v}
+                        WHERE e1.metric_name = "monthly_edits" AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.highest_flag IS NOT NULL AND e2.bot = "editor" 
                         GROUP BY 2, 3
                     ''')
