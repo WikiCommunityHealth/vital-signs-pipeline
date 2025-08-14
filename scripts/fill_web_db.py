@@ -67,7 +67,7 @@ def compute_wiki_vital_signs(languagecode):
             parameters.append(dict(
                 langcode=languagecode, year_year_month='ym', year_month=year_month,
                 topic='retention', m1='register', m1_calculation='threshold', m1_value=1,
-                m2=None, m2_calculation=None, m2_value=None, m1_count=value, m2_count=None
+                m2='', m2_calculation='', m2_value='', m1_count=value, m2_count=0
             ))
 
         retention_baseline = {}
