@@ -665,7 +665,7 @@ def compute_wiki_vital_signs(languagecode):
                     SELECT count(distinct e1.user_id), e1.highest_flag, substr(e1.year_month_first_edit, 1, 4), e1.lustrum_first_edit 
                     FROM {languagecode}wiki_editors e1 
                     WHERE e1.highest_flag IS NOT NULL AND e1.bot = 'editor' 
-                    GROUP BY 2, 3 ORDER BY 2, 3
+                    GROUP BY 2, 3, 4 ORDER BY 2, 3
                 ''')
 
             else:
