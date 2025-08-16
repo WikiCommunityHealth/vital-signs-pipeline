@@ -684,12 +684,13 @@ def compute_wiki_vital_signs(languagecode):
                 year_month = row[2]
                 m2_value = row[3]
 
-                parameters.append(dict(
-                    langcode=languagecode, year_year_month='y', year_month=year_month,
-                    topic='flags', m1=metric_name, m1_calculation='name', m1_value=m1_value,
-                    m2='lustrum_first_edit', m2_calculation='bin', m2_value=m2_value,
-                    m1_count=0, m2_count=m2_count
-                ))
+                if year_month and m2_value:
+                    parameters.append(dict(
+                        langcode=languagecode, year_year_month='y', year_month=year_month,
+                        topic='flags', m1=metric_name, m1_calculation='name', m1_value=m1_value,
+                        m2='lustrum_first_edit', m2_calculation='bin', m2_value=m2_value,
+                        m1_count=0, m2_count=m2_count
+                    ))
 
         conn_web.execute(query_cm, parameters)
 
