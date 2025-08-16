@@ -102,14 +102,14 @@ def timeconversion(rawdate):
     return year
 
 
-def generate1(lingua, retention_rate, conn):
+def generate1(lingua, retention_rate, engine):
 
     query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'retention' AND m2_value='"+retention_rate+"'"
     query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
 
     query2 = query0+query1
 
-    df1 = pd.read_sql_query(query2, conn)
+    df1 = pd.read_sql_query(query2, engine)
     df1.reset_index(inplace=True)
 
     print("QUERY FOR DATAFRAME (HIGHLIGHTS)="+query2)
@@ -118,7 +118,7 @@ def generate1(lingua, retention_rate, conn):
     return df1
 
 
-def get_avg_retention(lingua, retention_rate, year, conn):
+def get_avg_retention(lingua, retention_rate, year, engine):
 
     query0 = "SELECT *, AVG(m2_count / m1_count)*100 AS retention_rate FROM vital_signs_metrics WHERE topic = 'retention' AND m1='first_edit' AND m2_value = '" + \
         retention_rate+"' AND year_month LIKE '"+str(year)+"-%'"
@@ -126,7 +126,7 @@ def get_avg_retention(lingua, retention_rate, year, conn):
 
     query_retention = query0 + query1
 
-    df2 = pd.read_sql_query(query_retention, conn)
+    df2 = pd.read_sql_query(query_retention, engine)
     df2.reset_index(inplace=True)
 
     print("QUERY FOR DATAFRAME RETENTION (HIGHLIGHTS)="+query_retention)
@@ -145,8 +145,7 @@ def highlights(language, retention_rate):
 
     container = ""
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     # params=""
     # for x in language:
@@ -158,7 +157,7 @@ def highlights(language, retention_rate):
 
     params = "'"+language_names[language]+"'"
 
-    df1 = generate1(params, retention_rate, conn)
+    df1 = generate1(params, retention_rate, engine)
     df1.reset_index(inplace=True)
 
     last_time = get_time(df1)
@@ -167,9 +166,9 @@ def highlights(language, retention_rate):
     old_date = int(date)-10
 
     old_retention_value = get_avg_retention(
-        params, retention_rate, old_date, conn)
+        params, retention_rate, old_date, engine)
     current_retention_value = get_avg_retention(
-        params, retention_rate, date, conn)
+        params, retention_rate, date, engine)
 
     return "", "* In **"+str(old_date)+"**, to **"+language+"** Wikipedia, the average retention rate was **"+old_retention_value+"%**, in **"+str(date)+"** it is **"+current_retention_value+"%**, this is **"+str(round(float(current_retention_value)-float(old_retention_value), 2))+"** difference."+"\n"+"We argue that a reasonable target would be a 3"+"%"+" retention rate to ensure there is renewal among editors, while it could be desirable to reach 5-7%. In general, communities should aim at reversing the declining trend in the retention rate."
 
@@ -193,8 +192,7 @@ def update_graph(language, retention_rate):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     # params=""
     # for x in langs:
@@ -215,12 +213,12 @@ def update_graph(language, retention_rate):
     print("RETENION QUERY 1 ="+query1)
     print("RETENION QUERY 2 = "+query2)
 
-    df1 = pd.read_sql_query(query1, conn)
+    df1 = pd.read_sql_query(query1, engine)
 
     df1.reset_index(inplace=True)
     # print(df[:100])
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
 
     df2.reset_index(inplace=True)
 

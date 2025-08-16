@@ -129,7 +129,5 @@ services:
     build:
       context: ./dashboards
       dockerfile: Dockerfile
-    volumes:
-      - ./databases:/databases
     ports:
       - "8050:8050"

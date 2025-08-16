@@ -8,13 +8,14 @@ import plotly.graph_objects as go
 import plotly.express as px  # (version 4.7.0 or higher)
 import pandas as pd
 import time
-import sqlite3
 import re
 import sys
 import os
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')))
 from app import *
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 dash.register_page(__name__,path="/main")
 
@@ -574,8 +575,7 @@ def activity_graph(language, user_type, time_type):
     else:
         langs.append(language_names[language])
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -594,7 +594,7 @@ def activity_graph(language, user_type, time_type):
 
     print("ACTIVITY QUERY = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     print(df[:10])
@@ -680,8 +680,7 @@ def retention_graph(lang, retention_rate, length):
 
     container = "The langcode chosen was: {}".format(lang)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     # users that register theirselves
     query01 = "select * from vital_signs_metrics where topic = 'retention' and year_year_month = 'ym' and m1 = 'register' and m2_value='"+retention_rate+"'"
@@ -694,12 +693,12 @@ def retention_graph(lang, retention_rate, length):
     # print("\033[0;31m FIRST RETENTION QUERY="+query1+"\033[0m")
     # print("\033[0;32m FIRST RETENTION QUERY="+query1+"\033[0m")
 
-    df1 = pd.read_sql_query(query1, conn)
+    df1 = pd.read_sql_query(query1, engine)
 
     df1.reset_index(inplace=True)
     # print(df[:100])
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
 
     df2.reset_index(inplace=True)
 
@@ -819,8 +818,7 @@ def stability_graph(language, user_type, value_type, time_type):
     else:
         langs.append(language_names[language])
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -837,7 +835,7 @@ def stability_graph(language, user_type, value_type, time_type):
 
     print("STABILITY QUERY = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
 
     df.reset_index(inplace=True)
     # print(df[:100])
@@ -961,8 +959,7 @@ def balance_graph(language, user_type, value_type, time_type):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -979,7 +976,7 @@ def balance_graph(language, user_type, value_type, time_type):
 
     print("BALANCE QUERY = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
 
     df.reset_index(inplace=True)
     # print(df[:100])
@@ -1108,8 +1105,7 @@ def special_graph(language, user_type, value_type, time_type):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -1132,8 +1128,8 @@ def special_graph(language, user_type, value_type, time_type):
     print("SPECIAL FUNCTIONS QUERY1 = "+query1)
     print("SPECIAL FUNCTIONS QUERY2 = "+query2)
 
-    df = pd.read_sql_query(query1, conn)
-    df2 = pd.read_sql_query(query2, conn)
+    df = pd.read_sql_query(query1, engine)
+    df2 = pd.read_sql_query(query2, engine)
 
     df.reset_index(inplace=True)
     df2.reset_index(inplace=True)
@@ -1336,8 +1332,7 @@ def admin_graph(language, admin_type, time_type):
 
     # container = "" #"The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -1363,8 +1358,8 @@ def admin_graph(language, admin_type, time_type):
     print("ADMIN QUERY 1 = "+query1)
     print("ADMIN QUERY 2 = "+query2)
 
-    df1 = pd.read_sql_query(query1, conn)
-    df2 = pd.read_sql_query(query2, conn)
+    df1 = pd.read_sql_query(query1, engine)
+    df2 = pd.read_sql_query(query2, engine)
 
     df1.reset_index(inplace=True)
     df2.reset_index(inplace=True)
@@ -1497,7 +1492,7 @@ def admin_graph(language, admin_type, time_type):
     query3 = query30+query31
 
     print("ADMIN QUERY3 = "+query3)
-    df3 = pd.read_sql_query(query3, conn)
+    df3 = pd.read_sql_query(query3, engine)
     df3.reset_index(inplace=True)
 
     datas = []
@@ -1591,8 +1586,7 @@ def global_graph(language, user_type, value_type, time_type, year, month):
 
     # container = "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -1622,7 +1616,7 @@ def global_graph(language, user_type, value_type, time_type, year, month):
 
     print("[GLOBAL] FIRST QUERY = "+query1)
 
-    df1 = pd.read_sql_query(query1, conn)
+    df1 = pd.read_sql_query(query1, engine)
     df1.reset_index(inplace=True)
 
     df1['perc'] = ((df1['m2_count']/df1['m1_count'])*100).round(2)
@@ -1679,7 +1673,7 @@ def global_graph(language, user_type, value_type, time_type, year, month):
 
     print("[GLOBAL] SECOND QUERY = "+query2)
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
     df2.reset_index(inplace=True)
 
     df2['perc'] = ((df2['m2_count']/df2['m1_count'])*100).round(2)
@@ -1886,7 +1880,7 @@ def get_time(df):
     return temp1
 
 
-def activity_generate1(lingua, attivi, tempo, last5, conn):
+def activity_generate1(lingua, attivi, tempo, last5, engine):
 
     query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value=" + \
         attivi+" AND year_year_month = '"+tempo+"'"
@@ -1894,7 +1888,7 @@ def activity_generate1(lingua, attivi, tempo, last5, conn):
 
     query = query0+query1
 
-    df1 = pd.read_sql_query(query, conn)
+    df1 = pd.read_sql_query(query, engine)
 
     df1.reset_index(inplace=True)
 
@@ -1904,7 +1898,7 @@ def activity_generate1(lingua, attivi, tempo, last5, conn):
     return df1
 
 
-def activity_generate2(lingua, attivi, tempo, last5, conn):
+def activity_generate2(lingua, attivi, tempo, last5, engine):
 
     query0 = "SELECT AVG(m1_count) AS Media FROM vital_signs_metrics WHERE year_month IN "+last5 + \
         " AND topic = 'active_editors' AND year_year_month = '" + \
@@ -1913,7 +1907,7 @@ def activity_generate2(lingua, attivi, tempo, last5, conn):
 
     query2 = query0+query1
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
 
     df2.reset_index(inplace=True)
 
@@ -1935,7 +1929,7 @@ def activity_generatetail(count, media, active, time):
     return tail
 
 
-def activity_findMax(language, active, yearmonth, time, conn):
+def activity_findMax(language, active, yearmonth, time, engine):
 
     query0 = "SELECT MAX(m1_count) as max,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
         active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
@@ -1944,12 +1938,12 @@ def activity_findMax(language, active, yearmonth, time, conn):
     query = query0 + query1
     # print("FIND MAX="+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
     return df
 
 
-def activity_findMin(language, active, yearmonth, time, conn):
+def activity_findMin(language, active, yearmonth, time, engine):
 
     query0 = "SELECT MIN(m1_count) as min,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
         active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
@@ -1958,7 +1952,7 @@ def activity_findMin(language, active, yearmonth, time, conn):
     query = query0 + query1
     # print("FIND MIN="+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
     return df
 
@@ -1969,8 +1963,7 @@ def activity_highlights(language, user_type, time_type):
 
     print(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2016,9 +2009,9 @@ def activity_highlights(language, user_type, time_type):
         for x in langs:
 
             df1 = activity_generate1(
-                "'"+x+"'", user_type, time_type, last5, conn)
+                "'"+x+"'", user_type, time_type, last5, engine)
             df2 = activity_generate2(
-                "'"+x+"'", user_type, time_type, last5, conn)
+                "'"+x+"'", user_type, time_type, last5, engine)
 
             count = get_count(df1)
             media = get_media(df2)
@@ -2032,8 +2025,8 @@ def activity_highlights(language, user_type, time_type):
                 language_names_full[x]+"** Wikipedia, the number of " + \
                     active+" editors was **"+str(count)+"**"+tail
 
-        dfmax = activity_findMax(params, user_type, time_type, timespan, conn)
-        dfmin = activity_findMin(params, user_type, time_type, timespan, conn)
+        dfmax = activity_findMax(params, user_type, time_type, timespan, engine)
+        dfmin = activity_findMin(params, user_type, time_type, timespan, engine)
 
         max0 = dfmax["langcode"].tolist()
         maxlang = max0[0]
@@ -2049,8 +2042,8 @@ def activity_highlights(language, user_type, time_type):
             max)+"**), **"+language_names_full[str(minlang)]+"** Wikipedia has the lower (**"+str(min)+"**)."
     else:
 
-        df1 = activity_generate1(params, user_type, time_type, last5, conn)
-        df2 = activity_generate2(params, user_type, time_type, last5, conn)
+        df1 = activity_generate1(params, user_type, time_type, last5, engine)
+        df2 = activity_generate2(params, user_type, time_type, last5, engine)
 
         count = get_count(df1)
         media = get_media(df2)
@@ -2085,14 +2078,14 @@ def retention_timeconversion(rawdate):
     return year
 
 
-def retention_generate1(lingua, retention_rate, conn):
+def retention_generate1(lingua, retention_rate, engine):
 
     query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'retention' AND m2_value='"+retention_rate+"'"
     query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
 
     query2 = query0+query1
 
-    df1 = pd.read_sql_query(query2, conn)
+    df1 = pd.read_sql_query(query2, engine)
     df1.reset_index(inplace=True)
 
     print("[RETENTION] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query2)
@@ -2101,7 +2094,7 @@ def retention_generate1(lingua, retention_rate, conn):
     return df1
 
 
-def get_avg_retention(lingua, retention_rate, year, conn):
+def get_avg_retention(lingua, retention_rate, year, engine):
 
     query0 = "SELECT *, AVG(m2_count / m1_count)*100 AS retention_rate FROM vital_signs_metrics WHERE topic = 'retention' AND m1='first_edit' AND m2_value = '" + \
         retention_rate+"' AND year_month LIKE '"+str(year)+"-%'"
@@ -2109,7 +2102,7 @@ def get_avg_retention(lingua, retention_rate, year, conn):
 
     query_retention = query0 + query1
 
-    df2 = pd.read_sql_query(query_retention, conn)
+    df2 = pd.read_sql_query(query_retention, engine)
     df2.reset_index(inplace=True)
 
     print("[RETENTION] QUERY FOR DATAFRAME RETENTION (HIGHLIGHTS)="+query_retention)
@@ -2122,8 +2115,7 @@ def get_avg_retention(lingua, retention_rate, year, conn):
 
 def retention_highlights(language, retention_rate):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2156,7 +2148,7 @@ def retention_highlights(language, retention_rate):
         count = 0
         for x in langs:
             count += 1
-            df1 = retention_generate1("'"+x+"'", retention_rate, conn)
+            df1 = retention_generate1("'"+x+"'", retention_rate, engine)
             df1.reset_index(inplace=True)
 
             last_time = get_time(df1)
@@ -2165,9 +2157,9 @@ def retention_highlights(language, retention_rate):
             old_date = int(date)-10
 
             old_retention_value = get_avg_retention(
-                "'"+x+"'", retention_rate, old_date, conn)
+                "'"+x+"'", retention_rate, old_date, engine)
             current_retention_value = get_avg_retention(
-                "'"+x+"'", retention_rate, date, conn)
+                "'"+x+"'", retention_rate, date, engine)
 
             if count > 1:
                 i = '\n \n * To'
@@ -2184,7 +2176,7 @@ def retention_highlights(language, retention_rate):
 
     else:
 
-        df1 = retention_generate1(params, retention_rate, conn)
+        df1 = retention_generate1(params, retention_rate, engine)
         df1.reset_index(inplace=True)
 
         last_time = get_time(df1)
@@ -2193,9 +2185,9 @@ def retention_highlights(language, retention_rate):
         old_date = int(date)-10
 
         old_retention_value = get_avg_retention(
-            params, retention_rate, old_date, conn)
+            params, retention_rate, old_date, engine)
         current_retention_value = get_avg_retention(
-            params, retention_rate, date, conn)
+            params, retention_rate, date, engine)
 
         h1 = "* In **"+str(old_date)+"**, to **"+language_names_full[str(langs[0])]+"** Wikipedia, the average retention rate was **"+old_retention_value+"%**, in **"+str(date)+"** it is **"+current_retention_value+"%**, this is **"+str(round(float(current_retention_value)-float(
             old_retention_value), 2))+"** difference. \nWe argue that a reasonable target would be a 3"+"%"+" retention rate to ensure there is renewal among editors, while it could be desirable to reach 5-7%. In general, communities should aim at reversing the declining trend in the retention rate."
@@ -2238,7 +2230,7 @@ def stability_calc_trend(num):
     return res
 
 
-def stability_generate1(lingua, attivi, valore, tempo, conn):
+def stability_generate1(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = '(m2_count/m1_count)*100'
@@ -2251,7 +2243,7 @@ def stability_generate1(lingua, attivi, valore, tempo, conn):
 
     query = query0+query1
 
-    df1 = pd.read_sql_query(query, conn)
+    df1 = pd.read_sql_query(query, engine)
 
     df1.reset_index(inplace=True)
 
@@ -2261,7 +2253,7 @@ def stability_generate1(lingua, attivi, valore, tempo, conn):
     return df1
 
 
-def stability_generate2(lingua, attivi, valore, tempo, conn):
+def stability_generate2(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = '(m2_count/m1_count)*100'
@@ -2275,7 +2267,7 @@ def stability_generate2(lingua, attivi, valore, tempo, conn):
 
     query = query0+query1
 
-    df1 = pd.read_sql_query(query, conn)
+    df1 = pd.read_sql_query(query, engine)
 
     df1.reset_index(inplace=True)
 
@@ -2287,8 +2279,7 @@ def stability_generate2(lingua, attivi, valore, tempo, conn):
 
 def stability_highlights(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2318,11 +2309,11 @@ def stability_highlights(language, user_type, value_type, time_type):
         for x in langs:
 
             df1 = stability_generate1(
-                "'"+x+"'", user_type, value_type, time_type, conn)
+                "'"+x+"'", user_type, value_type, time_type, engine)
             avg_fresh = stability_get_avg_fresh(df1)
 
             df2 = stability_generate2(
-                "'"+x+"'", user_type, value_type, time_type, conn)
+                "'"+x+"'", user_type, value_type, time_type, engine)
             avg_long = stability_get_avg_long(df2)
 
             if value_type == 'perc':
@@ -2348,11 +2339,11 @@ def stability_highlights(language, user_type, value_type, time_type):
     else:
 
         df1 = stability_generate1(
-            params, user_type, value_type, time_type, conn)
+            params, user_type, value_type, time_type, engine)
         avg_fresh = stability_get_avg_fresh(df1)
 
         df2 = stability_generate2(
-            params, user_type, value_type, time_type, conn)
+            params, user_type, value_type, time_type, engine)
         avg_long = stability_get_avg_long(df2)
 
         if value_type == 'perc':
@@ -2417,7 +2408,7 @@ def balance_get_gen(df):
     return temp1
 
 
-def balance_generate1(lingua, attivi, valore, tempo, conn):
+def balance_generate1(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = 'ROUND((m2_count/m1_count)*100,2)'
@@ -2436,7 +2427,7 @@ def balance_generate1(lingua, attivi, valore, tempo, conn):
 
     query = query0 + query1
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     print("[BALANCE] QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
@@ -2445,7 +2436,7 @@ def balance_generate1(lingua, attivi, valore, tempo, conn):
     return df
 
 
-def balance_generate2(lingua, attivi, valore, tempo, conn):
+def balance_generate2(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = 'ROUND((m2_count/m1_count)*100,2)'
@@ -2464,7 +2455,7 @@ def balance_generate2(lingua, attivi, valore, tempo, conn):
 
     query = query0 + query1
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     print("[BALANCE] QUERY FOR SECOND DATAFRAME (HIGHLIGHTS)="+query)
@@ -2475,8 +2466,7 @@ def balance_generate2(lingua, attivi, valore, tempo, conn):
 
 def balance_highlights(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2514,7 +2504,7 @@ def balance_highlights(language, user_type, value_type, time_type):
     elif len(language) != 1:
         for x in langs:
             df1 = balance_generate1(
-                "'"+x+"'", user_type, value_type, time_type, conn)
+                "'"+x+"'", user_type, value_type, time_type, engine)
 
             recent_year1 = get_time(df1)
             recent_year1 = timeconversion(recent_year1, time_type)
@@ -2525,7 +2515,7 @@ def balance_highlights(language, user_type, value_type, time_type):
                 last_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. "
 
             df2 = balance_generate2(
-                "'"+x+"'", user_type, value_type, time_type, conn)
+                "'"+x+"'", user_type, value_type, time_type, engine)
 
             recent_year2 = get_time(df2)
             recent_year2 = timeconversion(recent_year2, time_type)
@@ -2544,7 +2534,7 @@ def balance_highlights(language, user_type, value_type, time_type):
             "\n \n Although this generation might be at the end of their lifecycle and the growth may have occurred with the following generation (2006-2010). The share of every previous generation will inevitably **decrease** over time."
     else:
 
-        df1 = balance_generate1(params, user_type, value_type, time_type, conn)
+        df1 = balance_generate1(params, user_type, value_type, time_type, engine)
 
         recent_year1 = get_time(df1)
         recent_year1 = timeconversion(recent_year1, time_type)
@@ -2556,7 +2546,7 @@ def balance_highlights(language, user_type, value_type, time_type):
             "%" + \
             " depending on the years which have passed since its beginning (0-5)."
 
-        df2 = balance_generate2(params, user_type, value_type, time_type, conn)
+        df2 = balance_generate2(params, user_type, value_type, time_type, engine)
 
         recent_year2 = get_time(df2)
         recent_year2 = timeconversion(recent_year2, time_type)
@@ -2605,7 +2595,7 @@ def special_get_fresh_tech_editors(df):
     return value
 
 
-def special_generate1(topic, lingua, attivi, conn):
+def special_generate1(topic, lingua, attivi, engine):
 
     query0 = "SELECT * FROM vital_signs_metrics WHERE topic = '" + \
         topic+"' AND m1_value="+attivi+" AND year_year_month = 'y'"
@@ -2613,7 +2603,7 @@ def special_generate1(topic, lingua, attivi, conn):
 
     query = query0+query1
 
-    df1 = pd.read_sql_query(query, conn)
+    df1 = pd.read_sql_query(query, engine)
 
     df1.reset_index(inplace=True)
 
@@ -2624,7 +2614,7 @@ def special_generate1(topic, lingua, attivi, conn):
     return df1
 
 
-def special_generate2(topic, lingua, attivi, tempo, conn):
+def special_generate2(topic, lingua, attivi, tempo, engine):
 
     inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = '" + \
         topic+"' and m1_value='"+attivi+"'"
@@ -2639,7 +2629,7 @@ def special_generate2(topic, lingua, attivi, tempo, conn):
 
     query = query0+query1
 
-    df2 = pd.read_sql_query(query, conn)
+    df2 = pd.read_sql_query(query, engine)
 
     df2.reset_index(inplace=True)
 
@@ -2652,8 +2642,7 @@ def special_generate2(topic, lingua, attivi, tempo, conn):
 
 def special_highlights1(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2692,27 +2681,27 @@ def special_highlights1(language, user_type, value_type, time_type):
     elif len(language) != 1:
         for x in langs:
             df1 = special_generate1(
-                "technical_editors", "'"+x+"'", user_type, conn)
+                "technical_editors", "'"+x+"'", user_type, engine)
             tech_editors = special_get_tech_editors(df1)
 
             h1 = h1+"\n* In **"+get_time(df1)+"**, in the **"+language_names_full[x]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **technical** editors. This is **"+str(
                 special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
 
             df2 = special_generate2(
-                "technical_editors", "'"+x+"'", user_type, time_type, conn)
+                "technical_editors", "'"+x+"'", user_type, time_type, engine)
             fresh_tech_editors = special_get_fresh_tech_editors(df2)
 
             h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
                 fresh_tech_editors)+""+"%"+"** of the **"+active+"** technical editors. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
     else:
-        df1 = special_generate1("technical_editors", params, user_type, conn)
+        df1 = special_generate1("technical_editors", params, user_type, engine)
         tech_editors = special_get_tech_editors(df1)
 
         h1 = "* In **"+get_time(df1)+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **technical** editors. This is **"+str(
             special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
 
         df2 = special_generate2("technical_editors",
-                                params, user_type, time_type, conn)
+                                params, user_type, time_type, engine)
         fresh_tech_editors = special_get_fresh_tech_editors(df2)
 
         h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
@@ -2725,8 +2714,7 @@ def special_highlights1(language, user_type, value_type, time_type):
 
 
 def special_highlights2(language, user_type, value_type, time_type):
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2764,27 +2752,27 @@ def special_highlights2(language, user_type, value_type, time_type):
         h2 = ""
     elif len(language) != 1:
         for x in langs:
-            df1 = special_generate1("coordinators", "'"+x+"'", user_type, conn)
+            df1 = special_generate1("coordinators", "'"+x+"'", user_type, engine)
             tech_editors = special_get_tech_editors(df1)
 
             h1 = h1+"\n* In **"+get_time(df1)+"**, in the **"+language_names_full[x]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **coordinators**. This is **"+str(
                 special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
 
             df2 = special_generate2(
-                "coordinators", "'"+x+"'", user_type, time_type, conn)
+                "coordinators", "'"+x+"'", user_type, time_type, engine)
             fresh_tech_editors = special_get_fresh_tech_editors(df2)
 
             h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
                 fresh_tech_editors)+""+"%"+"** of the **"+active+"** coordinators. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
     else:
-        df1 = special_generate1("coordinators", params, user_type, conn)
+        df1 = special_generate1("coordinators", params, user_type, engine)
         tech_editors = special_get_tech_editors(df1)
 
         h1 = "* In **"+get_time(df1)+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there were **"+str(tech_editors)+" "+active+"** coordinators. This is **"+str(
             special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
 
         df2 = special_generate2("coordinators", params,
-                                user_type, time_type, conn)
+                                user_type, time_type, engine)
         fresh_tech_editors = special_get_fresh_tech_editors(df2)
 
         h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
@@ -2854,7 +2842,7 @@ def admin_get_avg(df):
     return temp1
 
 
-def admin_generate1(lingua, admin, conn):
+def admin_generate1(lingua, admin, engine):
 
     inner_query0 = "select sum(m2_count) as count from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' and m1_value = '"+admin+"'"
     inner_query1 = " and langcode = %s group by year_month" % lingua
@@ -2863,7 +2851,7 @@ def admin_generate1(lingua, admin, conn):
 
     query = "select ROUND(AVG(count),1) as avg from ("+inner_query+")"
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     # print("QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
@@ -2872,7 +2860,7 @@ def admin_generate1(lingua, admin, conn):
     return df
 
 
-def admin_generate2(lingua, tempo, admin, conn):
+def admin_generate2(lingua, tempo, admin, engine):
 
     query1 = "select *, ROUND((m2_count/m1_count)*100,2) as perc from vital_signs_metrics where topic = 'flags' and year_year_month='" + \
         tempo+"' and m2_value='"+admin+"' "
@@ -2880,7 +2868,7 @@ def admin_generate2(lingua, tempo, admin, conn):
 
     query = query1+query2
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     print("QUERY FOR SECOND DATAFRAME (HIGHLIGHTS)="+query)
@@ -2889,14 +2877,14 @@ def admin_generate2(lingua, tempo, admin, conn):
     return df
 
 
-def admin_find_last_flag(lingua, admin, conn):
+def admin_find_last_flag(lingua, admin, engine):
 
     query = "select year_month from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' and m1_value = '"+admin+"'"
     query1 = " and langcode IN  (%s) order by year_month desc limit 1" % lingua
 
     query = query + query1
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     temp = df["year_month"].tolist()
@@ -2908,14 +2896,14 @@ def admin_find_last_flag(lingua, admin, conn):
     return temp1
 
 
-def admin_total_num_admin(lingua, conn):
+def admin_total_num_admin(lingua, engine):
 
     query20 = "select sum(m2_count) as tot from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' "
     query21 = " and langcode In (%s)" % lingua  # and year_month = '2021'
 
     query2 = query20 + query21
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
     df2.reset_index(inplace=True)
 
     temp = df2["tot"].tolist()
@@ -2927,14 +2915,14 @@ def admin_total_num_admin(lingua, conn):
     return tot_admin
 
 
-def admin_find_last_percentage(lingua, conn):
+def admin_find_last_percentage(lingua, engine):
 
     query10 = "select sum(m2_count) as count, m2_value from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag'"
     query11 = " and langcode In (%s) group by m2_value order by m2_value desc limit 1" % lingua
 
     query1 = query10 + query11
 
-    df1 = pd.read_sql_query(query1, conn)
+    df1 = pd.read_sql_query(query1, engine)
     df1.reset_index(inplace=True)
 
     temp = df1["count"].tolist()
@@ -2943,7 +2931,7 @@ def admin_find_last_percentage(lingua, conn):
     # print("NUM ADMIN")
     # print(query1)
 
-    tot_admin = admin_total_num_admin(lingua, conn)
+    tot_admin = admin_total_num_admin(lingua, engine)
 
     res = round((num_admin/tot_admin)*100, 2)
 
@@ -2955,8 +2943,7 @@ def admin_find_last_percentage(lingua, conn):
 
 def admin_highlights1(language, admin_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -2983,14 +2970,14 @@ def admin_highlights1(language, admin_type, time_type):
         h2 = ""
     elif len(language) != 1:
         for x in langs:
-            df1 = admin_generate1("'"+x+"'", admin_type, conn)
+            df1 = admin_generate1("'"+x+"'", admin_type, engine)
             avg = admin_get_avg(df1)
 
-            last_flag_year = admin_find_last_flag("'"+x+"'", admin_type, conn)
+            last_flag_year = admin_find_last_flag("'"+x+"'", admin_type, engine)
 
-            last_per = admin_find_last_percentage("'"+x+"'", conn)
+            last_per = admin_find_last_percentage("'"+x+"'", engine)
 
-            tot = admin_total_num_admin("'"+x+"'", conn)
+            tot = admin_total_num_admin("'"+x+"'", engine)
 
             flag_percentage = (avg/tot)*100
 
@@ -3003,14 +2990,14 @@ def admin_highlights1(language, admin_type, time_type):
 
         h2 = h2+"\n \n Ideally, the group of admins should include members from all generations."
     else:
-        df1 = admin_generate1(params, admin_type, conn)
+        df1 = admin_generate1(params, admin_type, engine)
         avg = admin_get_avg(df1)
 
-        last_flag_year = admin_find_last_flag(params, admin_type, conn)
+        last_flag_year = admin_find_last_flag(params, admin_type, engine)
 
-        last_per = admin_find_last_percentage(params, conn)
+        last_per = admin_find_last_percentage(params, engine)
 
-        tot = admin_total_num_admin(params, conn)
+        tot = admin_total_num_admin(params, engine)
 
         flag_percentage = (avg/tot)*100
 
@@ -3029,8 +3016,7 @@ def admin_highlights1(language, admin_type, time_type):
 
 def admin_highlights2(language, admin_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if isinstance(language, str):
         language = language.split(',')
@@ -3055,7 +3041,7 @@ def admin_highlights2(language, admin_type, time_type):
         h1 = ""
     elif len(language) != 1:
         for x in langs:
-            df = admin_generate2("'"+x+"'", time_type, admin_type, conn)
+            df = admin_generate2("'"+x+"'", time_type, admin_type, engine)
 
             last_time = get_time(df)
             last_date = timeconversion(last_time, time_type)
@@ -3065,7 +3051,7 @@ def admin_highlights2(language, admin_type, time_type):
             h1 = h1+"\n* In **"+str(last_date)+"**, the proportion of ["+admin_type+"] admins in the **"+language_names_full[x]+"** Wikipedia is **"+str(proportion_value)+"%**. This is **"+admin_calc_trend3(
                 proportion_value)+"** the target of **1-5%** to guarantee that admins do not carry an excessive workload, since, in the end, they revise other editors’ edits."
     else:
-        df = admin_generate2(params, time_type, admin_type, conn)
+        df = admin_generate2(params, time_type, admin_type, engine)
 
         last_time = get_time(df)
         last_date = timeconversion(last_time, time_type)
@@ -3102,7 +3088,7 @@ def global_calc_trend(num):
     return res
 
 
-def global_generate1(language, user_type, value_type, time_type, conn):
+def global_generate1(language, user_type, value_type, time_type, engine):
 
     query0 = "select round(avg(m2_count),0) as nums, round(avg(m2_count/m1_count)*100,4) as percentage from vital_signs_metrics where topic = 'primary_editors' and year_year_month='" + \
         time_type+"' and m1_value='"+user_type+"' and m2_value != langcode "
@@ -3111,13 +3097,13 @@ def global_generate1(language, user_type, value_type, time_type, conn):
     query = query0 + query1
     print("[GLOBAL] Highlights query = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     return df
 
 
-def global_generate2(language, user_type, value_type, time_type, conn):
+def global_generate2(language, user_type, value_type, time_type, engine):
 
     query0 = "select avg(m2_count) as avg1, avg(m1_count) as avg2 from vital_signs_metrics where topic = 'primary_editors' and year_year_month='ym' and m1_value='" + \
         user_type+"' and langcode = 'meta' "
@@ -3126,7 +3112,7 @@ def global_generate2(language, user_type, value_type, time_type, conn):
     query = query0 + query1
     print("[GLOBAL] Highlights second query = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     return df
@@ -3134,8 +3120,7 @@ def global_generate2(language, user_type, value_type, time_type, conn):
 
 def global_highlights1(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if user_type == '5':
         user_text = 'Active Editors'
@@ -3167,7 +3152,7 @@ def global_highlights1(language, user_type, value_type, time_type):
     elif len(language) != 1:
         for x in langs:
             df = global_generate1("'"+x+"'", user_type,
-                                  value_type, time_type, conn)
+                                  value_type, time_type, engine)
 
             num = get_value(df, "nums")
 
@@ -3179,7 +3164,7 @@ def global_highlights1(language, user_type, value_type, time_type):
         h1 = h1+"\n\n  A percentage higher than 95% might imply that the community is not attracting collaborators from other communities. The rationale for both percentages is that we see both 50" + \
             "%"+" and 100"+"%"+" as extremes, and we suggest some margin around these values."
     else:
-        df = global_generate1(params, user_type, value_type, time_type, conn)
+        df = global_generate1(params, user_type, value_type, time_type, engine)
 
         num = get_value(df, "nums")
 
@@ -3196,8 +3181,7 @@ def global_highlights1(language, user_type, value_type, time_type):
 
 def global_highlights2(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if user_type == '5':
         user_text = 'Active Editors'
@@ -3229,7 +3213,7 @@ def global_highlights2(language, user_type, value_type, time_type):
     elif len(language) != 1:
         for x in langs:
             df = global_generate2("'"+x+"'", user_type,
-                                  value_type, time_type, conn)
+                                  value_type, time_type, engine)
 
             avg1 = get_value(df, "avg1")
             avg2 = get_value(df, "avg2")
@@ -3242,7 +3226,7 @@ def global_highlights2(language, user_type, value_type, time_type):
                     language_names_full[x]+" Wikipedia is **"+str(res)+"% **"
     else:
 
-        df = global_generate2(params, user_type, value_type, time_type, conn)
+        df = global_generate2(params, user_type, value_type, time_type, engine)
 
         avg1 = get_value(df, "avg1")
         avg2 = get_value(df, "avg2")

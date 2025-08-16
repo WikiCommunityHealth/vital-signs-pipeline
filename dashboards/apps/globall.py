@@ -150,8 +150,7 @@ def update_graph(language, user_type, value_type, time_type, year, month):
 
     container = ""  # The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if language == None:
         languages = []
@@ -180,7 +179,7 @@ def update_graph(language, user_type, value_type, time_type, year, month):
 
     print("GLOBAL QUERY2 = "+query2)
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
 
     df2.reset_index(inplace=True)
 
@@ -258,7 +257,7 @@ def update_graph(language, user_type, value_type, time_type, year, month):
     query23 = "AND langcode IN (%s)" % params
     query3 = query03 + query13 + query23
 
-    df3 = pd.read_sql_query(query3, conn)
+    df3 = pd.read_sql_query(query3, engine)
 
     df3.reset_index(inplace=True)
 

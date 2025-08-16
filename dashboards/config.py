@@ -6,7 +6,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import datetime
 import time
-import sqlite3
+from sqlalchemy import create_engine
 import plotly
 import chart_studio.plotly as py
 import plotly.express as px
@@ -15,8 +15,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import urllib
 from urllib.parse import urlparse, parse_qsl, urlencode
+import os
 
-last_period = '2025-04'
+POSTGRES_USER = os.getenv('POSTGRES_USER')
+POSTGRES_PASS = os.getenv('POSTGRES_PASSWORD')
+
+last_period = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime('%Y-%m')
 LOGO = "./assets/logo.png"
 LOGO_foot = "./assets/wikimedia-logo.png"
 
@@ -25,15 +29,15 @@ title_addenda = ' - Wikimedia Community Health Metrics'
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
 webtype = ''
-database = '/databases/vital_signs_web.db'
+database = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres/vital_signs_web'
 metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
 # languages
 
 languages = pd.DataFrame({
-    'Wikimedialanguagecode': ['lij', 'pms', 'lmo', 'vec', 'sc', 'scn', 'nap'],
-    'languagename': ['ligurian', 'piedmontese', 'lombard', 'venetian', 'sardinian', 'sicilian', 'neapolitan']
+    'Wikimedialanguagecode': ['lij', 'pms', 'lmo'],
+    'languagename': ['ligurian', 'piedmontese', 'lombard']
 }).set_index('Wikimedialanguagecode')
 
 wikilanguagecodes = list(languages.index.tolist())
@@ -102,3 +106,4 @@ footbar = html.Div([
         ])
     ])
 ])
+
