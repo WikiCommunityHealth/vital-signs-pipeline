@@ -17,9 +17,6 @@ import urllib
 from urllib.parse import urlparse, parse_qsl, urlencode
 import os
 
-POSTGRES_USER = os.getenv('POSTGRES_USER')
-POSTGRES_PASS = os.getenv('POSTGRES_PASSWORD')
-
 last_period = (datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)).strftime('%Y-%m')
 LOGO = "./assets/logo.png"
 LOGO_foot = "./assets/wikimedia-logo.png"
@@ -29,7 +26,7 @@ title_addenda = ' - Wikimedia Community Health Metrics'
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
 webtype = ''
-database = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres/vital_signs_web'
+database = f'postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@postgres/vital_signs_web'
 metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
