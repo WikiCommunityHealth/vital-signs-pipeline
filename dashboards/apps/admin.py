@@ -139,8 +139,7 @@ def update_graph(language, admin_type, value_type, time_type):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -158,8 +157,8 @@ def update_graph(language, admin_type, value_type, time_type):
     print("ADMIN QUERY = "+query)
     print("ADMIN QUERY1 = "+query1)
 
-    df = pd.read_sql_query(query, conn)
-    df1 = pd.read_sql_query(query1, conn)
+    df = pd.read_sql_query(query, engine)
+    df1 = pd.read_sql_query(query1, engine)
 
     df.reset_index(inplace=True)
     df1.reset_index(inplace=True)
@@ -270,7 +269,7 @@ def update_graph(language, admin_type, value_type, time_type):
     query3 = query03+query04
 
     print("SPECIAL FUNCTIONS QUERY3 = "+query3)
-    df3 = pd.read_sql_query(query3, conn)
+    df3 = pd.read_sql_query(query3, engine)
     df3.reset_index(inplace=True)
 
     df3['perc'] = ((df3['m2_count']/df3['m1_count'])*100).round(2)

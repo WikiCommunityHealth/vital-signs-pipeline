@@ -157,7 +157,7 @@ def get_time(df):
     return temp1
 
 
-def generate1(lingua, attivi, tempo, last5, conn):
+def generate1(lingua, attivi, tempo, last5, engine):
 
     query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value=" + \
         attivi+" AND year_year_month = '"+tempo+"'"
@@ -165,7 +165,7 @@ def generate1(lingua, attivi, tempo, last5, conn):
 
     query2 = query0+query1
 
-    df1 = pd.read_sql_query(query2, conn)
+    df1 = pd.read_sql_query(query2, engine)
 
     df1.reset_index(inplace=True)
 
@@ -175,7 +175,7 @@ def generate1(lingua, attivi, tempo, last5, conn):
     return df1
 
 
-def generate2(lingua, attivi, tempo, last5, conn):
+def generate2(lingua, attivi, tempo, last5, engine):
 
     query0 = "SELECT AVG(m1_count) AS Media FROM vital_signs_metrics WHERE year_month IN "+last5 + \
         " AND topic = 'active_editors' AND year_year_month = '" + \
@@ -184,7 +184,7 @@ def generate2(lingua, attivi, tempo, last5, conn):
 
     query2 = query0+query1
 
-    df2 = pd.read_sql_query(query2, conn)
+    df2 = pd.read_sql_query(query2, engine)
 
     df2.reset_index(inplace=True)
 
@@ -209,7 +209,7 @@ def generatetail(count, media, active, time):
     return tail
 
 
-def findMax(language, active, yearmonth, time, conn):
+def findMax(language, active, yearmonth, time, engine):
 
     query0 = "SELECT MAX(m1_count) as max,langcode, year_month FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
         active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
@@ -218,12 +218,12 @@ def findMax(language, active, yearmonth, time, conn):
     query = query0 + query1
     print("FIND MAX="+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
     return df
 
 
-def findMax2(language, active, yearmonth, conn):
+def findMax2(language, active, yearmonth, engine):
 
     query0 = "SELECT MAX(m1_count) as max,langcode, year_month FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
         active+"' AND year_year_month = '"+yearmonth+"'"
@@ -232,12 +232,12 @@ def findMax2(language, active, yearmonth, conn):
     query = query0 + query1
     print("FIND MAX="+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
     return df
 
 
-def findMin(language, active, yearmonth, time, conn):
+def findMin(language, active, yearmonth, time, engine):
 
     query0 = "SELECT MIN(m1_count) as min,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
         active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
@@ -246,7 +246,7 @@ def findMin(language, active, yearmonth, time, conn):
     query = query0 + query1
     print("FIND MIN="+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
     return df
 
@@ -324,8 +324,7 @@ def highlights(language, user_type, time_type):
 
     print("HIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTS")
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     container = ""
 
@@ -373,8 +372,8 @@ def highlights(language, user_type, time_type):
 
         for x in langs:
 
-            df1 = generate1("'"+x+"'", user_type, time_type, last5, conn)
-            df2 = generate2("'"+x+"'", user_type, time_type, last5, conn)
+            df1 = generate1("'"+x+"'", user_type, time_type, last5, engine)
+            df2 = generate2("'"+x+"'", user_type, time_type, last5, engine)
 
             count = get_count(df1)
             media = get_media(df2)
@@ -388,7 +387,7 @@ def highlights(language, user_type, time_type):
                 language_names_inv[x]+"** Wikipedia, the number of " + \
                     active+" editors was **"+str(count)+"**"+tail
 
-            df3 = findMax2("'"+x+"'", user_type, time_type, conn)
+            df3 = findMax2("'"+x+"'", user_type, time_type, engine)
 
             timemax = get_time(df3)
             datemax = timeconversion(timemax, time_type)
@@ -400,8 +399,8 @@ def highlights(language, user_type, time_type):
                 active+" editors in **"+datemax+"** with **" + \
                     str(max_value)+"** "+active+" editors. \n"
 
-        dfmax = findMax(params, user_type, time_type, timespan, conn)
-        dfmin = findMin(params, user_type, time_type, timespan, conn)
+        dfmax = findMax(params, user_type, time_type, timespan, engine)
+        dfmin = findMin(params, user_type, time_type, timespan, engine)
 
         max0 = dfmax["langcode"].tolist()
         maxlang = max0[0]
@@ -417,8 +416,8 @@ def highlights(language, user_type, time_type):
             max)+"**), **"+language_names_inv[str(minlang)]+"** Wikipedia has the smallest (**"+str(min)+"**)."
     else:
 
-        df1 = generate1(params, user_type, time_type, last5, conn)
-        df2 = generate2(params, user_type, time_type, last5, conn)
+        df1 = generate1(params, user_type, time_type, last5, engine)
+        df2 = generate2(params, user_type, time_type, last5, engine)
 
         count = get_count(df1)
         media = get_media(df2)
@@ -432,7 +431,7 @@ def highlights(language, user_type, time_type):
             str(language)+"** Wikipedia, the number of " + \
             active+" editors was **"+str(count)+"**"+tail
 
-        df3 = findMax2(params, user_type, time_type, conn)
+        df3 = findMax2(params, user_type, time_type, engine)
 
         timemax = get_time(df3)
         datemax = timeconversion(timemax, time_type)
@@ -473,8 +472,7 @@ def update_graph(language, user_type, time_type):
 
     container = ""  # The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -493,7 +491,7 @@ def update_graph(language, user_type, time_type):
 
     print("ACTIVITY QUERY = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
 
     df.reset_index(inplace=True)
     # print(df[:100])

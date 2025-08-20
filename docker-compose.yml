@@ -1,4 +1,7 @@
 x-airflow-env: &airflow-env
+  TMPDIR: /opt/airflow/tmp
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
   AIRFLOW__CORE__EXECUTOR: LocalExecutor
   AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
@@ -25,7 +28,6 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./databases:/opt/airflow/databases
       - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
 
@@ -46,9 +48,9 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./databases:/opt/airflow/databases
       - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
+      - ./airflow-tmp:/opt/airflow/tmp
 
     command: scheduler
     depends_on:
@@ -64,7 +66,6 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
-      - ./databases:/opt/airflow/databases
       - /mnt/nfs/dumps-clouddumps1001.wikimedia.org/other/mediawiki_history:/opt/airflow/mediawiki_history
       - ./logs:/opt/airflow/logs
     entrypoint: >
@@ -85,6 +86,7 @@ services:
         POSTGRES_DB: ${POSTGRES_DB}
       volumes:
         - ./postgres-data:/var/lib/postgresql/data
+        - ./init_multidb.sql:/docker-entrypoint-initdb.d/init-multidb.sql
       healthcheck:
         test: ["CMD-SHELL", "pg_isready -U airflow"]
         interval: 10s
@@ -127,7 +129,5 @@ services:
     build:
       context: ./dashboards
       dockerfile: Dockerfile
-    volumes:
-      - ./databases:/databases
     ports:
       - "8050:8050"

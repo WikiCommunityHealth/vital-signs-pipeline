@@ -127,7 +127,7 @@ def calc_trend(num):
     return res
 
 
-def generate1(lingua, attivi, valore, tempo, conn):
+def generate1(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = '(m2_count/m1_count)*100'
@@ -140,7 +140,7 @@ def generate1(lingua, attivi, valore, tempo, conn):
 
     query = query0+query1
 
-    df1 = pd.read_sql_query(query, conn)
+    df1 = pd.read_sql_query(query, engine)
 
     df1.reset_index(inplace=True)
 
@@ -150,7 +150,7 @@ def generate1(lingua, attivi, valore, tempo, conn):
     return df1
 
 
-def generate2(lingua, attivi, valore, tempo, conn):
+def generate2(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = '(m2_count/m1_count)*100'
@@ -164,7 +164,7 @@ def generate2(lingua, attivi, valore, tempo, conn):
 
     query = query0+query1
 
-    df1 = pd.read_sql_query(query, conn)
+    df1 = pd.read_sql_query(query, engine)
 
     df1.reset_index(inplace=True)
 
@@ -184,8 +184,7 @@ def generate2(lingua, attivi, valore, tempo, conn):
                Input(component_id='year_yearmonth', component_property='value')])
 def highlights(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if language == None:
         languages = []
@@ -207,10 +206,10 @@ def highlights(language, user_type, value_type, time_type):
     print("PARAMS")
     print(params)
 
-    df1 = generate1(params, user_type, value_type, time_type, conn)
+    df1 = generate1(params, user_type, value_type, time_type, engine)
     avg_fresh = get_avg_fresh(df1)
 
-    df2 = generate2(params, user_type, value_type, time_type, conn)
+    df2 = generate2(params, user_type, value_type, time_type, engine)
     avg_long = get_avg_long(df2)
 
     if value_type == 'perc':
@@ -271,8 +270,7 @@ def update_graph(language, user_type, value_type, time_type):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -289,7 +287,7 @@ def update_graph(language, user_type, value_type, time_type):
 
     print("STABILITY QUERY = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
 
     df.reset_index(inplace=True)
     # print(df[:100])

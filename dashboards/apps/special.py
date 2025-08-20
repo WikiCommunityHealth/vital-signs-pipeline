@@ -131,8 +131,7 @@ def update_graph(language, user_type, value_type, time_type):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -155,8 +154,8 @@ def update_graph(language, user_type, value_type, time_type):
     print("SPECIAL FUNCTIONS QUERY1 = "+query1)
     print("SPECIAL FUNCTIONS QUERY2 = "+query2)
 
-    df = pd.read_sql_query(query1, conn)
-    df2 = pd.read_sql_query(query2, conn)
+    df = pd.read_sql_query(query1, engine)
+    df2 = pd.read_sql_query(query2, engine)
 
     df.reset_index(inplace=True)
     df2.reset_index(inplace=True)

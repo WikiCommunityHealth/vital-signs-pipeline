@@ -32,14 +32,13 @@ def get_mediawiki_paths(languagecode):
             for year in range(2001, cy+1):
                 for month in range(1, 13):
                     file_name = f'{year_month}.{languagecode}wiki.{year}-{month:02d}.tsv.bz2'
-                    abs_path = path + dir_name + file_name
-
+                    abs_path = os.path.join(path_dir, file_name)
                     if os.path.isfile(abs_path):
                         d_paths.append(abs_path)
         else:
             for year in range(2001, cy+1):
                 file_name = f'{year_month}.{languagecode}wiki.{year}.tsv.bz2'
-                abs_path = path + dir_name + file_name
+                abs_path = os.path.join(path_dir, file_name)
 
                 if os.path.isfile(abs_path):
                     d_paths.append(abs_path)

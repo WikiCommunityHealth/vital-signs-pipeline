@@ -138,7 +138,7 @@ def get_gen(df):
     return temp1
 
 
-def generate1(lingua, attivi, valore, tempo, conn):
+def generate1(lingua, attivi, valore, tempo, engine):
 
     if valore == 'perc':
         toreturn = 'ROUND(AVG((m2_count/m1_count)*100),2)'
@@ -157,7 +157,7 @@ def generate1(lingua, attivi, valore, tempo, conn):
 
     query = query0 + query1
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
     df.reset_index(inplace=True)
 
     print("QUERY FOR DATAFRAME (HIGHLIGHTS)="+query)
@@ -176,8 +176,7 @@ def generate1(lingua, attivi, valore, tempo, conn):
                Input(component_id='year_yearmonth', component_property='value')])
 def highlights(language, user_type, value_type, time_type):
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     if language == None:
         languages = []
@@ -207,7 +206,7 @@ def highlights(language, user_type, value_type, time_type):
     else:
         perc_or_num = ''
 
-    df1 = generate1(params, user_type, value_type, time_type, conn)
+    df1 = generate1(params, user_type, value_type, time_type, engine)
 
     recent_year1 = get_time(df1, time_type)
     last_gen_value = get_last_gen_val(df1)
@@ -260,8 +259,7 @@ def update_graph(language, user_type, value_type, time_type):
 
     container = ""  # "The langcode chosen was: {}".format(language)
 
-    conn = sqlite3.connect(database)
-    cursor = conn.cursor()
+    engine = create_engine(database)
 
     params = ""
     for x in langs:
@@ -278,7 +276,7 @@ def update_graph(language, user_type, value_type, time_type):
 
     print("BALANCE QUERY = "+query)
 
-    df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, engine)
 
     df.reset_index(inplace=True)
     # print(df[:100])
