@@ -6,7 +6,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import datetime
 import time
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text, bindparam
 import plotly
 import chart_studio.plotly as py
 import plotly.express as px
@@ -27,6 +27,7 @@ external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
 webtype = ''
 database = f'postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@postgres/vital_signs_web'
+engine = create_engine(database)
 metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
@@ -57,11 +58,10 @@ language_names_inv = {v: k for k, v in language_names.items()}
 admin_type = ['autopatrolled', 'sysop', 'bureaucrat', 'checkuser', 'ipblock-exempt', 'rollbacker', 'confirmed', 'extendedconfirmed', 'interface-admin', 'patroller', 'import', 'abusefilter',
               'reviewer', 'accountcreator', 'oversight', 'founder', 'autoreviewer', 'eventcoordinator', 'filemover', 'researcher', 'massmessage-sender', 'extendedmover', 'templateeditor', 'steward']
 
-year_list = ['2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012',
-             '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025']
+year_list = [str(year) for year in range(2002, datetime.datetime.now().year + 1)]
+
 month_list = ['01', '02', '03', '04', '05',
               '06', '07', '08', '09', '10', '11', '12']
-
 
 navbar = html.Div([
     html.Br(),

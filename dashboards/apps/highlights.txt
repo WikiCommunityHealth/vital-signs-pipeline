@@ -1,0 +1,1497 @@
+
+def timeconversion(rawdate, time_type):
+
+    if time_type == 'ym':
+
+        year = ''
+        month = ''
+
+        # print("Raw date is: "+rawdate)
+
+        lista = rawdate.split('-')
+
+        # print(lista[0])
+        # print(lista[1])
+
+        year = lista[0]
+
+        if lista[1] == '01':
+            month = 'January'
+        elif lista[1] == '02':
+            month = 'February'
+        elif lista[1] == '03':
+            month = 'March'
+        elif lista[1] == '04':
+            month = 'April'
+        elif lista[1] == '05':
+            month = 'May'
+        elif lista[1] == '06':
+            month = 'June'
+        elif lista[1] == '07':
+            month = 'July'
+        elif lista[1] == '08':
+            month = 'August'
+        elif lista[1] == '09':
+            month = 'September'
+        elif lista[1] == '10':
+            month = 'October'
+        elif lista[1] == '11':
+            month = 'November'
+        elif lista[1] == '12':
+            month = 'December'
+        else:
+            month = 'invalid'
+
+        date = month+' '+year
+        # print("Date is:"+date)
+    elif time_type == 'y':
+        date = rawdate
+    return date
+
+
+def get_count(df):
+    # il valore della media nell'ultimo tempo
+    temp_c = df["m1_count"].tolist()
+    count = temp_c[0]
+
+    return count
+
+
+def get_media(df):
+    # la media negli ultimi 5 anni/mesi
+    temp_m = df["Media"].tolist()
+    media = temp_m[0]
+
+    return media
+
+
+def get_time(df):
+    # l'ultimo tempo disponibile
+    temp = df["year_month"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def activity_generate1(lingua, attivi, tempo, last5, engine):
+
+    query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value=" + \
+        attivi+" AND year_year_month = '"+tempo+"'"
+    query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
+
+    query = query0+query1
+
+    df1 = pd.read_sql_query(query, engine)
+
+    df1.reset_index(inplace=True)
+
+    print("[ACTIVITY] QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df1
+
+
+def activity_generate2(lingua, attivi, tempo, last5, engine):
+
+    query0 = "SELECT AVG(m1_count) AS Media FROM vital_signs_metrics WHERE year_month IN "+last5 + \
+        " AND topic = 'active_editors' AND year_year_month = '" + \
+        tempo+"'  AND m1_value='"+attivi+"'"
+    query1 = " AND langcode IN (%s)" % lingua
+
+    query2 = query0+query1
+
+    df2 = pd.read_sql_query(query2, engine)
+
+    df2.reset_index(inplace=True)
+
+    print("[ACTIVITY] QUERY FOR AVERAGE ="+query2)
+    print("---------------------------")
+
+    return df2
+
+
+def activity_generatetail(count, media, active, time):
+
+    if (count > media):
+        tail = ", which is **above** the median number (**"+str(
+            media)+"**) of "+active+" editors of the five last **"+time+"**. \n"
+    else:
+        tail = ", which is **below** the median number (**"+str(
+            media)+"**) of "+active+" editors of the five last **"+time+"**. \n"
+
+    return tail
+
+
+def activity_findMax(language, active, yearmonth, time, engine):
+
+    query0 = "SELECT MAX(m1_count) as max,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
+        active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
+    query1 = " AND langcode IN (%s)" % language
+
+    query = query0 + query1
+    # print("FIND MAX="+query)
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+    return df
+
+
+def activity_findMin(language, active, yearmonth, time, engine):
+
+    query0 = "SELECT MIN(m1_count) as min,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
+        active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
+    query1 = " AND langcode IN (%s)" % language
+
+    query = query0 + query1
+    # print("FIND MIN="+query)
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+    return df
+
+
+def activity_highlights(language, user_type, time_type):
+
+    print("HIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTS")
+
+    print(language)
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    if language == None:
+        languages = []
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+
+    params = params[:-1]
+
+    if user_type == '5':
+        active = 'active'
+    elif user_type == '100':
+        active = 'very active'
+
+    if time_type == 'y':
+        last5 = "('2021','2020','2019','2018','2017')"
+        time = "years"
+    elif time_type == 'ym':
+        last5 = "('2021-12','2021-11','2021-10','2021-09','2021-08')"
+        time = "months"
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+
+        for x in langs:
+
+            df1 = activity_generate1(
+                "'"+x+"'", user_type, time_type, last5, engine)
+            df2 = activity_generate2(
+                "'"+x+"'", user_type, time_type, last5, engine)
+
+            count = get_count(df1)
+            media = get_media(df2)
+
+            tail = activity_generatetail(count, media, active, time)
+
+            timespan = get_time(df1)
+            date = timeconversion(timespan, time_type)
+
+            h1 = h1+"* In **"+date+"**, in **" + \
+                language_names_full[x]+"** Wikipedia, the number of " + \
+                    active+" editors was **"+str(count)+"**"+tail
+
+        dfmax = activity_findMax(params, user_type, time_type, timespan, engine)
+        dfmin = activity_findMin(params, user_type, time_type, timespan, engine)
+
+        max0 = dfmax["langcode"].tolist()
+        maxlang = max0[0]
+        max1 = dfmax["max"].tolist()
+        max = max1[0]
+
+        min0 = dfmin["langcode"].tolist()
+        minlang = min0[0]
+        min1 = dfmin["min"].tolist()
+        min = min1[0]
+
+        h2 = "* **"+language_names_full[str(maxlang)]+"** Wikipedia language edition has the higher number of "+active+" editors (**"+str(
+            max)+"**), **"+language_names_full[str(minlang)]+"** Wikipedia has the lower (**"+str(min)+"**)."
+    else:
+
+        df1 = activity_generate1(params, user_type, time_type, last5, engine)
+        df2 = activity_generate2(params, user_type, time_type, last5, engine)
+
+        count = get_count(df1)
+        media = get_media(df2)
+
+        tail = activity_generatetail(count, media, active, time)
+
+        timespan = get_time(df1)
+        date = timeconversion(timespan, time_type)
+
+        h1 = "* In **"+date+"**, in **"+language_names_full[str(
+            langs[0])]+"** Wikipedia, the number of "+active+" editors was **"+str(count)+"**"+tail
+        h2 = ""
+
+    # print("---------------------------")
+
+    res = dcc.Markdown(id='highlights', children=[
+                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
+
+    return res
+
+##########################################################################################################################################################################
+
+
+def retention_timeconversion(rawdate):
+
+    # print("Received "+rawdate)
+
+    year = ''
+    lista = rawdate.split('-')
+    year = lista[0]
+
+    return year
+
+
+def retention_generate1(lingua, retention_rate, engine):
+
+    query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'retention' AND m2_value='"+retention_rate+"'"
+    query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
+
+    query2 = query0+query1
+
+    df1 = pd.read_sql_query(query2, engine)
+    df1.reset_index(inplace=True)
+
+    print("[RETENTION] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query2)
+    print("---------------------------")
+
+    return df1
+
+
+def get_avg_retention(lingua, retention_rate, year, engine):
+
+    query0 = "SELECT *, AVG(m2_count / m1_count)*100 AS retention_rate FROM vital_signs_metrics WHERE topic = 'retention' AND m1='first_edit' AND m2_value = '" + \
+        retention_rate+"' AND year_month LIKE '"+str(year)+"-%'"
+    query1 = " AND langcode IN (%s)" % lingua
+
+    query_retention = query0 + query1
+
+    df2 = pd.read_sql_query(query_retention, engine)
+    df2.reset_index(inplace=True)
+
+    print("[RETENTION] QUERY FOR DATAFRAME RETENTION (HIGHLIGHTS)="+query_retention)
+
+    temp = df2["retention_rate"]
+    res = round(temp[0], 2)
+
+    return str(res)
+
+
+def retention_highlights(language, retention_rate):
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    if language == None:
+        languages = []
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+
+    params = params[:-1]
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+        count = 0
+        for x in langs:
+            count += 1
+            df1 = retention_generate1("'"+x+"'", retention_rate, engine)
+            df1.reset_index(inplace=True)
+
+            last_time = get_time(df1)
+            date = retention_timeconversion(last_time)
+
+            old_date = int(date)-10
+
+            old_retention_value = get_avg_retention(
+                "'"+x+"'", retention_rate, old_date, engine)
+            current_retention_value = get_avg_retention(
+                "'"+x+"'", retention_rate, date, engine)
+
+            if count > 1:
+                i = '\n \n * To'
+                text_eventual = 'in the same periods'
+            else:
+                i = '* In'
+                text_eventual = ''
+
+            h1 = h1+"* In "+str(old_date)+" **"+language_names_full[x]+"** Wikipedia, the average retention rate was **"+old_retention_value+"%**, in **"+str(
+                date)+"** it is **"+current_retention_value+"%**, "+text_eventual+" this is **"+str(round(float(current_retention_value)-float(old_retention_value), 2))+"** difference. \n \n"
+
+        h1 = h1+"\n \n We argue that a reasonable target would be a 3"+"%" + \
+            " retention rate to ensure there is renewal among editors, while it could be desirable to reach 5-7%. In general, communities should aim at **reversing** the declining trend in the retention rate."
+
+    else:
+
+        df1 = retention_generate1(params, retention_rate, engine)
+        df1.reset_index(inplace=True)
+
+        last_time = get_time(df1)
+        date = retention_timeconversion(last_time)
+
+        old_date = int(date)-10
+
+        old_retention_value = get_avg_retention(
+            params, retention_rate, old_date, engine)
+        current_retention_value = get_avg_retention(
+            params, retention_rate, date, engine)
+
+        h1 = "* In **"+str(old_date)+"**, to **"+language_names_full[str(langs[0])]+"** Wikipedia, the average retention rate was **"+old_retention_value+"%**, in **"+str(date)+"** it is **"+current_retention_value+"%**, this is **"+str(round(float(current_retention_value)-float(
+            old_retention_value), 2))+"** difference. \nWe argue that a reasonable target would be a 3"+"%"+" retention rate to ensure there is renewal among editors, while it could be desirable to reach 5-7%. In general, communities should aim at reversing the declining trend in the retention rate."
+
+    res = dcc.Markdown(id='highlights', children=[h1], style={
+                       "font-size": "18px"}, className='container'),
+
+    return res
+
+##########################################################################################################################################################################
+
+
+def stability_get_avg_fresh(df):
+
+    temp = df["fresh"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def stability_get_avg_long(df):
+
+    temp = df["long"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def stability_calc_trend(num):
+
+    res = ""
+
+    if num < 33:
+        res = "below"
+    elif num > 33:
+        res = "above"
+    elif num == 33:
+        res = "inline"
+
+    return res
+
+
+def stability_generate1(lingua, attivi, valore, tempo, engine):
+
+    if valore == 'perc':
+        toreturn = '(m2_count/m1_count)*100'
+    else:
+        toreturn = 'm2_count'
+
+    query0 = "select *, AVG("+toreturn+") AS fresh from vital_signs_metrics where topic = 'stability' AND year_year_month = '" + \
+        tempo+"' AND year_month LIKE '20%' AND m1_value='"+attivi+"' and m2_value = '1'"
+    query1 = " AND langcode = %s " % lingua
+
+    query = query0+query1
+
+    df1 = pd.read_sql_query(query, engine)
+
+    df1.reset_index(inplace=True)
+
+    print("[STABILITY] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df1
+
+
+def stability_generate2(lingua, attivi, valore, tempo, engine):
+
+    if valore == 'perc':
+        toreturn = '(m2_count/m1_count)*100'
+    else:
+        toreturn = 'm2_count'
+
+    query0 = "select *, AVG("+toreturn+") AS long from vital_signs_metrics where topic = 'stability' AND year_year_month = '" + \
+        tempo+"' AND year_month LIKE '20%' AND m1_value='" + \
+        attivi+"' and (m2_value = '13-24' OR m2_value='+24')"
+    query1 = " AND langcode = %s " % lingua
+
+    query = query0+query1
+
+    df1 = pd.read_sql_query(query, engine)
+
+    df1.reset_index(inplace=True)
+
+    print("[STABILITY] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df1
+
+
+def stability_highlights(language, user_type, value_type, time_type):
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+    params = params[:-1]
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+
+        for x in langs:
+
+            df1 = stability_generate1(
+                "'"+x+"'", user_type, value_type, time_type, engine)
+            avg_fresh = stability_get_avg_fresh(df1)
+
+            df2 = stability_generate2(
+                "'"+x+"'", user_type, value_type, time_type, engine)
+            avg_long = stability_get_avg_long(df2)
+
+            if value_type == 'perc':
+                perc_or_num = '%'
+                avg_fresh = round(avg_fresh, 2)
+                avg_long = round(avg_long, 2)
+            else:
+                perc_or_num = ''
+                avg_fresh = round(avg_fresh, 0)
+                avg_long = round(avg_long, 0)
+
+            trend = stability_calc_trend(avg_long)
+
+            h1 = h1+"\n* On average, in the **" + \
+                language_names_full[x]+"** Wikipedia, the **fresh** editors are **"+str(
+                    avg_fresh)+""+perc_or_num+"**. "
+
+            h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the share of **long-term engaged** editors (including the bins of editing **13-24 months** in a row and **> 24 months** in a row) is **"+str(
+                avg_long)+""+perc_or_num+"**. This is **"+trend+"** the target of a **33%** that we would recommend."
+
+        h1 = h1+"\n \n A target of 30"+"%"+"-40"+"%"+" of **fresh** editors may be desirable in order to have an influx of new energy and ideas. \nIf higher than this, and especially over 60%, it may be an indicator of a lack of capacity to engage and stabilize the community. High percentages of fresh editors are only desirable when the number of active editors is growing."
+        h2 = h2+"\n \n The target value is indicative of a solid community able to carry on with long-term Wikiprojects and activities."
+    else:
+
+        df1 = stability_generate1(
+            params, user_type, value_type, time_type, engine)
+        avg_fresh = stability_get_avg_fresh(df1)
+
+        df2 = stability_generate2(
+            params, user_type, value_type, time_type, engine)
+        avg_long = stability_get_avg_long(df2)
+
+        if value_type == 'perc':
+            perc_or_num = '%'
+            avg_fresh = round(avg_fresh, 2)
+            avg_long = round(avg_long, 2)
+        else:
+            perc_or_num = ''
+            avg_fresh = round(avg_fresh, 0)
+            avg_long = round(avg_long, 0)
+
+        trend = stability_calc_trend(avg_long)
+
+        h1 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **fresh** editors are **"+str(avg_fresh)+""+perc_or_num+"**. A target of 30"+"%"+"-40"+"%" + \
+            " of **fresh** editors may be desirable in order to have an influx of new energy and ideas. \nIf higher than this, and especially over 60%, it may be an indicator of a lack of capacity to engage and stabilize the community. High percentages of fresh editors are only desirable when the number of active editors is growing."
+
+        h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the share of **long-term engaged** editors (including the bins of editing **13-24 months** in a row and **> 24 months** in a row) is **"+str(
+            avg_long)+""+perc_or_num+"**. This is **"+trend+"** the target of a **33%** that we would recommend. This value is indicative of a solid community able to carry on with long-term Wikiprojects and activities."
+
+    res = dcc.Markdown(id='highlights', children=[
+                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
+
+    return res
+
+################################################################################################################################################################
+
+
+def balance_get_last_gen_val(df):
+
+    temp = df["last_gen"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def balance_get_first_gen_val(df):
+
+    temp = df["first_gen"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def balance_calc_trend(num):
+
+    res = ""
+
+    if num < 5:
+        res = "below"
+    elif num > 15:
+        res = "above"
+    elif num > 5 or num < 15:
+        res = "inline with"
+
+    return res
+
+
+def balance_get_gen(df):
+    temp = df["m2_value"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def balance_generate1(lingua, attivi, valore, tempo, engine):
+
+    if valore == 'perc':
+        toreturn = 'ROUND((m2_count/m1_count)*100,2)'
+    else:
+        toreturn = 'm2_count'
+
+    inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
+        tempo+"'  and m1_value='"+attivi+"'"
+    inner_query1 = " and langcode = %s order by m2_value desc limit 1" % lingua
+
+    inner_query = inner_query0 + inner_query1
+
+    query0 = "select *, "+toreturn+" as last_gen from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
+        tempo+"' and m2_value= ( "+inner_query+" ) and m1_value='"+attivi+"'"
+    query1 = " and langcode = %s order by year_month desc" % lingua
+
+    query = query0 + query1
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    print("[BALANCE] QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df
+
+
+def balance_generate2(lingua, attivi, valore, tempo, engine):
+
+    if valore == 'perc':
+        toreturn = 'ROUND((m2_count/m1_count)*100,2)'
+    else:
+        toreturn = 'm2_count'
+
+    inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
+        tempo+"'  and m1_value='"+attivi+"'"
+    inner_query1 = " and langcode = %s order by m2_value desc limit 1" % lingua
+
+    inner_query = inner_query0 + inner_query1
+
+    query0 = "select *, "+toreturn+" as first_gen from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
+        tempo+"' and m2_value= '2001-2005' and m1_value='"+attivi+"'"
+    query1 = " and langcode = %s order by year_month desc" % lingua
+
+    query = query0 + query1
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    print("[BALANCE] QUERY FOR SECOND DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df
+
+
+def balance_highlights(language, user_type, value_type, time_type):
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+    params = params[:-1]
+
+    if user_type == '5':
+        active_type = 'active'
+    else:
+        active_type = 'very active'
+
+    if value_type == 'perc':
+        perc_or_num = '%'
+    else:
+        perc_or_num = ''
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df1 = balance_generate1(
+                "'"+x+"'", user_type, value_type, time_type, engine)
+
+            recent_year1 = get_time(df1)
+            recent_year1 = timeconversion(recent_year1, time_type)
+            last_gen_value = balance_get_last_gen_val(df1)
+            last_gen = balance_get_gen(df1)
+
+            h1 = h1+"\n* In **"+recent_year1+"**, in the **"+language_names_full[x]+"** Wikipedia, the **last generation ["+last_gen+"]** had a share of **"+str(
+                last_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. "
+
+            df2 = balance_generate2(
+                "'"+x+"'", user_type, value_type, time_type, engine)
+
+            recent_year2 = get_time(df2)
+            recent_year2 = timeconversion(recent_year2, time_type)
+            first_gen_value = balance_get_first_gen_val(df2)
+
+            trend = balance_calc_trend(first_gen_value)
+
+            h2 = h2+"\n* In **"+recent_year2+"**, in **the "+language_names_full[x]+"** Wikipedia, the share of the **first generation [2001-2005]** takes **"+str(
+                first_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. This is **"+trend+"** a desirable target of **5-15%**."
+
+        h1 = h1 + \
+            "\n \n We believe a growing share of the last generation until occupying between **30-40%** may be reasonable for a language edition that is not in a growth phase. Larger when it is. We considered every generation to be 5 years (a lustrum), so, as a rule of thumb, we suggest that the last generation occupies from 10 to 40" + \
+            "%" + \
+            " depending on the years which have passed since its beginning (0-5)."
+        h2 = h2 + \
+            "\n \n Although this generation might be at the end of their lifecycle and the growth may have occurred with the following generation (2006-2010). The share of every previous generation will inevitably **decrease** over time."
+    else:
+
+        df1 = balance_generate1(params, user_type, value_type, time_type, engine)
+
+        recent_year1 = get_time(df1)
+        recent_year1 = timeconversion(recent_year1, time_type)
+        last_gen_value = balance_get_last_gen_val(df1)
+        last_gen = balance_get_gen(df1)
+
+        h1 = "* In **"+recent_year1+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation ["+last_gen+"]** had a share of **"+str(last_gen_value)+""+perc_or_num+"** of the **"+active_type + \
+            "** editors. We believe a growing share of the last generation until occupying between **30-40%** may be reasonable for a language edition that is not in a growth phase. Larger when it is. We considered every generation to be 5 years (a lustrum), so, as a rule of thumb, we suggest that the last generation occupies from 10 to 40" + \
+            "%" + \
+            " depending on the years which have passed since its beginning (0-5)."
+
+        df2 = balance_generate2(params, user_type, value_type, time_type, engine)
+
+        recent_year2 = get_time(df2)
+        recent_year2 = timeconversion(recent_year2, time_type)
+        first_gen_value = balance_get_first_gen_val(df2)
+
+        trend = balance_calc_trend(first_gen_value)
+
+        h2 = "* In **"+recent_year2+"**, in **the "+language_names_full[str(langs[0])]+"** Wikipedia, the share of the **first generation [2001-2005]** takes **"+str(first_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. This is **"+trend + \
+            "** a desirable target of **5-15%**. Although this generation might be at the end of their lifecycle and the growth may have occurred with the following generation (2006-2010). The share of every previous generation will inevitably **decrease** over time."
+
+    res = dcc.Markdown(id='highlights', children=[
+                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
+
+    return res
+
+##########################################################################################################################################################################
+
+
+def special_calc_trend(num):
+
+    res = ""
+
+    if num < 20:
+        res = "below"
+    elif num > 20:
+        res = "above"
+    elif num == 20:
+        res = "inline with"
+
+    return res
+
+
+def special_get_tech_editors(df):
+    # il valore della media nell'ultimo tempo
+    temp = df["m1_count"].tolist()
+    value = temp[0]
+
+    return value
+
+
+def special_get_fresh_tech_editors(df):
+    # il valore della media nell'ultimo tempo
+    temp = df["percentage"].tolist()
+    value = temp[0]
+
+    return value
+
+
+def special_generate1(topic, lingua, attivi, engine):
+
+    query0 = "SELECT * FROM vital_signs_metrics WHERE topic = '" + \
+        topic+"' AND m1_value="+attivi+" AND year_year_month = 'y'"
+    query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
+
+    query = query0+query1
+
+    df1 = pd.read_sql_query(query, engine)
+
+    df1.reset_index(inplace=True)
+
+    print("[SPECIALISTS] QUERY FOR FIRST " +
+          topic+" DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df1
+
+
+def special_generate2(topic, lingua, attivi, tempo, engine):
+
+    inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = '" + \
+        topic+"' and m1_value='"+attivi+"'"
+    inner_query1 = " and langcode = %s order by m2_value desc limit 1" % lingua
+
+    inner_query = inner_query0 + inner_query1
+
+    query0 = "SELECT ROUND(AVG((m2_count/m1_count)*100),2) as percentage FROM vital_signs_metrics WHERE topic = '" + \
+        topic+"' AND m1_value="+attivi + \
+        " AND m2_value = ("+inner_query+") AND year_year_month = '"+tempo+"'"
+    query1 = " AND langcode IN (%s)" % lingua
+
+    query = query0+query1
+
+    df2 = pd.read_sql_query(query, engine)
+
+    df2.reset_index(inplace=True)
+
+    print("[SPECIALISTS] QUERY FOR SECOND " +
+          topic+" DATAFRAME (HIGHLIGHTS)="+query)
+    print("---------------------------")
+
+    return df2
+
+
+def special_highlights1(language, user_type, value_type, time_type):
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+
+    params = params[:-1]
+
+    if user_type == '5':
+        active = 'active'
+    elif user_type == '100':
+        active = 'very active'
+
+    if time_type == 'y':
+        periodicity = 'yearly'
+    elif time_type == 'ym':
+        periodicity = 'monthly'
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df1 = special_generate1(
+                "technical_editors", "'"+x+"'", user_type, engine)
+            tech_editors = special_get_tech_editors(df1)
+
+            h1 = h1+"\n* In **"+get_time(df1)+"**, in the **"+language_names_full[x]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **technical** editors. This is **"+str(
+                special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
+
+            df2 = special_generate2(
+                "technical_editors", "'"+x+"'", user_type, time_type, engine)
+            fresh_tech_editors = special_get_fresh_tech_editors(df2)
+
+            h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
+                fresh_tech_editors)+""+"%"+"** of the **"+active+"** technical editors. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
+    else:
+        df1 = special_generate1("technical_editors", params, user_type, engine)
+        tech_editors = special_get_tech_editors(df1)
+
+        h1 = "* In **"+get_time(df1)+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **technical** editors. This is **"+str(
+            special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
+
+        df2 = special_generate2("technical_editors",
+                                params, user_type, time_type, engine)
+        fresh_tech_editors = special_get_fresh_tech_editors(df2)
+
+        h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
+            fresh_tech_editors)+""+"%"+"** of the **"+active+"** technical editors. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
+
+    res = dcc.Markdown(id='highlights1', children=[
+                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
+
+    return res
+
+
+def special_highlights2(language, user_type, value_type, time_type):
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+
+    params = params[:-1]
+
+    if user_type == '5':
+        active = 'active'
+    elif user_type == '100':
+        active = 'very active'
+
+    if time_type == 'y':
+        periodicity = 'yearly'
+    elif time_type == 'ym':
+        periodicity = 'monthly'
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df1 = special_generate1("coordinators", "'"+x+"'", user_type, engine)
+            tech_editors = special_get_tech_editors(df1)
+
+            h1 = h1+"\n* In **"+get_time(df1)+"**, in the **"+language_names_full[x]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **coordinators**. This is **"+str(
+                special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
+
+            df2 = special_generate2(
+                "coordinators", "'"+x+"'", user_type, time_type, engine)
+            fresh_tech_editors = special_get_fresh_tech_editors(df2)
+
+            h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
+                fresh_tech_editors)+""+"%"+"** of the **"+active+"** coordinators. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
+    else:
+        df1 = special_generate1("coordinators", params, user_type, engine)
+        tech_editors = special_get_tech_editors(df1)
+
+        h1 = "* In **"+get_time(df1)+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there were **"+str(tech_editors)+" "+active+"** coordinators. This is **"+str(
+            special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
+
+        df2 = special_generate2("coordinators", params,
+                                user_type, time_type, engine)
+        fresh_tech_editors = special_get_fresh_tech_editors(df2)
+
+        h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
+            fresh_tech_editors)+""+"%"+"** of the **"+active+"** coordinators. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
+
+    res = dcc.Markdown(id='highlights2', children=[
+                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
+
+    return res
+
+##########################################################################################################################################################################
+
+
+def admin_calc_trend1(num):
+
+    res = ""
+
+    if num < 5:
+        res = "below"
+    elif num > 5:
+        res = "above"
+    else:
+        res = "inline with"
+
+    return res
+
+
+def admin_calc_trend2(num):
+
+    res = ""
+
+    if num < 10:
+        res = "below"
+    elif num > 15:
+        res = "above"
+    else:
+        res = "inline with"
+
+    return res
+
+
+def admin_calc_trend3(num):
+
+    res = ""
+
+    if num < 1:
+        res = "below"
+    elif num > 5:
+        res = "above"
+    else:
+        res = "inline with"
+
+    return res
+
+
+def admin_get_value(df):
+    temp = df["perc"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def admin_get_avg(df):
+    temp = df["avg"].tolist()
+    temp1 = temp[0]
+
+    return temp1
+
+
+def admin_generate1(lingua, admin, engine):
+
+    inner_query0 = "select sum(m2_count) as count from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' and m1_value = '"+admin+"'"
+    inner_query1 = " and langcode = %s group by year_month" % lingua
+
+    inner_query = inner_query0 + inner_query1
+
+    query = "select ROUND(AVG(count),1) as avg from ("+inner_query+")"
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    # print("QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
+    # print("---------------------------")
+
+    return df
+
+
+def admin_generate2(lingua, tempo, admin, engine):
+
+    query1 = "select *, ROUND((m2_count/m1_count)*100,2) as perc from vital_signs_metrics where topic = 'flags' and year_year_month='" + \
+        tempo+"' and m2_value='"+admin+"' "
+    query2 = "and langcode = %s order by year_month desc limit 1" % lingua
+
+    query = query1+query2
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    print("QUERY FOR SECOND DATAFRAME (HIGHLIGHTS)="+query)
+    # print("---------------------------")
+
+    return df
+
+
+def admin_find_last_flag(lingua, admin, engine):
+
+    query = "select year_month from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' and m1_value = '"+admin+"'"
+    query1 = " and langcode IN  (%s) order by year_month desc limit 1" % lingua
+
+    query = query + query1
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    temp = df["year_month"].tolist()
+    temp1 = temp[0]
+
+    # print("LOOK HERE")
+    # print(temp1)
+
+    return temp1
+
+
+def admin_total_num_admin(lingua, engine):
+
+    query20 = "select sum(m2_count) as tot from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' "
+    query21 = " and langcode In (%s)" % lingua  # and year_month = '2021'
+
+    query2 = query20 + query21
+
+    df2 = pd.read_sql_query(query2, engine)
+    df2.reset_index(inplace=True)
+
+    temp = df2["tot"].tolist()
+    tot_admin = temp[0]
+
+    # print("TOT ADMIN")
+    # print(query2)
+
+    return tot_admin
+
+
+def admin_find_last_percentage(lingua, engine):
+
+    query10 = "select sum(m2_count) as count, m2_value from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag'"
+    query11 = " and langcode In (%s) group by m2_value order by m2_value desc limit 1" % lingua
+
+    query1 = query10 + query11
+
+    df1 = pd.read_sql_query(query1, engine)
+    df1.reset_index(inplace=True)
+
+    temp = df1["count"].tolist()
+    num_admin = temp[0]
+
+    # print("NUM ADMIN")
+    # print(query1)
+
+    tot_admin = admin_total_num_admin(lingua, engine)
+
+    res = round((num_admin/tot_admin)*100, 2)
+
+    # print("PERCENTAGE")
+    # print(res)
+
+    return res
+
+
+def admin_highlights1(language, admin_type, time_type):
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+    params = params[:-1]
+
+    h1 = ""
+    h2 = ""
+
+    if len(language) == 0:
+        h1 = ""
+        h2 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df1 = admin_generate1("'"+x+"'", admin_type, engine)
+            avg = admin_get_avg(df1)
+
+            last_flag_year = admin_find_last_flag("'"+x+"'", admin_type, engine)
+
+            last_per = admin_find_last_percentage("'"+x+"'", engine)
+
+            tot = admin_total_num_admin("'"+x+"'", engine)
+
+            flag_percentage = (avg/tot)*100
+
+            h1 = h1+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, there are **"+str(avg)+" ("+str(round(flag_percentage, 2))+")%** new **"+admin_type+"** flags given every year; the last **"+admin_type + \
+                "** flag was granted in **"+last_flag_year+"** . This is **"+admin_calc_trend1(
+                    flag_percentage)+"** the target of a renewal of **5"+"%"+"** of the total admins every year that would be recommended."
+
+            h2 = h2+"\n* Among the **"+language_names_full[x]+"** Wikipedia’s admins, the last generation has a share of **"+str(
+                last_per)+"%**. This is **"+admin_calc_trend2(last_per)+"** the target of **10-15%** yearly from the last generation that would be recommended. "
+
+        h2 = h2+"\n \n Ideally, the group of admins should include members from all generations."
+    else:
+        df1 = admin_generate1(params, admin_type, engine)
+        avg = admin_get_avg(df1)
+
+        last_flag_year = admin_find_last_flag(params, admin_type, engine)
+
+        last_per = admin_find_last_percentage(params, engine)
+
+        tot = admin_total_num_admin(params, engine)
+
+        flag_percentage = (avg/tot)*100
+
+        h1 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there are **"+str(avg)+" ("+str(round(flag_percentage, 2))+")%** new **"+admin_type+"** flags given every year; the last **" + \
+            admin_type+"** flag was granted in **"+last_flag_year+"** . This is **"+admin_calc_trend1(
+                flag_percentage)+"** the target of a renewal of **5"+"%"+"** of the total admins every year that would be recommended."
+
+        h2 = "* Among the **"+language_names_full[str(langs[0])]+"** Wikipedia’s admins, the last generation has a share of **"+str(last_per)+"%**. This is **"+admin_calc_trend2(
+            last_per)+"** the target of **10-15%** yearly from the last generation that would be recommended. Ideally, the group of admins should include members from all generations."
+
+    res = dcc.Markdown(id='highlights2', children=[
+                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
+
+    return res
+
+
+def admin_highlights2(language, admin_type, time_type):
+
+    engine = create_engine(database)
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+    params = params[:-1]
+
+    h1 = ""
+
+    if len(language) == 0:
+        h1 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df = admin_generate2("'"+x+"'", time_type, admin_type, engine)
+
+            last_time = get_time(df)
+            last_date = timeconversion(last_time, time_type)
+
+            proportion_value = admin_get_value(df)
+
+            h1 = h1+"\n* In **"+str(last_date)+"**, the proportion of ["+admin_type+"] admins in the **"+language_names_full[x]+"** Wikipedia is **"+str(proportion_value)+"%**. This is **"+admin_calc_trend3(
+                proportion_value)+"** the target of **1-5%** to guarantee that admins do not carry an excessive workload, since, in the end, they revise other editors’ edits."
+    else:
+        df = admin_generate2(params, time_type, admin_type, engine)
+
+        last_time = get_time(df)
+        last_date = timeconversion(last_time, time_type)
+
+        proportion_value = admin_get_value(df)
+        h1 = "* In **"+str(last_date)+"**, the proportion of ["+admin_type+"] admins in the **"+language_names_full[str(langs[0])]+"** Wikipedia is **"+str(proportion_value)+"%**. This is **"+admin_calc_trend3(
+            proportion_value)+"** the target of **1-5%** to guarantee that admins do not carry an excessive workload, since, in the end, they revise other editors’ edits."
+
+    res = dcc.Markdown(id='highlights2', children=[h1], style={
+                       "font-size": "18px"}, className='container'),
+
+    return res
+
+##########################################################################################################################################################################
+
+
+def get_value(df, toreturn):
+
+    temp = df[toreturn].tolist()
+    res = temp[0]
+
+    return res
+
+
+def global_calc_trend(num):
+
+    if num < 55:
+        res = "below"
+    elif num == 55:
+        res = "inline"
+    elif num > 55:
+        res = "above"
+
+    return res
+
+
+def global_generate1(language, user_type, value_type, time_type, engine):
+
+    query0 = "select round(avg(m2_count),0) as nums, round(avg(m2_count/m1_count)*100,4) as percentage from vital_signs_metrics where topic = 'primary_editors' and year_year_month='" + \
+        time_type+"' and m1_value='"+user_type+"' and m2_value != langcode "
+    query1 = "and langcode = %s" % language
+
+    query = query0 + query1
+    print("[GLOBAL] Highlights query = "+query)
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    return df
+
+
+def global_generate2(language, user_type, value_type, time_type, engine):
+
+    query0 = "select avg(m2_count) as avg1, avg(m1_count) as avg2 from vital_signs_metrics where topic = 'primary_editors' and year_year_month='ym' and m1_value='" + \
+        user_type+"' and langcode = 'meta' "
+    query1 = "and m2_value = %s" % language
+
+    query = query0 + query1
+    print("[GLOBAL] Highlights second query = "+query)
+
+    df = pd.read_sql_query(query, engine)
+    df.reset_index(inplace=True)
+
+    return df
+
+
+def global_highlights1(language, user_type, value_type, time_type):
+
+    engine = create_engine(database)
+
+    if user_type == '5':
+        user_text = 'Active Editors'
+    else:
+        user_text = 'Very Active Editors'
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+
+    params = params[:-1]
+
+    h1 = ""
+
+    if len(language) == 0:
+        h1 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df = global_generate1("'"+x+"'", user_type,
+                                  value_type, time_type, engine)
+
+            num = get_value(df, "nums")
+
+            perc = get_value(df, "percentage")
+
+            h1 = h1+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, there are **"+str(num)+"** "+user_text+" editors **("+str(perc)+"%)** whose primary language is a different language edition. This is **"+global_calc_trend(
+                perc)+"** the target of 55% to guarantee that there are dedicated editors whose main project is that Wikipedia language edition."
+
+        h1 = h1+"\n\n  A percentage higher than 95% might imply that the community is not attracting collaborators from other communities. The rationale for both percentages is that we see both 50" + \
+            "%"+" and 100"+"%"+" as extremes, and we suggest some margin around these values."
+    else:
+        df = global_generate1(params, user_type, value_type, time_type, engine)
+
+        num = get_value(df, "nums")
+
+        perc = get_value(df, "percentage")
+
+        h1 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there are **"+str(num)+"** "+user_text+" editors **("+str(perc)+"%)** whose primary language is a different language edition. This is **"+global_calc_trend(
+            perc)+"** the target of 55% to guarantee that there are dedicated editors whose main project is that Wikipedia language edition. A percentage higher than 95% might imply that the community is not attracting collaborators from other communities. The rationale for both percentages is that we see both 50"+"%"+" and 100"+"%"+" as extremes, and we suggest some margin around these values."
+
+    res = dcc.Markdown(id='highlights1', children=[h1], style={
+                       "font-size": "18px"}, className='container'),
+
+    return res
+
+
+def global_highlights2(language, user_type, value_type, time_type):
+
+    engine = create_engine(database)
+
+    if user_type == '5':
+        user_text = 'Active Editors'
+    else:
+        user_text = 'Very Active Editors'
+
+    if isinstance(language, str):
+        language = language.split(',')
+
+    langs = []
+    if type(language) != str:
+        for x in language:
+            langs.append(language_names[x])
+    else:
+        langs.append(language_names[language])
+
+    params = ""
+    for x in langs:
+        params += "'"
+        params += x
+        params += "',"
+
+    params = params[:-1]
+
+    h1 = ""
+
+    if len(language) == 0:
+        h1 = ""
+    elif len(language) != 1:
+        for x in langs:
+            df = global_generate2("'"+x+"'", user_type,
+                                  value_type, time_type, engine)
+
+            avg1 = get_value(df, "avg1")
+            avg2 = get_value(df, "avg2")
+
+            res = round((avg1/avg2)*100, 2)
+            print(res)
+
+            h1 = h1+"\n* On average, the proportion between the number of "+user_text+" editors in **Meta-wiki** whose primary language belongs to **" + \
+                language_names_full[x]+"** Wikipedia to the total number of active editors in " + \
+                    language_names_full[x]+" Wikipedia is **"+str(res)+"% **"
+    else:
+
+        df = global_generate2(params, user_type, value_type, time_type, engine)
+
+        avg1 = get_value(df, "avg1")
+        avg2 = get_value(df, "avg2")
+
+        res = round((avg1/avg2)*100, 2)
+        print(res)
+
+        h1 = "* On average, the proportion between the number of "+user_text+" editors in **Meta-wiki** whose primary language belongs to **" + \
+            language_names_full[str(langs[0])]+"** Wikipedia to the total number of active editors in " + \
+            language_names_full[str(langs[0])] + \
+            " Wikipedia is **"+str(res)+"% **"
+
+    res = dcc.Markdown(id='highlights2', children=[h1], style={
+                       "font-size": "18px"}, className='container'),
+
+    return res
+
+##########################################################################################################################################################################
+
+
+@dash.callback([Output(component_id='highlights_container', component_property='children'),
+               Output(component_id='highlights_container_additional', component_property='children')],
+              [Input(component_id='metric', component_property='value'),
+               Input(component_id='langcode', component_property='value'),
+               Input(component_id='active_veryactive',
+                     component_property='value'),
+               Input(component_id='year_yearmonth',
+                     component_property='value'),
+               Input(component_id='retention_rate',
+                     component_property='value'),
+               Input(component_id='percentage_number',
+                     component_property='value'),
+               Input(component_id='admin', component_property='value')])
+def change_highlight(metric, language, user_type, time_type, retention_rate, value_type, admin_type):
+
+    if metric == 'Activity':
+
+        res = activity_highlights(
+            language, user_type, time_type), dcc.Markdown("")
+
+        return res
+    elif metric == 'Retention':
+
+        res = retention_highlights(language, retention_rate), dcc.Markdown("")
+        return res
+    elif metric == 'Stability':
+
+        res = stability_highlights(
+            language, user_type, value_type, time_type), dcc.Markdown("")
+
+        return res
+    elif metric == 'Balance':
+
+        res = balance_highlights(
+            language, user_type, value_type, time_type), dcc.Markdown("")
+
+        return res
+    elif metric == 'Specialists':
+
+        res = special_highlights2(language, user_type, value_type, time_type), special_highlights1(
+            language, user_type, value_type, time_type)
+
+        return res
+    elif metric == 'Administrators':
+
+        res = admin_highlights2(language, admin_type, time_type), admin_highlights1(
+            language, admin_type, time_type)
+
+        return res
+    else:
+
+        res = global_highlights2(language, user_type, value_type, time_type), global_highlights1(
+            language, user_type, value_type, time_type)
+
+        return res

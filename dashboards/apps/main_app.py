@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from app import *
 from plotly.subplots import make_subplots
 from urllib.parse import urlparse, parse_qsl, urlencode
-import urllib
 from dash import Dash, dcc, html, Input, Output
 import dash
 import plotly.graph_objects as go
@@ -11,16 +13,16 @@ import time
 import re
 import sys
 import os
+from datetime import datetime, timedelta
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')))
-from app import *
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-dash.register_page(__name__,path="/main")
+dash.register_page(__name__, path="/main")
 
 ##### METHODS #####
 # parse
+
+
 def parse_state(url):
     parse_result = urlparse(url)
     params = parse_qsl(parse_result.query)
@@ -41,19 +43,6 @@ def apply_default_value(params):
     return wrapper
 
 
-def save_dict_to_file(dic):
-    f = open('databases/'+'dict.txt', 'w')
-    f.write(str(dic))
-    f.close()
-
-
-def load_dict_from_file():
-    f = open('databases/'+'dict.txt', 'r')
-    data = f.read()
-    f.close()
-    return eval(data)
-
-
 def enrich_dataframe(dataframe):
     datas = []
     for x in wikilanguagecodes:
@@ -66,9 +55,6 @@ def enrich_dataframe(dataframe):
     return res
 
 ### DASH APP TEST IN LOCAL ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-# main_app = Dash("main_app", server = server, url_base_pathname= webtype + "/", external_stylesheets=external_stylesheets, external_scripts=external_scripts)
-# main_app.config['suppress_callback_exceptions']=True
-
 
 title = "Vital Signs"+title_addenda
 
@@ -269,7 +255,7 @@ component_ids = ['metric', 'langcode', 'active_veryactive',
 
 
 @dash.callback(Output('main_url', 'search'),
-              inputs=[Input(i, 'value') for i in component_ids])
+               inputs=[Input(i, 'value') for i in component_ids])
 def update_url_state(*values):
     #    print (values)
 
@@ -284,7 +270,7 @@ def update_url_state(*values):
 
 
 @dash.callback(Output('page-content', 'children'),
-              inputs=[Input('url', 'href')])
+               inputs=[Input('url', 'href')])
 def page_load(href):
     if not href:
         return []
@@ -374,7 +360,7 @@ def main_app_build_layout(params):
                     id='retention_rate',
                     options=[{'label': '24 hours', 'value': '24h'}, {'label': '30 days', 'value': '30d'}, {
                         'label': '60 days', 'value': '60d'}, {'label': '365 days', 'value': '365d'}, {'label': '730 days', 'value': '730d'}],
-                    multi= True,
+                    multi=True,
                     value='60d',
                     # style={'width': '490px'},
                     disabled=False,
@@ -432,7 +418,7 @@ def main_app_build_layout(params):
 
         # PAGE 1: FIRST PAGE. NOTHING STARTED YET.
         layout = html.Div([
-            
+
             html.H3('Vital Signs', style={'textAlign': 'center'}),
             # html.Div(id='title_container', children=[]),
             # html.H3(id='title', children=[], title='Activity', style={'textAlign':'center',"fontSize":"18px",'fontStyle':'bold'}, className = 'container'),
@@ -488,7 +474,6 @@ def main_app_build_layout(params):
                     multi=False,
                     value='sysop',
                     # style={'width': '390px'},
-                    disabled=True,
                 ), style={'display': 'inline-block', 'width': '290px', 'padding': '0px 0px 0px 10px'}),
 
 
@@ -499,7 +484,6 @@ def main_app_build_layout(params):
                         'label': '60d', 'value': '60d'}, {'label': '365d', 'value': '365d'}, {'label': '730d', 'value': '730d'}],
                     value='60d',
                     # style={'width': '490px'},
-                    disabled=True,
                 ), style={'display': 'inline-block', 'width': '290px', 'padding': '0px 0px 0px 10px'}),
 
             html.Br(),
@@ -561,472 +545,394 @@ def main_app_build_layout(params):
 
 
 def activity_graph(language, user_type, time_type):
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+    # 1) Normalizza l'input lingua → lista di etichette UI
+    if language is None or language == "":
+        language_list = []
+    elif isinstance(language, str):
+        language_list = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        language_list = list(language)
 
-    engine = create_engine(database)
+    # 2) Mappa etichette UI → codici (es. "piedmontese (pms)" → "pms")
+    langcodes = [language_names[x]
+                 for x in language_list] if language_list else []
 
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
+    # 3) Costruisci la query parametrica
+    base_sql = """
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE topic = 'active_editors'
+          AND year_year_month = :time_type
+          AND m1_calculation = 'threshold'
+          AND m1_value = :user_type
+          {lang_filter}
+        ORDER BY year_month
+    """
+    lang_filter = "AND langcode IN :langcodes" if langcodes else ""
+    stmt = text(base_sql.format(lang_filter=lang_filter))
+    if langcodes:
+        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
 
-    params = params[:-1]
+    params = {"time_type": time_type, "user_type": user_type}
+    if langcodes:
+        params["langcodes"] = langcodes
 
-    query0 = "select * from vital_signs_metrics where topic = 'active_editors' and year_year_month = '" + \
-        time_type+"' and m1_calculation = 'threshold' and m1_value = '"+user_type+"'"
+    # 4) Esegui con pandas + SQLAlchemy (parametrico)
+    df = pd.read_sql_query(stmt, engine, params=params)
 
-    query1 = " and langcode IN (%s)" % params
+    # 5) Aggiungi il nome leggibile della lingua senza merge
+    #    (language_names_inv: "pms" -> "piedmontese (pms)")
+    df["language_name"] = df["langcode"].map(language_names_inv)
 
-    query = query0 + query1
+    # 6) Testi per etichette
+    incipit = "Active" if user_type == "5" else "Very Active"
+    time_text = "Period of Time (Yearly)" if time_type == "y" else "Period of Time (Monthly)"
 
-    print("ACTIVITY QUERY = "+query)
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    print(df[:10])
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df = pd.merge(df, df_created, how='inner', on='langcode')
-
-    print(df[:10])
-
-    if user_type == '5':
-        incipit = 'Active'
-    else:
-        incipit = 'Very Active'
-
-    if time_type == 'y':
-        time_text = 'Period of Time (Yearly)'
-    else:
-        time_text = 'Period of Time (Monthly)'
-
+    # 7) Grafico
     fig = px.line(
         df,
-        x='year_month',
-        y='m1_count',
-        color=df['language_name'],
+        x="year_month",
+        y="m1_count",
+        color="language_name",
         height=500,
         width=1200,
-        title=incipit+' Users',
-        labels={
-            "m1_count": incipit+" Editors ",
-            "year_month": time_text,
-            "language_name": "Projects",
-        },
-        # labels=language_names_inv
+        title=f"{incipit} Users",
+        labels={"m1_count": f"{incipit} Editors",
+                "year_month": time_text, "language_name": "Projects"},
     )
-
     fig.update_layout(
         xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=True
-            ),
+            rangeselector=dict(buttons=[
+                dict(count=6,  label="<b>6M</b>",
+                     step="month", stepmode="backward"),
+                dict(count=1,  label="<b>1Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=5,  label="<b>5Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=10, label="<b>10Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(label="<b>ALL</b>", step="all")
+            ]),
+            rangeslider=dict(visible=True),
             type="date"
         )
     )
 
-    res = html.Div(
-        dcc.Graph(id='my_graph', figure=fig)
-    )
+    return html.Div(dcc.Graph(id="my_graph", figure=fig))
 
-    return res
 
 # RETENTION GRAPH
 ##########################################################################################################################################################################################################
 
 
-def retention_graph(lang, retention_rate, length):
+def retention_graph(lang: str, retention_rate: str, length: int):
 
-    container = "The langcode chosen was: {}".format(lang)
+    # 1) Normalizza lang in 'langcode'
+    #    Se 'lang' è un'etichetta presente in language_names -> mappa a codice; altrimenti usa lang come già-codice.
+    try:
+        langcode = language_names[lang]
+    except Exception:
+        langcode = lang
 
-    engine = create_engine(database)
+    # 2) SQL parametrico
+    base_sql = text("""
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE topic = 'retention'
+          AND year_year_month = 'ym'
+          AND m1 = :m1
+          AND m2_value = :retention_rate
+          AND langcode = :langcode
+        ORDER BY year_month
+    """)
 
-    # users that register theirselves
-    query01 = "select * from vital_signs_metrics where topic = 'retention' and year_year_month = 'ym' and m1 = 'register' and m2_value='"+retention_rate+"'"
-    # retention
-    query02 = "select * from vital_signs_metrics where topic = 'retention' and year_year_month = 'ym' and m1 = 'first_edit' and m2_value='"+retention_rate+"'"
+    params_common = {"retention_rate": retention_rate, "langcode": langcode}
 
-    query1 = query01+' and langcode IN (\'%s\')' % language_names[lang]
-    query2 = query02+' and langcode IN (\'%s\')' % language_names[lang]
+    # 3) Query: registered editors (m1='register')
+    df1 = pd.read_sql_query(base_sql, engine, params={
+                            **params_common, "m1": "register"}).copy()
+    df1.reset_index(inplace=True, drop=True)
 
-    # print("\033[0;31m FIRST RETENTION QUERY="+query1+"\033[0m")
-    # print("\033[0;32m FIRST RETENTION QUERY="+query1+"\033[0m")
+    # 4) Query: first_edit (per la linea di retention) (m1='first_edit')
+    df2 = pd.read_sql_query(base_sql, engine, params={
+                            **params_common, "m1": "first_edit"}).copy()
+    df2.reset_index(inplace=True, drop=True)
 
-    df1 = pd.read_sql_query(query1, engine)
+    # 5) Costruzione figura
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    df1.reset_index(inplace=True)
-    # print(df[:100])
+    height_value = 600 if length == 1 else 350
 
-    df2 = pd.read_sql_query(query2, engine)
+    # Bar: registered editors
+    if not df1.empty:
+        fig.add_bar(
+            x=df1['year_month'],
+            y=df1['m1_count'],
+            name="Registered Editors",
+            marker_color='gray'
+        )
 
-    df2.reset_index(inplace=True)
+    # Line: retention rate = 100 * m2_count / m1_count (evita divisioni per zero)
+    if not df2.empty:
+        denom = df2['m1_count'].replace(0, pd.NA)
+        df2['retention'] = (df2['m2_count'] / denom) * 100
+        df2['retention'] = df2['retention'].fillna(0)
 
-    # Create figure with secondary y-axis
-    fig = make_subplots(
-        specs=[[{"secondary_y": True}]])
+        fig.add_trace(
+            go.Scatter(
+                x=df2['year_month'],
+                y=df2['retention'],
+                name="Retention Rate",
+                hovertemplate='%{y:.2f}%',
+                marker_color='orange'
+            ),
+            secondary_y=True
+        )
 
-    if length == 1:
-        height_value = 600
-    else:
-        height_value = 350
-
-    # Add bar
-    fig.add_bar(
-        x=df1['year_month'],
-        y=df1['m1_count'],
-        name="Registered Editors",
-        marker_color='gray')
-
+    # Titolo in base al retention_rate (come in originale)
+    titles = {
+        '24h': "24 hours",
+        '30d': "30 days",
+        '60d': "60 days",
+        '365d': "365 days",
+        '730d': "730 days",
+    }
+    rate_label = titles.get(retention_rate, retention_rate)
     fig.update_layout(
-        autosize=False,
-        width=1200,
-        height=height_value
-    )
+        title=f"Retention in {lang} Wikipedia. Editors who edited again after {rate_label} of their first edit")
 
-    # Add trace
-    df2['retention'] = (df2['m2_count']/df2['m1_count'])*100
-
-    fig.add_trace(
-        go.Scatter(
-            x=df2['year_month'],
-            y=df2['retention'],
-            name="Retention Rate",
-            hovertemplate='%{y:.2f}%',
-            marker_color='orange'),
-        secondary_y=True)
-
-    # Add figure title
-    if retention_rate == '24h':
-        fig.update_layout(title="Retention in "+lang +
-                          " Wikipedia. Editors who edited again after 24 hours of their first edit")
-    elif retention_rate == '30d':
-        fig.update_layout(title="Retention in "+lang +
-                          " Wikipedia. Editors who edited again after 30 days of their first edit")
-    elif retention_rate == '60d':
-        fig.update_layout(title="Retention in "+lang +
-                          " Wikipedia. Editors who edited again after 60 days of their first edit")
-    elif retention_rate == '365d':
-        fig.update_layout(title="Retention in "+lang +
-                          " Wikipedia. Editors who edited again after 365 days of their first edit")
-    elif retention_rate == '730d':
-        fig.update_layout(title="Retention in "+lang +
-                          " Wikipedia. Editors who edited again after 730 days of their first edit")
-
-    # Set x-axis title
+    # Assi e layout
+    # rimasto come originale
     fig.update_xaxes(title_text="Period of Time (Yearly)")
-
-    # Set y-axes titles
     fig.update_yaxes(title_text="Registered Editors", secondary_y=False)
     fig.update_yaxes(title_text="Retention Rate", secondary_y=True)
 
     fig.update_layout(
+        autosize=False,
+        width=1200,
+        height=height_value,
         xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
+            rangeselector=dict(buttons=list([
+                dict(count=6,  label="<b>6M</b>",
+                     step="month", stepmode="backward"),
+                dict(count=1,  label="<b>1Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=5,  label="<b>5Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=10, label="<b>10Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(label="<b>ALL</b>", step="all")
+            ])),
+            rangeslider=dict(visible=False),
             type="date"
         )
     )
 
-    # res = html.Div(
-    #     dcc.Graph(id='my_graph',figure=fig)
-    # )
-
-    res = dcc.Graph(id='my_graph', figure=fig)
-
-    return res
+    return dcc.Graph(id='my_graph', figure=fig)
 
 # STABILITY GRAPH
 ##########################################################################################################################################################################################################
 
 
-def stability_graph(language, user_type, value_type, time_type):
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+def stability_graph(language, user_type: str, value_type: str, time_type: str):
+    # --- 1) Normalizza lingue in lista di langcode ---
+    if language is None or language == "":
+        ui_langs = []
+    elif isinstance(language, str):
+        ui_langs = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        ui_langs = list(language)
 
-    engine = create_engine(database)
+    # mappa etichette UI -> codici; se già codice, lascialo com'è
+    langcodes = []
+    for x in ui_langs:
+        try:
+            langcodes.append(language_names[x])
+        except Exception:
+            langcodes.append(x)
+    # se nulla selezionato, NON filtriamo per lingua (mostra tutto)
+    filter_lang = bool(langcodes)
 
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
+    # --- 2) Query parametrica (con IN expanding quando serve) ---
+    base_sql = f"""
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE topic = 'stability'
+          AND year_year_month = :time_type
+          AND m1_value = :user_type
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+        ORDER BY year_month
+    """
+    stmt = text(base_sql)
+    if filter_lang:
+        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
 
-    params = params[:-1]
+    params = {"time_type": time_type, "user_type": user_type}
+    if filter_lang:
+        params["langcodes"] = langcodes
 
-    query0 = "select * from vital_signs_metrics where topic = 'stability' and year_year_month='" + \
-        time_type+"' and m1_value='"+user_type+"'"
+    df = pd.read_sql_query(stmt, engine)
 
-    query = query0 + " and langcode IN (%s)" % params
+    if df.empty:
+        # Grafico vuoto “gentile”
+        return html.Div(dcc.Graph(
+            id='my_graph',
+            figure=px.bar(title="No data for selected filters")
+        ))
 
-    print("STABILITY QUERY = "+query)
+    # --- 3) Colonne derivate & testi ---
+    # perc = 100 * m2_count / m1_count (evita divisioni per zero)
+    denom = df["m1_count"].replace(0, pd.NA)
+    df["perc"] = ((df["m2_count"] / denom) * 100).round(2).fillna(0)
 
-    df = pd.read_sql_query(query, engine)
+    # Mappa langcode -> nome leggibile (es. "pms" -> "piedmontese (pms)")
+    df["language_name"] = df["langcode"].map(language_names_inv)
 
-    df.reset_index(inplace=True)
-    # print(df[:100])
+    time_text = "Period of Time (Yearly)" if time_type == "y" else "Period of Time (Monthly)"
+    incipit = "Active" if user_type == "5" else "Very Active"
+    text_template = "%{y:.2f}%" if value_type == "perc" else ""
 
-    df['perc'] = ((df['m2_count']/df['m1_count'])*100).round(2)
+    # Altezza: proporzionale al numero di lingue selezionate (se nessuna selezione, 1)
+    n_langs = max(1, len(langcodes) if filter_lang else 1)
+    height_value = 400 if n_langs == 1 else 230 * n_langs
 
-    if time_type == 'y':
-        time_text = 'Period of Time (Yearly)'
-    else:
-        time_text = 'Period of Time (Monthly)'
-
-    if user_type == '5':
-        incipit = 'Active'
-    else:
-        incipit = 'Very Active'
-
-    if value_type == 'perc':
-        text_type = '%{y:.2f}%'
-    else:
-        text_type = ''
-
-    if len(language) == 1:
-        height_value = 400
-    else:
-        height_value = 230*len(language)
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df = pd.merge(df, df_created, how='inner', on='langcode')
-
+    # --- 4) Grafico ---
     fig = px.bar(
         df,
-        x='year_month',
-        y=value_type,
-        color='m2_value',
+        x="year_month",
+        y=value_type,                 # 'perc' oppure 'm2_count'
+        color="m2_value",             # bucket "1","2","3-6",...
         text=value_type,
-        facet_row=df['language_name'],
+        facet_row="language_name",    # una riga per lingua
         width=1200,
         height=height_value,
         color_discrete_map={
             "1": "gray",
-                 "2": "#00CC96",
+            "2": "#00CC96",
             "3-6": "#FECB52",
             "7-12": "red",
             "13-24": "#E377C2",
-            "24+": "#636EFA"},
+            "24+": "#636EFA",
+        },
         labels={
             "year_month": time_text,
-            "perc":  incipit+" Editors (%)",
+            "perc": f"{incipit} Editors (%)",
             "m2_value": "Active Months in a row",
-            "m2_count":  incipit+" Editors",
-            "language_name": "Language"
-        }
+            "m2_count": f"{incipit} Editors",
+            "language_name": "Language",
+        },
+        title=f"{incipit} users stability",
     )
 
-    fig.update_layout(font_size=12)
-
-    fig.update_traces(texttemplate=text_type)
-    # it also causes the text to float
-    fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
+    fig.update_layout(font_size=12, uniformtext_minsize=12,
+                      uniformtext_mode="hide")
+    fig.update_traces(texttemplate=text_template)
 
     fig.update_layout(
         xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
-            type="date"
+            rangeselector=dict(buttons=[
+                dict(count=6,  label="<b>6M</b>",
+                     step="month", stepmode="backward"),
+                dict(count=1,  label="<b>1Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=5,  label="<b>5Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=10, label="<b>10Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(label="<b>ALL</b>", step="all"),
+            ]),
+            rangeslider=dict(visible=False),
+            type="date",
         )
     )
 
-    res = html.Div(
-        dcc.Graph(id='my_graph', figure=fig)
-    )
-
-    return res
+    return html.Div(dcc.Graph(id="my_graph", figure=fig))
 
 # BALANCE GRAPH
 ##########################################################################################################################################################################################################
 
 
-def balance_graph(language, user_type, value_type, time_type):
+def balance_graph(language, user_type: str, value_type: str, time_type: str):
 
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+    # --- 1) Normalizza lingue (accetta stringa CSV o lista) -> langcodes ---
+    if language is None or language == "":
+        ui_langs = []
+    elif isinstance(language, str):
+        ui_langs = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        ui_langs = list(language)
 
-    container = ""  # "The langcode chosen was: {}".format(language)
+    langcodes = []
+    for x in ui_langs:
+        # se è un'etichetta UI, mappa a codice; se è già codice, lascialo
+        try:
+            langcodes.append(language_names[x])
+        except Exception:
+            langcodes.append(x)
 
-    engine = create_engine(database)
+    filter_lang = bool(langcodes)
 
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
+    # --- 2) Query parametrica (IN expanding se servono lingue filtrate) ---
+    base_sql = f"""
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE topic = 'balance'
+          AND year_year_month = :time_type
+          AND m1_value = :user_type
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+        ORDER BY year_month
+    """
+    stmt = text(base_sql)
+    if filter_lang:
+        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
 
-    params = params[:-1]
+    params = {"time_type": time_type, "user_type": user_type}
+    if filter_lang:
+        params["langcodes"] = langcodes
 
-    query0 = "select * from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
-        time_type+"' and m1_value='"+user_type+"'"
+    df = pd.read_sql_query(stmt, engine)
 
-    query = query0 + " and langcode IN (%s)" % params
+    if df.empty:
+        return html.Div(dcc.Graph(
+            id="my_graph",
+            figure=px.bar(title="No data for selected filters")
+        ))
 
-    print("BALANCE QUERY = "+query)
+    # --- 3) Colonne derivate & testi ---
+    # perc = 100 * m2_count / m1_count (evita divisioni per zero)
+    denom = df["m1_count"].replace(0, pd.NA)
+    df["perc"] = ((df["m2_count"] / denom) * 100).round(2).fillna(0)
 
-    df = pd.read_sql_query(query, engine)
+    # lingua leggibile (es. "pms" -> "piedmontese (pms)")
+    df["language_name"] = df["langcode"].map(language_names_inv)
 
-    df.reset_index(inplace=True)
-    # print(df[:100])
-
-    df['perc'] = ((df['m2_count']/df['m1_count'])*100).round(2)
-
-    if value_type == 'perc':
-        value_text = 'perc'
-        hover = '%{y:.2f}%'
+    if value_type == "perc":
+        value_y = "perc"
+        text_template = "%{y:.2f}%"
     else:
-        value_text = 'm2_count'
-        hover = ''
+        value_y = "m2_count"
+        text_template = ""
 
-    if time_type == 'y':
-        time_text = 'Period of Time (Yearly)'
+    time_text = "Period of Time (Yearly)" if time_type == "y" else "Period of Time (Monthly)"
+    if user_type == "5":
+        incipit = "Active"
+        user_text = "Active Editors"
     else:
-        time_text = 'Period of Time (Monthly)'
+        incipit = "Very active"
+        user_text = "Very Active Editors"
 
-    if user_type == '5':
-        incipit = 'Active'
-        user_text = 'Active Editors'
-    else:
-        user_text = 'Very Active Editors'
-        incipit = 'Very active'
+    # altezza grafico in base al numero di lingue selezionate (almeno 1)
+    n_langs = max(1, len(langcodes) if filter_lang else 1)
+    height_value = 400 if n_langs == 1 else 230 * n_langs
 
-    if value_type == 'perc':
-        text_type = '%{y:.2f}%'
-    else:
-        text_type = ''
-
-    if len(language) == 1:
-        height_value = 400
-    else:
-        height_value = 230*len(language)
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df = pd.merge(df, df_created, how='inner', on='langcode')
-
+    # --- 4) Grafico ---
     fig = px.bar(
         df,
-        x='year_month',
-        y=value_text,
-        color='m2_value',
-        text=value_type,
-        facet_row=df['language_name'],
+        x="year_month",
+        y=value_y,
+        color="m2_value",
+        text=value_type,               # coerente con il comportamento originale
+        facet_row="language_name",
         width=1200,
         height=height_value,
         color_discrete_map={
@@ -1034,623 +940,537 @@ def balance_graph(language, user_type, value_type, time_type):
             "2006-2010": "#F58518",
             "2011-2015": "#E45756",
             "2016-2020": "#FC0080",
-            "2021-2025": "#1C8356"},
+            "2021-2025": "#1C8356",
+        },
         labels={
             "year_month": time_text,
-            "perc":  incipit+" Editors (%)",
+            "perc": f"{incipit} Editors (%)",
             "m2_value": "Lustrum First Edit",
             "m2_count": user_text,
-            "language_name": "Language"
+            "language_name": "Language",
         },
+        title=f"{incipit} users balance",
     )
 
-    fig.update_layout(uniformtext_minsize=12)
-    fig.update_traces(texttemplate=text_type)  # , hovertemplate=hover)
-    fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
+    fig.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
+    fig.update_traces(texttemplate=text_template)
 
     fig.update_layout(
         xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
-            type="date"
+            rangeselector=dict(buttons=[
+                dict(count=6,  label="<b>6M</b>",
+                     step="month", stepmode="backward"),
+                dict(count=1,  label="<b>1Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=5,  label="<b>5Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(count=10, label="<b>10Y</b>",
+                     step="year",  stepmode="backward"),
+                dict(label="<b>ALL</b>", step="all"),
+            ]),
+            rangeslider=dict(visible=False),
+            type="date",
         )
     )
-    res = html.Div(
-        dcc.Graph(id='my_graph', figure=fig)
-    )
 
-    return res
+    return html.Div(dcc.Graph(id="my_graph", figure=fig))
 
 # SPECIALISTS GRAPH
 ##########################################################################################################################################################################################################
 
 
-def special_graph(language, user_type, value_type, time_type):
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+def special_graph(language, user_type: str, value_type: str, time_type: str):
+    # --- 1) Normalizza lingue -> lista di langcode ---
+    if language is None or language == "":
+        ui_langs = []
+    elif isinstance(language, str):
+        ui_langs = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        ui_langs = list(language)
 
-    container = ""  # "The langcode chosen was: {}".format(language)
+    langcodes = []
+    for x in ui_langs:
+        try:
+            # etichetta UI -> codice
+            langcodes.append(language_names[x])
+        except Exception:
+            # già codice
+            langcodes.append(x)
 
-    engine = create_engine(database)
+    filter_lang = bool(langcodes)
 
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
+    # --- 2) Query parametrica (riusabile per i due topic) ---
+    base_sql = f"""
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE year_year_month = :time_type
+          AND m1_value = :user_type
+          AND topic = :topic
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+        ORDER BY year_month
+    """
+    stmt = text(base_sql)
+    if filter_lang:
+        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
 
-    params = params[:-1]
+    common_params = {"time_type": time_type, "user_type": user_type}
+    if filter_lang:
+        common_params["langcodes"] = langcodes
 
-    query01 = "select * from vital_signs_metrics where topic = 'technical_editors' and year_year_month='" + \
-        time_type+"' and m1_value='"+user_type+"'"
+    # --- 3) Esegui le due query ---
+    params_tech = {**common_params, "topic": "technical_editors"}
+    params_coord = {**common_params, "topic": "coordinators"}
 
-    query02 = "select * from vital_signs_metrics where topic = 'coordinators' and year_year_month='" + \
-        time_type+"' and m1_value='"+user_type+"'"
+    df_tech = pd.read_sql_query(stmt, engine, params=params_tech)
+    df_coord = pd.read_sql_query(stmt, engine, params=params_coord)
 
-    query1 = query01 + " and langcode IN (%s)" % params
+    # --- 4) Colonne derivate + mapping nome lingua ---
+    for df in (df_tech, df_coord):
+        if df.empty:
+            continue
+        denom = df["m1_count"].replace(0, pd.NA)
+        df["perc"] = ((df["m2_count"] / denom) * 100).round(2).fillna(0)
+        df["language_name"] = df["langcode"].map(language_names_inv)
 
-    query2 = query02 + " and langcode IN (%s)" % params
+    # --- 5) Etichette & layout comuni ---
+    time_text = "Period of Time(Yearly)" if time_type == "y" else "Period of Time(Monthly)"
+    user_text = "Active" if user_type == "5" else "Very Active"
 
-    print("SPECIAL FUNCTIONS QUERY1 = "+query1)
-    print("SPECIAL FUNCTIONS QUERY2 = "+query2)
-
-    df = pd.read_sql_query(query1, engine)
-    df2 = pd.read_sql_query(query2, engine)
-
-    df.reset_index(inplace=True)
-    df2.reset_index(inplace=True)
-    # print(df[:100])
-
-    df['perc'] = ((df['m2_count']/df['m1_count'])*100).round(2)
-    df2['perc'] = ((df2['m2_count']/df2['m1_count'])*100).round(2)
-
-    if value_type == 'perc':
-        value_text = 'perc'
-        hover = '%{y:.2f}%'
-        text = '%{y:.2f}%'
+    if value_type == "perc":
+        value_y = "perc"
+        text_template = "%{y:.2f}%"
     else:
-        value_text = 'm2_count'
-        hover = ''
-        text = ''
+        value_y = "m2_count"
+        text_template = ""
 
-    if time_type == 'y':
-        time_text = 'Period of Time(Yearly)'
-    elif time_type == 'ym':
-        time_text = 'Period of Time(Monthly)'
+    # Altezza: proporzionale al numero di lingue selezionate (almeno 1)
+    n_langs = max(1, len(langcodes) if filter_lang else 1)
+    height_value = 400 if n_langs == 1 else 230 * n_langs
 
-    if user_type == '5':
-        user_text = 'Active'
+    color_map = {
+        "2001-2005": "#636EFA",
+        "2006-2010": "#F58518",
+        "2011-2015": "#E45756",
+        "2016-2020": "#FC0080",
+        "2021-2025": "#1C8356",
+    }
+
+    # --- 6) Costruisci i grafici ---
+    if df_tech.empty:
+        fig1 = px.bar(title=f"{user_text} Technical Contributors — No data")
     else:
-        user_text = 'Very Active'
-
-    if len(language) == 1:
-        height_value = 400
-    else:
-        height_value = 230*len(language)
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df = pd.merge(df, df_created, how='inner', on='langcode')
-
-    fig1 = px.bar(
-        df,
-        x='year_month',
-        y=value_text,
-        color='m2_value',
-        text=value_text,
-        facet_row=df['language_name'],
-        width=1200,
-        height=height_value,
-        title=user_text+' Technical Contributors',
-        color_discrete_map={
-            "2001-2005": "#636EFA",
-            "2006-2010": "#F58518",
-            "2011-2015": "#E45756",
-            "2016-2020": "#FC0080",
-            "2021-2025": "#1C8356"},
-        labels={
-            "language_name": "Language",
-            "year_month": time_text,
-            "perc": user_text+" editors (%)",
-            "m2_count": user_text+" editors",
-            "m2_value": "Lustrum First Edit"
-
-        },
-    )
-
-    fig1.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    fig1.update_traces(texttemplate=text)  # , hovertemplate=hover)
-
-    fig1.update_layout(
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
-            type="date"
+        fig1 = px.bar(
+            df_tech,
+            x="year_month",
+            y=value_y,
+            color="m2_value",
+            text=value_y,
+            facet_row="language_name",
+            width=1200,
+            height=height_value,
+            title=f"{user_text} Technical Contributors",
+            color_discrete_map=color_map,
+            labels={
+                "language_name": "Language",
+                "year_month": time_text,
+                "perc": f"{user_text} editors (%)",
+                "m2_count": f"{user_text} editors",
+                "m2_value": "Lustrum First Edit",
+            },
         )
-    )
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df2 = pd.merge(df2, df_created, how='inner', on='langcode')
-
-    fig2 = px.bar(
-        df2,
-        x='year_month',
-        y=value_text,
-        color='m2_value',
-        text=value_text,
-        facet_row=df2['language_name'],
-        height=height_value,
-        title=user_text+' Project Coordinators',
-        color_discrete_map={
-            "2001-2005": "#636EFA",
-            "2006-2010": "#F58518",
-            "2011-2015": "#E45756",
-            "2016-2020": "#FC0080",
-            "2021-2025": "#1C8356"},
-        labels={
-            "language_name": "Language",
-            "m1_count": "Editors",
-            "year_month": time_text,
-            "perc": user_text+" editors (%)",
-            "m2_count": user_text+" editors",
-            "m2_value": "Lustrum First Edit"
-        },
-    )
-
-    fig2.update_layout(uniformtext_minsize=12)
-    fig2.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
-    fig2.update_traces(texttemplate=text)  # , hovertemplate=hover)
-
-    fig2.update_layout(
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
-            type="date"
+        fig1.update_layout(uniformtext_minsize=8, uniformtext_mode="hide")
+        fig1.update_traces(texttemplate=text_template)
+        fig1.update_layout(
+            xaxis=dict(
+                rangeselector=dict(buttons=[
+                    dict(count=6,  label="<b>6M</b>",
+                         step="month", stepmode="backward"),
+                    dict(count=1,  label="<b>1Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=5,  label="<b>5Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=10, label="<b>10Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(label="<b>ALL</b>", step="all"),
+                ]),
+                rangeslider=dict(visible=False),
+                type="date",
+            )
         )
+
+    if df_coord.empty:
+        fig2 = px.bar(title=f"{user_text} Project Coordinators — No data")
+    else:
+        fig2 = px.bar(
+            df_coord,
+            x="year_month",
+            y=value_y,
+            color="m2_value",
+            text=value_y,
+            facet_row="language_name",
+            height=height_value,
+            title=f"{user_text} Project Coordinators",
+            color_discrete_map=color_map,
+            labels={
+                "language_name": "Language",
+                "m1_count": "Editors",
+                "year_month": time_text,
+                "perc": f"{user_text} editors (%)",
+                "m2_count": f"{user_text} editors",
+                "m2_value": "Lustrum First Edit",
+            },
+        )
+        fig2.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
+        fig2.update_traces(texttemplate=text_template)
+        fig2.update_layout(
+            xaxis=dict(
+                rangeselector=dict(buttons=[
+                    dict(count=6,  label="<b>6M</b>",
+                         step="month", stepmode="backward"),
+                    dict(count=1,  label="<b>1Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=5,  label="<b>5Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=10, label="<b>10Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(label="<b>ALL</b>", step="all"),
+                ]),
+                rangeslider=dict(visible=False),
+                type="date",
+            )
+        )
+
+    # --- 7) Output Dash ---
+    return html.Div(
+        children=[
+            dcc.Graph(id="my_graph1", figure=fig1),
+
+            html.H5("Highlights"),
+            html.Div(id="highlights_container_additional", children=[]),
+
+            dcc.Graph(id="my_graph2", figure=fig2),
+        ]
     )
 
-    res = html.Div(children=[
-        dcc.Graph(id='my_graph1', figure=fig1),
-
-        html.H5('Highlights'),
-
-        html.Div(id='highlights_container_additional', children=[]),
-
-        # html.Br(),
-        dcc.Graph(id='my_graph2', figure=fig2),]
-    )
-
-    return res
 
 # ADMIN FLAG GRAPH
 ##########################################################################################################################################################################################################
 
 
-def admin_graph(language, admin_type, time_type):
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+def admin_graph(language, admin_type: str, time_type: str):
+    # --- 1) Normalizza lingue -> lista di langcode ---
+    if language is None or language == "":
+        ui_langs = []
+    elif isinstance(language, str):
+        ui_langs = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        ui_langs = list(language)
 
-    # container = "" #"The langcode chosen was: {}".format(language)
+    langcodes = []
+    for x in ui_langs:
+        try:
+            langcodes.append(language_names[x])   # etichetta UI -> codice
+        except Exception:
+            langcodes.append(x)                   # già codice
 
-    engine = create_engine(database)
+    filter_lang = bool(langcodes)
+    time_text = "Yearly" if time_type == "y" else "Monthly"
 
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
+    # --- 2) Query 1: conteggio per mese e lustrum (per lingua) ---
+    sql_q1 = f"""
+        SELECT
+            langcode,
+            year_year_month,
+            year_month,
+            m2_value,
+            SUM(m2_count) AS count
+        FROM vital_signs_metrics
+        WHERE topic = 'flags'
+          AND m1 = 'granted_flag'
+          AND m1_value = :admin_type
+          AND m2_value IS NOT NULL
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+        GROUP BY langcode, year_year_month, year_month, m2_value
+        ORDER BY langcode, year_month, m2_value
+    """
+    stmt_q1 = text(sql_q1)
+    if filter_lang:
+        stmt_q1 = stmt_q1.bindparams(bindparam("langcodes", expanding=True))
+    params_q1 = {"admin_type": admin_type}
+    if filter_lang:
+        params_q1["langcodes"] = langcodes
 
-    params = params[:-1]
+    df1 = pd.read_sql_query(stmt_q1, engine)
 
-    # HOW MUCH [flag] ADMIN IN A YEAR
-    query10 = "select langcode, sum(m2_count) as count, m2_value,year_year_month,year_month from vital_signs_metrics where topic = 'flags' and langcode In (%s)" % params
-    query11 = " and m1 = 'granted_flag' and m1_value = '"+admin_type + \
-        "' and m2_value not null group by year_month, m2_value"
+    # --- 3) Query 2: totale per lustrum (per lingua) ---
+    sql_q2 = f"""
+        SELECT
+            langcode,
+            m2_value,
+            SUM(m2_count) AS count
+        FROM vital_signs_metrics
+        WHERE topic = 'flags'
+          AND m1 = 'granted_flag'
+          AND m1_value = :admin_type
+          AND m2_value IS NOT NULL
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+    GROUP BY langcode, m2_value
+    ORDER BY langcode, m2_value
+    """
+    stmt_q2 = text(sql_q2)
+    if filter_lang:
+        stmt_q2 = stmt_q2.bindparams(bindparam("langcodes", expanding=True))
+    params_q2 = {"admin_type": admin_type}
+    if filter_lang:
+        params_q2["langcodes"] = langcodes
 
-    query1 = query10+query11
+    df2 = pd.read_sql_query(stmt_q2, engine)
+    if not df2.empty:
+        df2["x"] = ""  # per il bar compatto a colonne uniche
 
-    query20 = "select langcode, sum(m2_count) as count, m2_value from vital_signs_metrics where topic = 'flags' and langcode In (%s)" % params
-    query21 = " and m1 = 'granted_flag' and m1_value = '" + \
-        admin_type+"' and m2_value not null group by m2_value"
+    # --- 4) Query 3: percentuale admin tra active editors (per mese/lingua) ---
+    # Nota: mantengo il calcolo in SQL come in origine, ma parametricamente.
+    sql_q3 = f"""
+        SELECT
+            *,
+            ROUND((m2_count::numeric / NULLIF(m1_count,0)) * 100, 2) AS perc
+        FROM vital_signs_metrics
+        WHERE topic = 'flags'
+          AND year_year_month = :time_type
+          AND m2_value = :admin_type
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+        ORDER BY langcode, year_month
+    """
+    stmt_q3 = text(sql_q3)
+    if filter_lang:
+        stmt_q3 = stmt_q3.bindparams(bindparam("langcodes", expanding=True))
+    params_q3 = {"time_type": time_type, "admin_type": admin_type}
+    if filter_lang:
+        params_q3["langcodes"] = langcodes
 
-    query2 = query20 + query21
+    df3 = pd.read_sql_query(stmt_q3, engine)
 
-    print("ADMIN QUERY 1 = "+query1)
-    print("ADMIN QUERY 2 = "+query2)
+    # --- 5) Mapping nome lingua & altezze ---
+    def add_language_name(df):
+        if df.empty:
+            return df
+        df["language_name"] = df["langcode"].map(language_names_inv)
+        return df
 
-    df1 = pd.read_sql_query(query1, engine)
-    df2 = pd.read_sql_query(query2, engine)
+    df1 = add_language_name(df1)
+    df2 = add_language_name(df2)
+    df3 = add_language_name(df3)
 
-    df1.reset_index(inplace=True)
-    df2.reset_index(inplace=True)
-    # print(df[:100])
+    n_langs = max(1, len(langcodes) if filter_lang else 1)
+    height_value = 400 if n_langs == 1 else 230 * n_langs
 
-    # df['perc']=((df['m2_count']/df['m1_count'])*100).round(2)
-    # hover='%{y:.2f}%'
+    color_map = {
+        "2001-2005": "#3366CC",
+        "2006-2010": "#F58518",
+        "2011-2015": "#E45756",
+        "2016-2020": "#FC0080",
+        "2021-2025": "#1C8356",
+    }
 
-    if time_type == 'y':
-        time_text = 'Yearly'
+    # --- 6) Figure 1: flags per mese e lustrum ---
+    if df1.empty:
+        fig1 = px.bar(title=f"[{admin_type}] flags granted — No data")
     else:
-        time_text = 'Monthly'
-
-    df2['x'] = ''
-
-    if len(language) == 1:
-        height_value = 400
-    else:
-        height_value = 230*len(language)
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df1 = pd.merge(df1, df_created, how='inner', on='langcode')
-
-    fig1 = px.bar(
-        df1,
-        x='year_month',
-        y='count',
-        color='m2_value',
-        title='['+admin_type +
-        '] flags granted over the years by lustrum of first edit',
-        text='count',
-        facet_row=df1['language_name'],
-        height=height_value,
-        width=850,
-        color_discrete_map={
-            "2001-2005": "#3366CC",
-            "2006-2010": "#F58518",
-            "2011-2015": "#E45756",
-            "2016-2020": "#FC0080",
-            "2021-2025": "#1C8356"},
-        labels={
-            "language_name": "Language",
-            "count": "Number of Admins",
-                     "year_month": "Period of Time("+time_text+")",
-                     # "perc": user_text,
-                     "m2_value": "Lustrum First Edit"
-
-        },
-    )
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df2 = pd.merge(df2, df_created, how='inner', on='langcode')
-
-    fig2 = px.bar(
-        df2,
-        x='x',
-        y='count',
-        color='m2_value',
-        title='Total Num. of ['+admin_type+']',
-        text='count',
-        facet_row=df2['language_name'],
-        height=height_value,
-        width=300,
-        color_discrete_map={
-            "2001-2005": "#3366CC",
-            "2006-2010": "#F58518",
-            "2011-2015": "#E45756",
-            "2016-2020": "#FC0080",
-            "2021-2025": "#1C8356"},
-        labels={
-            "count": "",
-            "x": "",
-                     "language_name": "Language",
-        },
-
-    )
-
-    fig1.update_layout(
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
-            type="date"
+        fig1 = px.bar(
+            df1,
+            x="year_month",
+            y="count",
+            color="m2_value",
+            text="count",
+            facet_row="language_name",
+            height=height_value,
+            width=850,
+            color_discrete_map=color_map,
+            title=f"[{admin_type}] flags granted over the years by lustrum of first edit",
+            labels={
+                "language_name": "Language",
+                "count": "Number of Admins",
+                "year_month": f"Period of Time({time_text})",
+                "m2_value": "Lustrum First Edit",
+            },
         )
-    )
-
-    fig1.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-
-    fig2.layout.update(showlegend=False)
-
-    ###################################
-
-    query30 = "select *, ROUND((m2_count/m1_count)*100,2) as perc from vital_signs_metrics where topic = 'flags' and year_year_month='" + \
-        time_type+"' and m2_value='"+admin_type+"'"
-
-    query31 = " and langcode in (%s)" % params
-
-    query3 = query30+query31
-
-    print("ADMIN QUERY3 = "+query3)
-    df3 = pd.read_sql_query(query3, engine)
-    df3.reset_index(inplace=True)
-
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['langcode', 'language_name'])
-
-    df3 = pd.merge(df3, df_created, how='inner', on='langcode')
-
-    fig3 = px.bar(
-        df3,
-        x='year_month',
-        y='perc',
-        text='perc',
-        facet_row=df3['language_name'],
-        height=height_value,
-        width=1000,
-        title="Percentage of ["+admin_type +
-        "] flags among active editors on a "+time_text+" basis",
-        labels={
-            "language_name": "Language",
-            'm2_count': "Number of Admins per Active Editors",
-            'perc': "Percentage",
-            "year_month": "Period of Time("+time_text+")"
-        }
-    )
-
-    # fig3.update_traces(texttemplate = "(%{y})")
-    fig3.update_traces(marker_color='indigo')
-    fig3.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
-
-    fig3.update_layout(
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=6,
-                         label="<b>6M</b>",
-                         step="month",
-                         stepmode="backward"),
-                    dict(count=1,
-                         label="<b>1Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=5,
-                         label="<b>5Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(count=10,
-                         label="<b>10Y</b>",
-                         step="year",
-                         stepmode="backward"),
-                    dict(label="<b>ALL</b>",
-                         step="all")
-                ])
-            ),
-            rangeslider=dict(
-                visible=False
-            ),
-            type="date"
+        fig1.update_layout(uniformtext_minsize=8, uniformtext_mode="hide")
+        fig1.update_layout(
+            xaxis=dict(
+                rangeselector=dict(buttons=[
+                    dict(count=6,  label="<b>6M</b>",
+                         step="month", stepmode="backward"),
+                    dict(count=1,  label="<b>1Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=5,  label="<b>5Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=10, label="<b>10Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(label="<b>ALL</b>", step="all"),
+                ]),
+                rangeslider=dict(visible=False),
+                type="date",
+            )
         )
-    )
 
-    fig3.update_traces(texttemplate="%{y}%")
+    # --- 7) Figure 2: totale per lustrum (per lingua) ---
+    if df2.empty:
+        fig2 = px.bar(
+            title=f"Total Num. of [{admin_type}] — No data", width=300, height=height_value)
+    else:
+        fig2 = px.bar(
+            df2,
+            x="x",
+            y="count",
+            color="m2_value",
+            text="count",
+            facet_row="language_name",
+            height=height_value,
+            width=300,
+            color_discrete_map=color_map,
+            title=f"Total Num. of [{admin_type}]",
+            labels={
+                "count": "",
+                "x": "",
+                "language_name": "Language",
+            },
+        )
+        fig2.layout.update(showlegend=False)
 
-    res = html.Div(
-        children=[
-            dcc.Graph(id="my_graph", figure=fig1, style={
-                      'display': 'inline-block'}),
-            dcc.Graph(id="my_subgraph", figure=fig2,
-                      style={'display': 'inline-block'}),
+    # --- 8) Figure 3: percentuale admin tra active editors ---
+    if df3.empty:
+        fig3 = px.bar(title=f"Percentage of [{admin_type}] flags among active editors — No data",
+                      width=1000, height=height_value)
+    else:
+        fig3 = px.bar(
+            df3,
+            x="year_month",
+            y="perc",
+            text="perc",
+            facet_row="language_name",
+            height=height_value,
+            width=1000,
+            title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
+            labels={
+                "language_name": "Language",
+                "m2_count": "Number of Admins per Active Editors",
+                "perc": "Percentage",
+                "year_month": f"Period of Time({time_text})",
+            },
+        )
+        fig3.update_traces(marker_color="indigo", texttemplate="%{y}%")
+        fig3.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
+        fig3.update_layout(
+            xaxis=dict(
+                rangeselector=dict(buttons=[
+                    dict(count=6,  label="<b>6M</b>",
+                         step="month", stepmode="backward"),
+                    dict(count=1,  label="<b>1Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=5,  label="<b>5Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(count=10, label="<b>10Y</b>",
+                         step="year",  stepmode="backward"),
+                    dict(label="<b>ALL</b>", step="all"),
+                ]),
+                rangeslider=dict(visible=False),
+                type="date",
+            )
+        )
 
-            html.Hr(),
-
-            html.H5('Highlights'),
-
-            html.Div(id='highlights_container_additional', children=[]),
-
-            dcc.Graph(id="my_graph2", figure=fig3),
-
-
-        ])
-
-    return res
+    # --- 9) Output ---
+    return html.Div(children=[
+        dcc.Graph(id="my_graph", figure=fig1, style={
+                  'display': 'inline-block'}),
+        dcc.Graph(id="my_subgraph", figure=fig2,
+                  style={'display': 'inline-block'}),
+        html.Hr(),
+        html.H5('Highlights'),
+        html.Div(id='highlights_container_additional', children=[]),
+        dcc.Graph(id="my_graph2", figure=fig3),
+    ])
 
 
 # GLOBAL COMMUNITY GRAPH
 ##########################################################################################################################################################################################################
 
-def global_graph(language, user_type, value_type, time_type, year, month):
-
-    # container = "The langcode chosen was: {}".format(language)
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+def global_graph(language, user_type: str, value_type: str, time_type: str, year: str, month: str):
+    # --- 1) Normalizza lingue -> lista di langcode ---
+    if language is None or language == "":
+        ui_langs = []
+    elif isinstance(language, str):
+        ui_langs = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        ui_langs = list(language)
 
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
+    langcodes = []
+    for x in ui_langs:
+        try:
+            langcodes.append(language_names[x])   # etichetta UI -> codice
+        except Exception:
+            langcodes.append(x)                   # già codice
 
-    params = params[:-1]
+    filter_lang = bool(langcodes)
 
-    query10 = "select * from vital_signs_metrics where topic = 'primary_editors' and year_year_month='" + \
-        time_type+"' and m1_value='"+user_type+"' "
-    query11 = "and langcode IN (%s) " % params
-    query1 = query10 + query11
+    # --- 2) Query 1: primary_editors filtrati per periodo/utente/(lingue) ---
+    sql_q1 = f"""
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE topic = 'primary_editors'
+          AND year_year_month = :time_type
+          AND m1_value = :user_type
+          {"AND langcode IN :langcodes" if filter_lang else ""}
+        ORDER BY year_month
+    """
+    stmt_q1 = text(sql_q1)
+    if filter_lang:
+        stmt_q1 = stmt_q1.bindparams(bindparam("langcodes", expanding=True))
 
-    print("[GLOBAL] FIRST QUERY = "+query1)
+    params_q1 = {"time_type": time_type, "user_type": user_type}
+    if filter_lang:
+        params_q1["langcodes"] = langcodes
 
-    df1 = pd.read_sql_query(query1, engine)
-    df1.reset_index(inplace=True)
+    df1 = pd.read_sql_query(stmt_q1, engine)
+    if df1.empty:
+        # Grafico “gentile” se non ci sono dati
+        empty_fig = px.bar(title="No data for selected filters")
+        return html.Div(children=[
+            dcc.Graph(id="my_graph", figure=empty_fig,
+                      style={'display': 'inline-block'}),
+            html.Hr(),
+            html.H5('Highlights'),
+            html.Div(id='highlights_container_additional', children=[]),
+            dcc.Graph(id="my_graph2", figure=empty_fig)
+        ])
 
-    df1['perc'] = ((df1['m2_count']/df1['m1_count'])*100).round(2)
+    # --- 3) Derivate + mapping lingua ---
+    denom = df1["m1_count"].replace(0, pd.NA)
+    df1["perc"] = ((df1["m2_count"] / denom) * 100).round(2).fillna(0)
+    # enrich + language names
+    df1 = enrich_dataframe(df1)  # mantiene compatibilità con il tuo flusso
+    # Se vuoi solo il nome leggibile: df1["language_name"] = df1["langcode"].map(language_names_inv)
 
-    if time_type == 'y':
-        time_text = '(Yearly)'
-    else:
-        time_text = '(Monthy)'
+    time_text = "(Yearly)" if time_type == "y" else "(Monthly)"
+    user_text = "Active Editors" if user_type == "5" else "Very Active Editors"
 
-    if user_type == '5':
-        user_text = 'Active Editors'
-    else:
-        user_text = 'Very Active Editors'
+    # Altezza grafico proporzionale al numero di lingue selezionate (almeno 1)
+    n_langs = max(1, len(langcodes) if filter_lang else 1)
+    height_value = 400 if n_langs == 1 else 270 * n_langs
 
-    if len(language) == 1:
-        height_value = 400
-    else:
-        height_value = 270*len(language)
-
-    df1 = enrich_dataframe(df1)
-
+    # --- 4) Figure 1: bar facet per language/primary language ---
     fig1 = px.bar(
         df1,
-        y=value_type,
+        y=value_type,                # 'perc' o 'm2_count' ecc.
         x='year_month',
         color='language_name',
         text=value_type,
-        title=user_text+" by primary language",
-        facet_row=df1['langcode'],
+        title=f"{user_text} by primary language",
+        facet_row=df1['langcode'],   # coerente con codice originale
         height=height_value,
         labels={
             "language_name": "Language",
             "m1_count": "Active Editors",
-            "year_month": "Period of Time "+time_text,
+            "year_month": f"Period of Time {time_text}",
             "perc": user_text,
             "m2_value": "Primary language",
             "m2_count": user_text,
@@ -1661,57 +1481,59 @@ def global_graph(language, user_type, value_type, time_type, year, month):
             "en": "#3366CC",
             "it": "#3283FE",
             "ru": "#FD3216",
-            "pl": "#1C8356"},
-
+            "pl": "#1C8356",
+        },
     )
-
     fig1.update_layout(width=1300)
 
-    query20 = "select * from vital_signs_metrics where topic = 'primary_editors' and year_year_month='ym' and year_month = '2022-03' and m1_value='"+user_type+"' "
-    query21 = "and langcode = 'meta'"
-    query2 = query20 + query21
+    # --- 5) Query 2: snapshot per treemap (meta, anno/mese scelti) ---
+    #   L'originale fissava 'ym' e '2022-03' su 'meta'.
+    ym_value = f"{year}-{month}"
+    sql_q2 = text("""
+        SELECT *
+        FROM vital_signs_metrics
+        WHERE topic = 'primary_editors'
+          AND year_year_month = 'ym'
+          AND year_month = :ym_value
+          AND m1_value = :user_type
+          AND langcode = 'meta'
+        ORDER BY m2_value
+    """)
+    df2 = pd.read_sql_query(sql_q2, engine, params={
+                            "ym_value": ym_value, "user_type": user_type})
 
-    print("[GLOBAL] SECOND QUERY = "+query2)
+    if df2.empty:
+        fig2 = px.treemap(
+            title=f"Meta-wiki {user_text} by primary language — No data for {ym_value}")
+    else:
+        denom2 = df2["m1_count"].replace(0, pd.NA)
+        df2["perc"] = ((df2["m2_count"] / denom2) * 100).round(2).fillna(0)
+        df2 = enrich_dataframe(df2)
 
-    df2 = pd.read_sql_query(query2, engine)
-    df2.reset_index(inplace=True)
+        fig2 = go.Figure()
+        fig2.add_trace(go.Treemap(
+            parents=df2["langcode"],
+            labels=df2["language_name"],
+            values=df2["m2_count"],
+            customdata=df2["perc"],
+            text=df2["m2_value"],
+            texttemplate="<b>%{label}</b><br>Percentage: %{customdata}%<br>Editors: %{value}<br>",
+            hovertemplate='<b>%{label}</b><br>Percentage: %{customdata}%<br>Editors: %{value}<br>%{text}<br><extra></extra>',
+        ))
+        fig2.update_layout(
+            width=1200, title_text=f"Meta-wiki {user_text} by primary language — {ym_value}")
 
-    df2['perc'] = ((df2['m2_count']/df2['m1_count'])*100).round(2)
+    # --- 6) Output ---
+    return html.Div(children=[
+        dcc.Graph(id="my_graph", figure=fig1, style={
+                  'display': 'inline-block'}),
 
-    df2 = enrich_dataframe(df2)
+        html.Hr(),
+        html.H5('Highlights'),
+        html.Div(id='highlights_container_additional', children=[]),
 
-    fig2 = go.Figure()
-
-    fig2.add_trace(go.Treemap(
-        parents=df2["langcode"],
-        labels=df2['language_name'],
-        values=df2['m2_count'],
-        customdata=df2['perc'],
-        text=df2['m2_value'],
-        texttemplate="<b>%{label} </b><br>Percentage: %{customdata}%<br>Editors: %{value}<br>",
-        hovertemplate='<b>%{label} </b><br>Percentage: %{customdata}%<br>Editors: %{value}<br>%{text}<br><extra></extra>',
-    ))
-
-    fig2.update_layout(width=1200, title_text="Meta-wiki " +
-                       user_text+" by primary language")
-
-    res = html.Div(
-        children=[
-            dcc.Graph(id="my_graph", figure=fig1, style={
-                      'display': 'inline-block'}),
-
-            html.Hr(),
-
-            html.H5('Highlights'),
-
-            html.Div(id='highlights_container_additional', children=[]),
-
-            dcc.Graph(id="my_graph2", figure=fig2),
-
-
-        ])
-
-    return res
+        dcc.Graph(id="my_graph2", figure=fig2),
+    ])
 
 
 @dash.callback([Output(component_id='graph_container', component_property='children'),
@@ -1723,7 +1545,7 @@ def global_graph(language, user_type, value_type, time_type, year, month):
                Output(component_id='year_yearmonth',
                       component_property='options'),
                Output(component_id='active_veryactive', component_property='options')],
-              [Input(component_id='metric', component_property='value'),
+               [Input(component_id='metric', component_property='value'),
                Input(component_id='langcode', component_property='value'),
                Input(component_id='active_veryactive',
                      component_property='value'),
@@ -1796,1509 +1618,19 @@ def change_graph(metric, language, user_type, time_type, retention_rate, value_t
         return fig, True, False, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5', 'disabled': True}, {'label': 'Very Active', 'value': '100', 'disabled': True}]
     elif metric == 'Global':
 
+        # Get current date and format for 2 months ago
+
+        # Get 2 months ago year and month
+        two_months_ago = (datetime.now().replace(day=1) -
+                          timedelta(days=32)).replace(day=1)
+        year = str(two_months_ago.year)
+        month = str(two_months_ago.month).zfill(2)  # Ensure 2-digit format
+
         fig = global_graph(language, user_type, value_type,
-                           time_type, '2021', '12')
+                           time_type, year, month)
 
         return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
 
 ####################################################################################################################################################################################
 ####################################################################################################################################################################################
 ####################################################################################################################################################################################
-
-
-def timeconversion(rawdate, time_type):
-
-    if time_type == 'ym':
-
-        year = ''
-        month = ''
-
-        # print("Raw date is: "+rawdate)
-
-        lista = rawdate.split('-')
-
-        # print(lista[0])
-        # print(lista[1])
-
-        year = lista[0]
-
-        if lista[1] == '01':
-            month = 'January'
-        elif lista[1] == '02':
-            month = 'February'
-        elif lista[1] == '03':
-            month = 'March'
-        elif lista[1] == '04':
-            month = 'April'
-        elif lista[1] == '05':
-            month = 'May'
-        elif lista[1] == '06':
-            month = 'June'
-        elif lista[1] == '07':
-            month = 'July'
-        elif lista[1] == '08':
-            month = 'August'
-        elif lista[1] == '09':
-            month = 'September'
-        elif lista[1] == '10':
-            month = 'October'
-        elif lista[1] == '11':
-            month = 'November'
-        elif lista[1] == '12':
-            month = 'December'
-        else:
-            month = 'invalid'
-
-        date = month+' '+year
-        # print("Date is:"+date)
-    elif time_type == 'y':
-        date = rawdate
-    return date
-
-
-def get_count(df):
-    # il valore della media nell'ultimo tempo
-    temp_c = df["m1_count"].tolist()
-    count = temp_c[0]
-
-    return count
-
-
-def get_media(df):
-    # la media negli ultimi 5 anni/mesi
-    temp_m = df["Media"].tolist()
-    media = temp_m[0]
-
-    return media
-
-
-def get_time(df):
-    # l'ultimo tempo disponibile
-    temp = df["year_month"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def activity_generate1(lingua, attivi, tempo, last5, engine):
-
-    query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value=" + \
-        attivi+" AND year_year_month = '"+tempo+"'"
-    query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
-
-    query = query0+query1
-
-    df1 = pd.read_sql_query(query, engine)
-
-    df1.reset_index(inplace=True)
-
-    print("[ACTIVITY] QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df1
-
-
-def activity_generate2(lingua, attivi, tempo, last5, engine):
-
-    query0 = "SELECT AVG(m1_count) AS Media FROM vital_signs_metrics WHERE year_month IN "+last5 + \
-        " AND topic = 'active_editors' AND year_year_month = '" + \
-        tempo+"'  AND m1_value='"+attivi+"'"
-    query1 = " AND langcode IN (%s)" % lingua
-
-    query2 = query0+query1
-
-    df2 = pd.read_sql_query(query2, engine)
-
-    df2.reset_index(inplace=True)
-
-    print("[ACTIVITY] QUERY FOR AVERAGE ="+query2)
-    print("---------------------------")
-
-    return df2
-
-
-def activity_generatetail(count, media, active, time):
-
-    if (count > media):
-        tail = ", which is **above** the median number (**"+str(
-            media)+"**) of "+active+" editors of the five last **"+time+"**. \n"
-    else:
-        tail = ", which is **below** the median number (**"+str(
-            media)+"**) of "+active+" editors of the five last **"+time+"**. \n"
-
-    return tail
-
-
-def activity_findMax(language, active, yearmonth, time, engine):
-
-    query0 = "SELECT MAX(m1_count) as max,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
-        active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
-    query1 = " AND langcode IN (%s)" % language
-
-    query = query0 + query1
-    # print("FIND MAX="+query)
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-    return df
-
-
-def activity_findMin(language, active, yearmonth, time, engine):
-
-    query0 = "SELECT MIN(m1_count) as min,langcode FROM vital_signs_metrics WHERE topic = 'active_editors' AND m1_value = '" + \
-        active+"' AND year_year_month = '"+yearmonth+"' AND year_month='"+time+"'"
-    query1 = " AND langcode IN (%s)" % language
-
-    query = query0 + query1
-    # print("FIND MIN="+query)
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-    return df
-
-
-def activity_highlights(language, user_type, time_type):
-
-    print("HIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTSHIGHLIGHTS")
-
-    print(language)
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-
-    params = params[:-1]
-
-    if user_type == '5':
-        active = 'active'
-    elif user_type == '100':
-        active = 'very active'
-
-    if time_type == 'y':
-        last5 = "('2021','2020','2019','2018','2017')"
-        time = "years"
-    elif time_type == 'ym':
-        last5 = "('2021-12','2021-11','2021-10','2021-09','2021-08')"
-        time = "months"
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-
-        for x in langs:
-
-            df1 = activity_generate1(
-                "'"+x+"'", user_type, time_type, last5, engine)
-            df2 = activity_generate2(
-                "'"+x+"'", user_type, time_type, last5, engine)
-
-            count = get_count(df1)
-            media = get_media(df2)
-
-            tail = activity_generatetail(count, media, active, time)
-
-            timespan = get_time(df1)
-            date = timeconversion(timespan, time_type)
-
-            h1 = h1+"* In **"+date+"**, in **" + \
-                language_names_full[x]+"** Wikipedia, the number of " + \
-                    active+" editors was **"+str(count)+"**"+tail
-
-        dfmax = activity_findMax(params, user_type, time_type, timespan, engine)
-        dfmin = activity_findMin(params, user_type, time_type, timespan, engine)
-
-        max0 = dfmax["langcode"].tolist()
-        maxlang = max0[0]
-        max1 = dfmax["max"].tolist()
-        max = max1[0]
-
-        min0 = dfmin["langcode"].tolist()
-        minlang = min0[0]
-        min1 = dfmin["min"].tolist()
-        min = min1[0]
-
-        h2 = "* **"+language_names_full[str(maxlang)]+"** Wikipedia language edition has the higher number of "+active+" editors (**"+str(
-            max)+"**), **"+language_names_full[str(minlang)]+"** Wikipedia has the lower (**"+str(min)+"**)."
-    else:
-
-        df1 = activity_generate1(params, user_type, time_type, last5, engine)
-        df2 = activity_generate2(params, user_type, time_type, last5, engine)
-
-        count = get_count(df1)
-        media = get_media(df2)
-
-        tail = activity_generatetail(count, media, active, time)
-
-        timespan = get_time(df1)
-        date = timeconversion(timespan, time_type)
-
-        h1 = "* In **"+date+"**, in **"+language_names_full[str(
-            langs[0])]+"** Wikipedia, the number of "+active+" editors was **"+str(count)+"**"+tail
-        h2 = ""
-
-    # print("---------------------------")
-
-    res = dcc.Markdown(id='highlights', children=[
-                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
-
-    return res
-
-##########################################################################################################################################################################
-
-
-def retention_timeconversion(rawdate):
-
-    # print("Received "+rawdate)
-
-    year = ''
-    lista = rawdate.split('-')
-    year = lista[0]
-
-    return year
-
-
-def retention_generate1(lingua, retention_rate, engine):
-
-    query0 = "SELECT * FROM vital_signs_metrics WHERE topic = 'retention' AND m2_value='"+retention_rate+"'"
-    query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
-
-    query2 = query0+query1
-
-    df1 = pd.read_sql_query(query2, engine)
-    df1.reset_index(inplace=True)
-
-    print("[RETENTION] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query2)
-    print("---------------------------")
-
-    return df1
-
-
-def get_avg_retention(lingua, retention_rate, year, engine):
-
-    query0 = "SELECT *, AVG(m2_count / m1_count)*100 AS retention_rate FROM vital_signs_metrics WHERE topic = 'retention' AND m1='first_edit' AND m2_value = '" + \
-        retention_rate+"' AND year_month LIKE '"+str(year)+"-%'"
-    query1 = " AND langcode IN (%s)" % lingua
-
-    query_retention = query0 + query1
-
-    df2 = pd.read_sql_query(query_retention, engine)
-    df2.reset_index(inplace=True)
-
-    print("[RETENTION] QUERY FOR DATAFRAME RETENTION (HIGHLIGHTS)="+query_retention)
-
-    temp = df2["retention_rate"]
-    res = round(temp[0], 2)
-
-    return str(res)
-
-
-def retention_highlights(language, retention_rate):
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-
-    params = params[:-1]
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-        count = 0
-        for x in langs:
-            count += 1
-            df1 = retention_generate1("'"+x+"'", retention_rate, engine)
-            df1.reset_index(inplace=True)
-
-            last_time = get_time(df1)
-            date = retention_timeconversion(last_time)
-
-            old_date = int(date)-10
-
-            old_retention_value = get_avg_retention(
-                "'"+x+"'", retention_rate, old_date, engine)
-            current_retention_value = get_avg_retention(
-                "'"+x+"'", retention_rate, date, engine)
-
-            if count > 1:
-                i = '\n \n * To'
-                text_eventual = 'in the same periods'
-            else:
-                i = '* In'
-                text_eventual = ''
-
-            h1 = h1+"* In "+str(old_date)+" **"+language_names_full[x]+"** Wikipedia, the average retention rate was **"+old_retention_value+"%**, in **"+str(
-                date)+"** it is **"+current_retention_value+"%**, "+text_eventual+" this is **"+str(round(float(current_retention_value)-float(old_retention_value), 2))+"** difference. \n \n"
-
-        h1 = h1+"\n \n We argue that a reasonable target would be a 3"+"%" + \
-            " retention rate to ensure there is renewal among editors, while it could be desirable to reach 5-7%. In general, communities should aim at **reversing** the declining trend in the retention rate."
-
-    else:
-
-        df1 = retention_generate1(params, retention_rate, engine)
-        df1.reset_index(inplace=True)
-
-        last_time = get_time(df1)
-        date = retention_timeconversion(last_time)
-
-        old_date = int(date)-10
-
-        old_retention_value = get_avg_retention(
-            params, retention_rate, old_date, engine)
-        current_retention_value = get_avg_retention(
-            params, retention_rate, date, engine)
-
-        h1 = "* In **"+str(old_date)+"**, to **"+language_names_full[str(langs[0])]+"** Wikipedia, the average retention rate was **"+old_retention_value+"%**, in **"+str(date)+"** it is **"+current_retention_value+"%**, this is **"+str(round(float(current_retention_value)-float(
-            old_retention_value), 2))+"** difference. \nWe argue that a reasonable target would be a 3"+"%"+" retention rate to ensure there is renewal among editors, while it could be desirable to reach 5-7%. In general, communities should aim at reversing the declining trend in the retention rate."
-
-    res = dcc.Markdown(id='highlights', children=[h1], style={
-                       "font-size": "18px"}, className='container'),
-
-    return res
-
-##########################################################################################################################################################################
-
-
-def stability_get_avg_fresh(df):
-
-    temp = df["fresh"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def stability_get_avg_long(df):
-
-    temp = df["long"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def stability_calc_trend(num):
-
-    res = ""
-
-    if num < 33:
-        res = "below"
-    elif num > 33:
-        res = "above"
-    elif num == 33:
-        res = "inline"
-
-    return res
-
-
-def stability_generate1(lingua, attivi, valore, tempo, engine):
-
-    if valore == 'perc':
-        toreturn = '(m2_count/m1_count)*100'
-    else:
-        toreturn = 'm2_count'
-
-    query0 = "select *, AVG("+toreturn+") AS fresh from vital_signs_metrics where topic = 'stability' AND year_year_month = '" + \
-        tempo+"' AND year_month LIKE '20%' AND m1_value='"+attivi+"' and m2_value = '1'"
-    query1 = " AND langcode = %s " % lingua
-
-    query = query0+query1
-
-    df1 = pd.read_sql_query(query, engine)
-
-    df1.reset_index(inplace=True)
-
-    print("[STABILITY] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df1
-
-
-def stability_generate2(lingua, attivi, valore, tempo, engine):
-
-    if valore == 'perc':
-        toreturn = '(m2_count/m1_count)*100'
-    else:
-        toreturn = 'm2_count'
-
-    query0 = "select *, AVG("+toreturn+") AS long from vital_signs_metrics where topic = 'stability' AND year_year_month = '" + \
-        tempo+"' AND year_month LIKE '20%' AND m1_value='" + \
-        attivi+"' and (m2_value = '13-24' OR m2_value='+24')"
-    query1 = " AND langcode = %s " % lingua
-
-    query = query0+query1
-
-    df1 = pd.read_sql_query(query, engine)
-
-    df1.reset_index(inplace=True)
-
-    print("[STABILITY] QUERY FOR DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df1
-
-
-def stability_highlights(language, user_type, value_type, time_type):
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-    params = params[:-1]
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-
-        for x in langs:
-
-            df1 = stability_generate1(
-                "'"+x+"'", user_type, value_type, time_type, engine)
-            avg_fresh = stability_get_avg_fresh(df1)
-
-            df2 = stability_generate2(
-                "'"+x+"'", user_type, value_type, time_type, engine)
-            avg_long = stability_get_avg_long(df2)
-
-            if value_type == 'perc':
-                perc_or_num = '%'
-                avg_fresh = round(avg_fresh, 2)
-                avg_long = round(avg_long, 2)
-            else:
-                perc_or_num = ''
-                avg_fresh = round(avg_fresh, 0)
-                avg_long = round(avg_long, 0)
-
-            trend = stability_calc_trend(avg_long)
-
-            h1 = h1+"\n* On average, in the **" + \
-                language_names_full[x]+"** Wikipedia, the **fresh** editors are **"+str(
-                    avg_fresh)+""+perc_or_num+"**. "
-
-            h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the share of **long-term engaged** editors (including the bins of editing **13-24 months** in a row and **> 24 months** in a row) is **"+str(
-                avg_long)+""+perc_or_num+"**. This is **"+trend+"** the target of a **33%** that we would recommend."
-
-        h1 = h1+"\n \n A target of 30"+"%"+"-40"+"%"+" of **fresh** editors may be desirable in order to have an influx of new energy and ideas. \nIf higher than this, and especially over 60%, it may be an indicator of a lack of capacity to engage and stabilize the community. High percentages of fresh editors are only desirable when the number of active editors is growing."
-        h2 = h2+"\n \n The target value is indicative of a solid community able to carry on with long-term Wikiprojects and activities."
-    else:
-
-        df1 = stability_generate1(
-            params, user_type, value_type, time_type, engine)
-        avg_fresh = stability_get_avg_fresh(df1)
-
-        df2 = stability_generate2(
-            params, user_type, value_type, time_type, engine)
-        avg_long = stability_get_avg_long(df2)
-
-        if value_type == 'perc':
-            perc_or_num = '%'
-            avg_fresh = round(avg_fresh, 2)
-            avg_long = round(avg_long, 2)
-        else:
-            perc_or_num = ''
-            avg_fresh = round(avg_fresh, 0)
-            avg_long = round(avg_long, 0)
-
-        trend = stability_calc_trend(avg_long)
-
-        h1 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **fresh** editors are **"+str(avg_fresh)+""+perc_or_num+"**. A target of 30"+"%"+"-40"+"%" + \
-            " of **fresh** editors may be desirable in order to have an influx of new energy and ideas. \nIf higher than this, and especially over 60%, it may be an indicator of a lack of capacity to engage and stabilize the community. High percentages of fresh editors are only desirable when the number of active editors is growing."
-
-        h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the share of **long-term engaged** editors (including the bins of editing **13-24 months** in a row and **> 24 months** in a row) is **"+str(
-            avg_long)+""+perc_or_num+"**. This is **"+trend+"** the target of a **33%** that we would recommend. This value is indicative of a solid community able to carry on with long-term Wikiprojects and activities."
-
-    res = dcc.Markdown(id='highlights', children=[
-                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
-
-    return res
-
-################################################################################################################################################################
-
-
-def balance_get_last_gen_val(df):
-
-    temp = df["last_gen"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def balance_get_first_gen_val(df):
-
-    temp = df["first_gen"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def balance_calc_trend(num):
-
-    res = ""
-
-    if num < 5:
-        res = "below"
-    elif num > 15:
-        res = "above"
-    elif num > 5 or num < 15:
-        res = "inline with"
-
-    return res
-
-
-def balance_get_gen(df):
-    temp = df["m2_value"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def balance_generate1(lingua, attivi, valore, tempo, engine):
-
-    if valore == 'perc':
-        toreturn = 'ROUND((m2_count/m1_count)*100,2)'
-    else:
-        toreturn = 'm2_count'
-
-    inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
-        tempo+"'  and m1_value='"+attivi+"'"
-    inner_query1 = " and langcode = %s order by m2_value desc limit 1" % lingua
-
-    inner_query = inner_query0 + inner_query1
-
-    query0 = "select *, "+toreturn+" as last_gen from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
-        tempo+"' and m2_value= ( "+inner_query+" ) and m1_value='"+attivi+"'"
-    query1 = " and langcode = %s order by year_month desc" % lingua
-
-    query = query0 + query1
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    print("[BALANCE] QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df
-
-
-def balance_generate2(lingua, attivi, valore, tempo, engine):
-
-    if valore == 'perc':
-        toreturn = 'ROUND((m2_count/m1_count)*100,2)'
-    else:
-        toreturn = 'm2_count'
-
-    inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
-        tempo+"'  and m1_value='"+attivi+"'"
-    inner_query1 = " and langcode = %s order by m2_value desc limit 1" % lingua
-
-    inner_query = inner_query0 + inner_query1
-
-    query0 = "select *, "+toreturn+" as first_gen from vital_signs_metrics where topic = 'balance' and year_year_month='" + \
-        tempo+"' and m2_value= '2001-2005' and m1_value='"+attivi+"'"
-    query1 = " and langcode = %s order by year_month desc" % lingua
-
-    query = query0 + query1
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    print("[BALANCE] QUERY FOR SECOND DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df
-
-
-def balance_highlights(language, user_type, value_type, time_type):
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-    params = params[:-1]
-
-    if user_type == '5':
-        active_type = 'active'
-    else:
-        active_type = 'very active'
-
-    if value_type == 'perc':
-        perc_or_num = '%'
-    else:
-        perc_or_num = ''
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df1 = balance_generate1(
-                "'"+x+"'", user_type, value_type, time_type, engine)
-
-            recent_year1 = get_time(df1)
-            recent_year1 = timeconversion(recent_year1, time_type)
-            last_gen_value = balance_get_last_gen_val(df1)
-            last_gen = balance_get_gen(df1)
-
-            h1 = h1+"\n* In **"+recent_year1+"**, in the **"+language_names_full[x]+"** Wikipedia, the **last generation ["+last_gen+"]** had a share of **"+str(
-                last_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. "
-
-            df2 = balance_generate2(
-                "'"+x+"'", user_type, value_type, time_type, engine)
-
-            recent_year2 = get_time(df2)
-            recent_year2 = timeconversion(recent_year2, time_type)
-            first_gen_value = balance_get_first_gen_val(df2)
-
-            trend = balance_calc_trend(first_gen_value)
-
-            h2 = h2+"\n* In **"+recent_year2+"**, in **the "+language_names_full[x]+"** Wikipedia, the share of the **first generation [2001-2005]** takes **"+str(
-                first_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. This is **"+trend+"** a desirable target of **5-15%**."
-
-        h1 = h1 + \
-            "\n \n We believe a growing share of the last generation until occupying between **30-40%** may be reasonable for a language edition that is not in a growth phase. Larger when it is. We considered every generation to be 5 years (a lustrum), so, as a rule of thumb, we suggest that the last generation occupies from 10 to 40" + \
-            "%" + \
-            " depending on the years which have passed since its beginning (0-5)."
-        h2 = h2 + \
-            "\n \n Although this generation might be at the end of their lifecycle and the growth may have occurred with the following generation (2006-2010). The share of every previous generation will inevitably **decrease** over time."
-    else:
-
-        df1 = balance_generate1(params, user_type, value_type, time_type, engine)
-
-        recent_year1 = get_time(df1)
-        recent_year1 = timeconversion(recent_year1, time_type)
-        last_gen_value = balance_get_last_gen_val(df1)
-        last_gen = balance_get_gen(df1)
-
-        h1 = "* In **"+recent_year1+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation ["+last_gen+"]** had a share of **"+str(last_gen_value)+""+perc_or_num+"** of the **"+active_type + \
-            "** editors. We believe a growing share of the last generation until occupying between **30-40%** may be reasonable for a language edition that is not in a growth phase. Larger when it is. We considered every generation to be 5 years (a lustrum), so, as a rule of thumb, we suggest that the last generation occupies from 10 to 40" + \
-            "%" + \
-            " depending on the years which have passed since its beginning (0-5)."
-
-        df2 = balance_generate2(params, user_type, value_type, time_type, engine)
-
-        recent_year2 = get_time(df2)
-        recent_year2 = timeconversion(recent_year2, time_type)
-        first_gen_value = balance_get_first_gen_val(df2)
-
-        trend = balance_calc_trend(first_gen_value)
-
-        h2 = "* In **"+recent_year2+"**, in **the "+language_names_full[str(langs[0])]+"** Wikipedia, the share of the **first generation [2001-2005]** takes **"+str(first_gen_value)+""+perc_or_num+"** of the **"+active_type+"** editors. This is **"+trend + \
-            "** a desirable target of **5-15%**. Although this generation might be at the end of their lifecycle and the growth may have occurred with the following generation (2006-2010). The share of every previous generation will inevitably **decrease** over time."
-
-    res = dcc.Markdown(id='highlights', children=[
-                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
-
-    return res
-
-##########################################################################################################################################################################
-
-
-def special_calc_trend(num):
-
-    res = ""
-
-    if num < 20:
-        res = "below"
-    elif num > 20:
-        res = "above"
-    elif num == 20:
-        res = "inline with"
-
-    return res
-
-
-def special_get_tech_editors(df):
-    # il valore della media nell'ultimo tempo
-    temp = df["m1_count"].tolist()
-    value = temp[0]
-
-    return value
-
-
-def special_get_fresh_tech_editors(df):
-    # il valore della media nell'ultimo tempo
-    temp = df["percentage"].tolist()
-    value = temp[0]
-
-    return value
-
-
-def special_generate1(topic, lingua, attivi, engine):
-
-    query0 = "SELECT * FROM vital_signs_metrics WHERE topic = '" + \
-        topic+"' AND m1_value="+attivi+" AND year_year_month = 'y'"
-    query1 = " AND langcode IN (%s) ORDER BY year_month DESC LIMIT 1" % lingua
-
-    query = query0+query1
-
-    df1 = pd.read_sql_query(query, engine)
-
-    df1.reset_index(inplace=True)
-
-    print("[SPECIALISTS] QUERY FOR FIRST " +
-          topic+" DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df1
-
-
-def special_generate2(topic, lingua, attivi, tempo, engine):
-
-    inner_query0 = "select distinct m2_value from vital_signs_metrics where topic = '" + \
-        topic+"' and m1_value='"+attivi+"'"
-    inner_query1 = " and langcode = %s order by m2_value desc limit 1" % lingua
-
-    inner_query = inner_query0 + inner_query1
-
-    query0 = "SELECT ROUND(AVG((m2_count/m1_count)*100),2) as percentage FROM vital_signs_metrics WHERE topic = '" + \
-        topic+"' AND m1_value="+attivi + \
-        " AND m2_value = ("+inner_query+") AND year_year_month = '"+tempo+"'"
-    query1 = " AND langcode IN (%s)" % lingua
-
-    query = query0+query1
-
-    df2 = pd.read_sql_query(query, engine)
-
-    df2.reset_index(inplace=True)
-
-    print("[SPECIALISTS] QUERY FOR SECOND " +
-          topic+" DATAFRAME (HIGHLIGHTS)="+query)
-    print("---------------------------")
-
-    return df2
-
-
-def special_highlights1(language, user_type, value_type, time_type):
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-
-    params = params[:-1]
-
-    if user_type == '5':
-        active = 'active'
-    elif user_type == '100':
-        active = 'very active'
-
-    if time_type == 'y':
-        periodicity = 'yearly'
-    elif time_type == 'ym':
-        periodicity = 'monthly'
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df1 = special_generate1(
-                "technical_editors", "'"+x+"'", user_type, engine)
-            tech_editors = special_get_tech_editors(df1)
-
-            h1 = h1+"\n* In **"+get_time(df1)+"**, in the **"+language_names_full[x]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **technical** editors. This is **"+str(
-                special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
-
-            df2 = special_generate2(
-                "technical_editors", "'"+x+"'", user_type, time_type, engine)
-            fresh_tech_editors = special_get_fresh_tech_editors(df2)
-
-            h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
-                fresh_tech_editors)+""+"%"+"** of the **"+active+"** technical editors. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
-    else:
-        df1 = special_generate1("technical_editors", params, user_type, engine)
-        tech_editors = special_get_tech_editors(df1)
-
-        h1 = "* In **"+get_time(df1)+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **technical** editors. This is **"+str(
-            special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
-
-        df2 = special_generate2("technical_editors",
-                                params, user_type, time_type, engine)
-        fresh_tech_editors = special_get_fresh_tech_editors(df2)
-
-        h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
-            fresh_tech_editors)+""+"%"+"** of the **"+active+"** technical editors. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
-
-    res = dcc.Markdown(id='highlights1', children=[
-                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
-
-    return res
-
-
-def special_highlights2(language, user_type, value_type, time_type):
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-
-    params = params[:-1]
-
-    if user_type == '5':
-        active = 'active'
-    elif user_type == '100':
-        active = 'very active'
-
-    if time_type == 'y':
-        periodicity = 'yearly'
-    elif time_type == 'ym':
-        periodicity = 'monthly'
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df1 = special_generate1("coordinators", "'"+x+"'", user_type, engine)
-            tech_editors = special_get_tech_editors(df1)
-
-            h1 = h1+"\n* In **"+get_time(df1)+"**, in the **"+language_names_full[x]+"** Wikipedia, there were **"+str(tech_editors)+"** "+active+" **coordinators**. This is **"+str(
-                special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
-
-            df2 = special_generate2(
-                "coordinators", "'"+x+"'", user_type, time_type, engine)
-            fresh_tech_editors = special_get_fresh_tech_editors(df2)
-
-            h2 = h2+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
-                fresh_tech_editors)+""+"%"+"** of the **"+active+"** coordinators. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
-    else:
-        df1 = special_generate1("coordinators", params, user_type, engine)
-        tech_editors = special_get_tech_editors(df1)
-
-        h1 = "* In **"+get_time(df1)+"**, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there were **"+str(tech_editors)+" "+active+"** coordinators. This is **"+str(
-            special_calc_trend(tech_editors))+"** the target of **20** that would be recommended to ensure the sustainability of the technical tasks."
-
-        df2 = special_generate2("coordinators", params,
-                                user_type, time_type, engine)
-        fresh_tech_editors = special_get_fresh_tech_editors(df2)
-
-        h2 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, the **last generation**  had a **"+periodicity+"** share of an **"+str(
-            fresh_tech_editors)+""+"%"+"** of the **"+active+"** coordinators. This is **"+special_calc_trend(fresh_tech_editors)+"** the target of a **10-15% yearly** from the last generation that would be recommended."
-
-    res = dcc.Markdown(id='highlights2', children=[
-                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
-
-    return res
-
-##########################################################################################################################################################################
-
-
-def admin_calc_trend1(num):
-
-    res = ""
-
-    if num < 5:
-        res = "below"
-    elif num > 5:
-        res = "above"
-    else:
-        res = "inline with"
-
-    return res
-
-
-def admin_calc_trend2(num):
-
-    res = ""
-
-    if num < 10:
-        res = "below"
-    elif num > 15:
-        res = "above"
-    else:
-        res = "inline with"
-
-    return res
-
-
-def admin_calc_trend3(num):
-
-    res = ""
-
-    if num < 1:
-        res = "below"
-    elif num > 5:
-        res = "above"
-    else:
-        res = "inline with"
-
-    return res
-
-
-def admin_get_value(df):
-    temp = df["perc"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def admin_get_avg(df):
-    temp = df["avg"].tolist()
-    temp1 = temp[0]
-
-    return temp1
-
-
-def admin_generate1(lingua, admin, engine):
-
-    inner_query0 = "select sum(m2_count) as count from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' and m1_value = '"+admin+"'"
-    inner_query1 = " and langcode = %s group by year_month" % lingua
-
-    inner_query = inner_query0 + inner_query1
-
-    query = "select ROUND(AVG(count),1) as avg from ("+inner_query+")"
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    # print("QUERY FOR FIRST DATAFRAME (HIGHLIGHTS)="+query)
-    # print("---------------------------")
-
-    return df
-
-
-def admin_generate2(lingua, tempo, admin, engine):
-
-    query1 = "select *, ROUND((m2_count/m1_count)*100,2) as perc from vital_signs_metrics where topic = 'flags' and year_year_month='" + \
-        tempo+"' and m2_value='"+admin+"' "
-    query2 = "and langcode = %s order by year_month desc limit 1" % lingua
-
-    query = query1+query2
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    print("QUERY FOR SECOND DATAFRAME (HIGHLIGHTS)="+query)
-    # print("---------------------------")
-
-    return df
-
-
-def admin_find_last_flag(lingua, admin, engine):
-
-    query = "select year_month from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' and m1_value = '"+admin+"'"
-    query1 = " and langcode IN  (%s) order by year_month desc limit 1" % lingua
-
-    query = query + query1
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    temp = df["year_month"].tolist()
-    temp1 = temp[0]
-
-    # print("LOOK HERE")
-    # print(temp1)
-
-    return temp1
-
-
-def admin_total_num_admin(lingua, engine):
-
-    query20 = "select sum(m2_count) as tot from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag' "
-    query21 = " and langcode In (%s)" % lingua  # and year_month = '2021'
-
-    query2 = query20 + query21
-
-    df2 = pd.read_sql_query(query2, engine)
-    df2.reset_index(inplace=True)
-
-    temp = df2["tot"].tolist()
-    tot_admin = temp[0]
-
-    # print("TOT ADMIN")
-    # print(query2)
-
-    return tot_admin
-
-
-def admin_find_last_percentage(lingua, engine):
-
-    query10 = "select sum(m2_count) as count, m2_value from vital_signs_metrics where topic = 'flags' and m1 = 'granted_flag'"
-    query11 = " and langcode In (%s) group by m2_value order by m2_value desc limit 1" % lingua
-
-    query1 = query10 + query11
-
-    df1 = pd.read_sql_query(query1, engine)
-    df1.reset_index(inplace=True)
-
-    temp = df1["count"].tolist()
-    num_admin = temp[0]
-
-    # print("NUM ADMIN")
-    # print(query1)
-
-    tot_admin = admin_total_num_admin(lingua, engine)
-
-    res = round((num_admin/tot_admin)*100, 2)
-
-    # print("PERCENTAGE")
-    # print(res)
-
-    return res
-
-
-def admin_highlights1(language, admin_type, time_type):
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-    params = params[:-1]
-
-    h1 = ""
-    h2 = ""
-
-    if len(language) == 0:
-        h1 = ""
-        h2 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df1 = admin_generate1("'"+x+"'", admin_type, engine)
-            avg = admin_get_avg(df1)
-
-            last_flag_year = admin_find_last_flag("'"+x+"'", admin_type, engine)
-
-            last_per = admin_find_last_percentage("'"+x+"'", engine)
-
-            tot = admin_total_num_admin("'"+x+"'", engine)
-
-            flag_percentage = (avg/tot)*100
-
-            h1 = h1+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, there are **"+str(avg)+" ("+str(round(flag_percentage, 2))+")%** new **"+admin_type+"** flags given every year; the last **"+admin_type + \
-                "** flag was granted in **"+last_flag_year+"** . This is **"+admin_calc_trend1(
-                    flag_percentage)+"** the target of a renewal of **5"+"%"+"** of the total admins every year that would be recommended."
-
-            h2 = h2+"\n* Among the **"+language_names_full[x]+"** Wikipedia’s admins, the last generation has a share of **"+str(
-                last_per)+"%**. This is **"+admin_calc_trend2(last_per)+"** the target of **10-15%** yearly from the last generation that would be recommended. "
-
-        h2 = h2+"\n \n Ideally, the group of admins should include members from all generations."
-    else:
-        df1 = admin_generate1(params, admin_type, engine)
-        avg = admin_get_avg(df1)
-
-        last_flag_year = admin_find_last_flag(params, admin_type, engine)
-
-        last_per = admin_find_last_percentage(params, engine)
-
-        tot = admin_total_num_admin(params, engine)
-
-        flag_percentage = (avg/tot)*100
-
-        h1 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there are **"+str(avg)+" ("+str(round(flag_percentage, 2))+")%** new **"+admin_type+"** flags given every year; the last **" + \
-            admin_type+"** flag was granted in **"+last_flag_year+"** . This is **"+admin_calc_trend1(
-                flag_percentage)+"** the target of a renewal of **5"+"%"+"** of the total admins every year that would be recommended."
-
-        h2 = "* Among the **"+language_names_full[str(langs[0])]+"** Wikipedia’s admins, the last generation has a share of **"+str(last_per)+"%**. This is **"+admin_calc_trend2(
-            last_per)+"** the target of **10-15%** yearly from the last generation that would be recommended. Ideally, the group of admins should include members from all generations."
-
-    res = dcc.Markdown(id='highlights2', children=[
-                       h1+"\n"+h2], style={"font-size": "18px"}, className='container'),
-
-    return res
-
-
-def admin_highlights2(language, admin_type, time_type):
-
-    engine = create_engine(database)
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-    params = params[:-1]
-
-    h1 = ""
-
-    if len(language) == 0:
-        h1 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df = admin_generate2("'"+x+"'", time_type, admin_type, engine)
-
-            last_time = get_time(df)
-            last_date = timeconversion(last_time, time_type)
-
-            proportion_value = admin_get_value(df)
-
-            h1 = h1+"\n* In **"+str(last_date)+"**, the proportion of ["+admin_type+"] admins in the **"+language_names_full[x]+"** Wikipedia is **"+str(proportion_value)+"%**. This is **"+admin_calc_trend3(
-                proportion_value)+"** the target of **1-5%** to guarantee that admins do not carry an excessive workload, since, in the end, they revise other editors’ edits."
-    else:
-        df = admin_generate2(params, time_type, admin_type, engine)
-
-        last_time = get_time(df)
-        last_date = timeconversion(last_time, time_type)
-
-        proportion_value = admin_get_value(df)
-        h1 = "* In **"+str(last_date)+"**, the proportion of ["+admin_type+"] admins in the **"+language_names_full[str(langs[0])]+"** Wikipedia is **"+str(proportion_value)+"%**. This is **"+admin_calc_trend3(
-            proportion_value)+"** the target of **1-5%** to guarantee that admins do not carry an excessive workload, since, in the end, they revise other editors’ edits."
-
-    res = dcc.Markdown(id='highlights2', children=[h1], style={
-                       "font-size": "18px"}, className='container'),
-
-    return res
-
-##########################################################################################################################################################################
-
-
-def get_value(df, toreturn):
-
-    temp = df[toreturn].tolist()
-    res = temp[0]
-
-    return res
-
-
-def global_calc_trend(num):
-
-    if num < 55:
-        res = "below"
-    elif num == 55:
-        res = "inline"
-    elif num > 55:
-        res = "above"
-
-    return res
-
-
-def global_generate1(language, user_type, value_type, time_type, engine):
-
-    query0 = "select round(avg(m2_count),0) as nums, round(avg(m2_count/m1_count)*100,4) as percentage from vital_signs_metrics where topic = 'primary_editors' and year_year_month='" + \
-        time_type+"' and m1_value='"+user_type+"' and m2_value != langcode "
-    query1 = "and langcode = %s" % language
-
-    query = query0 + query1
-    print("[GLOBAL] Highlights query = "+query)
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    return df
-
-
-def global_generate2(language, user_type, value_type, time_type, engine):
-
-    query0 = "select avg(m2_count) as avg1, avg(m1_count) as avg2 from vital_signs_metrics where topic = 'primary_editors' and year_year_month='ym' and m1_value='" + \
-        user_type+"' and langcode = 'meta' "
-    query1 = "and m2_value = %s" % language
-
-    query = query0 + query1
-    print("[GLOBAL] Highlights second query = "+query)
-
-    df = pd.read_sql_query(query, engine)
-    df.reset_index(inplace=True)
-
-    return df
-
-
-def global_highlights1(language, user_type, value_type, time_type):
-
-    engine = create_engine(database)
-
-    if user_type == '5':
-        user_text = 'Active Editors'
-    else:
-        user_text = 'Very Active Editors'
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-
-    params = params[:-1]
-
-    h1 = ""
-
-    if len(language) == 0:
-        h1 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df = global_generate1("'"+x+"'", user_type,
-                                  value_type, time_type, engine)
-
-            num = get_value(df, "nums")
-
-            perc = get_value(df, "percentage")
-
-            h1 = h1+"\n* On average, in the **"+language_names_full[x]+"** Wikipedia, there are **"+str(num)+"** "+user_text+" editors **("+str(perc)+"%)** whose primary language is a different language edition. This is **"+global_calc_trend(
-                perc)+"** the target of 55% to guarantee that there are dedicated editors whose main project is that Wikipedia language edition."
-
-        h1 = h1+"\n\n  A percentage higher than 95% might imply that the community is not attracting collaborators from other communities. The rationale for both percentages is that we see both 50" + \
-            "%"+" and 100"+"%"+" as extremes, and we suggest some margin around these values."
-    else:
-        df = global_generate1(params, user_type, value_type, time_type, engine)
-
-        num = get_value(df, "nums")
-
-        perc = get_value(df, "percentage")
-
-        h1 = "* On average, in the **"+language_names_full[str(langs[0])]+"** Wikipedia, there are **"+str(num)+"** "+user_text+" editors **("+str(perc)+"%)** whose primary language is a different language edition. This is **"+global_calc_trend(
-            perc)+"** the target of 55% to guarantee that there are dedicated editors whose main project is that Wikipedia language edition. A percentage higher than 95% might imply that the community is not attracting collaborators from other communities. The rationale for both percentages is that we see both 50"+"%"+" and 100"+"%"+" as extremes, and we suggest some margin around these values."
-
-    res = dcc.Markdown(id='highlights1', children=[h1], style={
-                       "font-size": "18px"}, className='container'),
-
-    return res
-
-
-def global_highlights2(language, user_type, value_type, time_type):
-
-    engine = create_engine(database)
-
-    if user_type == '5':
-        user_text = 'Active Editors'
-    else:
-        user_text = 'Very Active Editors'
-
-    if isinstance(language, str):
-        language = language.split(',')
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
-    else:
-        langs.append(language_names[language])
-
-    params = ""
-    for x in langs:
-        params += "'"
-        params += x
-        params += "',"
-
-    params = params[:-1]
-
-    h1 = ""
-
-    if len(language) == 0:
-        h1 = ""
-    elif len(language) != 1:
-        for x in langs:
-            df = global_generate2("'"+x+"'", user_type,
-                                  value_type, time_type, engine)
-
-            avg1 = get_value(df, "avg1")
-            avg2 = get_value(df, "avg2")
-
-            res = round((avg1/avg2)*100, 2)
-            print(res)
-
-            h1 = h1+"\n* On average, the proportion between the number of "+user_text+" editors in **Meta-wiki** whose primary language belongs to **" + \
-                language_names_full[x]+"** Wikipedia to the total number of active editors in " + \
-                    language_names_full[x]+" Wikipedia is **"+str(res)+"% **"
-    else:
-
-        df = global_generate2(params, user_type, value_type, time_type, engine)
-
-        avg1 = get_value(df, "avg1")
-        avg2 = get_value(df, "avg2")
-
-        res = round((avg1/avg2)*100, 2)
-        print(res)
-
-        h1 = "* On average, the proportion between the number of "+user_text+" editors in **Meta-wiki** whose primary language belongs to **" + \
-            language_names_full[str(langs[0])]+"** Wikipedia to the total number of active editors in " + \
-            language_names_full[str(langs[0])] + \
-            " Wikipedia is **"+str(res)+"% **"
-
-    res = dcc.Markdown(id='highlights2', children=[h1], style={
-                       "font-size": "18px"}, className='container'),
-
-    return res
-
-##########################################################################################################################################################################
-
-
-@dash.callback([Output(component_id='highlights_container', component_property='children'),
-               Output(component_id='highlights_container_additional', component_property='children')],
-              [Input(component_id='metric', component_property='value'),
-               Input(component_id='langcode', component_property='value'),
-               Input(component_id='active_veryactive',
-                     component_property='value'),
-               Input(component_id='year_yearmonth',
-                     component_property='value'),
-               Input(component_id='retention_rate',
-                     component_property='value'),
-               Input(component_id='percentage_number',
-                     component_property='value'),
-               Input(component_id='admin', component_property='value')])
-def change_highlight(metric, language, user_type, time_type, retention_rate, value_type, admin_type):
-
-    if metric == 'Activity':
-
-        res = activity_highlights(
-            language, user_type, time_type), dcc.Markdown("")
-
-        return res
-    elif metric == 'Retention':
-
-        res = retention_highlights(language, retention_rate), dcc.Markdown("")
-        return res
-    elif metric == 'Stability':
-
-        res = stability_highlights(
-            language, user_type, value_type, time_type), dcc.Markdown("")
-
-        return res
-    elif metric == 'Balance':
-
-        res = balance_highlights(
-            language, user_type, value_type, time_type), dcc.Markdown("")
-
-        return res
-    elif metric == 'Specialists':
-
-        res = special_highlights2(language, user_type, value_type, time_type), special_highlights1(
-            language, user_type, value_type, time_type)
-
-        return res
-    elif metric == 'Administrators':
-
-        res = admin_highlights2(language, admin_type, time_type), admin_highlights1(
-            language, admin_type, time_type)
-
-        return res
-    else:
-
-        res = global_highlights2(language, user_type, value_type, time_type), global_highlights1(
-            language, user_type, value_type, time_type)
-
-        return res
