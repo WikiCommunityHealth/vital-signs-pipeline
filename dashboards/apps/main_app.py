@@ -285,9 +285,6 @@ def main_app_build_layout(params):
             # html.Div(id='title_container', children=[]),
             # html.H3(id='title', children=[], style={'textAlign':'center',"fontSize":"18px",'fontStyle':'bold'}, className = 'container'),
             # html.Br(),
-
-            html.H3('Vital Signs', style={'textAlign': 'center'}),
-            html.Br(),
             dcc.Markdown(
                 text_default.replace('  ', '')),
 
