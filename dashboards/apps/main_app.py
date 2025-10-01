@@ -300,7 +300,7 @@ def main_app_build_layout(params):
                     id='metric',
                     options=[{'label': k, 'value': k} for k in metrics],
                     multi=False,
-                    value=params['metric'],
+                    value='activity',
                     style={'width': '290px'}
                 ), style={'display': 'inline-block', 'width': '290'}),
 
