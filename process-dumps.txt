@@ -1,2 +1,0 @@
-# controllare che user_id sia presente in user_id_user_name_dict 
-# trasformare in liste di dizionari le liste usate in fill_web

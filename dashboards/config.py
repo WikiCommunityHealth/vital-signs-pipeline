@@ -1,8 +1,7 @@
+import dash
 import pandas as pd
 import dash_bootstrap_components as dbc
-from dash import html
 from dash import Dash, html, dcc
-import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import datetime
 import time
@@ -26,8 +25,17 @@ title_addenda = ' - Wikimedia Community Health Metrics'
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
 webtype = ''
-database = f'postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@postgres/vital_signs_web'
-engine = create_engine(database)
+PG_USER = os.getenv("POSTGRES_USER")
+PG_PASS = os.getenv("POSTGRES_PASSWORD")
+PG_HOST = os.getenv("POSTGRES_HOST", "postgres")
+PG_DB   = os.getenv("POSTGRES_DB", "vital_signs_web")
+
+assert PG_USER and PG_PASS, "Missing POSTGRES_USER/POSTGRES_PASSWORD in env"
+
+engine = create_engine(
+    f"postgresql+psycopg2://{PG_USER}:{PG_PASS}@{PG_HOST}:5432/{PG_DB}",
+    pool_pre_ping=True,
+)
 metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
@@ -79,7 +87,7 @@ navbar = html.Div([
                         dbc.DropdownMenuItem("Activity", href="/activity"),
                         dbc.DropdownMenuItem("Retention", href="/retention"),
                         dbc.DropdownMenuItem("Stability", href="/stability"),
-                        dbc.DropdownMenuItem("Balance", href="balance"),
+                        dbc.DropdownMenuItem("Balance", href="/balance"),
                         dbc.DropdownMenuItem("Admin", href="/admin"),
                         dbc.DropdownMenuItem("Special", href="/special"),
                         dbc.DropdownMenuItem("Global", href="/global")

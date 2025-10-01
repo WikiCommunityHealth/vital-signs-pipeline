@@ -129,5 +129,12 @@ services:
     build:
       context: ./dashboards
       dockerfile: Dockerfile
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_DB=${POSTGRES_DB}
+    depends_on:
+      - postgres
     ports:
       - "8050:8050"

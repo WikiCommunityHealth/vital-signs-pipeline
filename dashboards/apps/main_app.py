@@ -1,23 +1,10 @@
 # -*- coding: utf-8 -*-
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from app import *
-from plotly.subplots import make_subplots
-from urllib.parse import urlparse, parse_qsl, urlencode
-from dash import Dash, dcc, html, Input, Output
-import dash
-import plotly.graph_objects as go
-import plotly.express as px  # (version 4.7.0 or higher)
-import pandas as pd
-import time
-import re
 import sys
-import os
 from datetime import datetime, timedelta
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')))
+from config import *
 
-dash.register_page(__name__, path="/main")
 
 ##### METHODS #####
 # parse
@@ -54,12 +41,12 @@ def enrich_dataframe(dataframe):
 
     return res
 
-### DASH APP TEST IN LOCAL ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
 
 title = "Vital Signs"+title_addenda
 
 layout = html.Div([
-    dcc.Location(id='main_url', refresh=False),
+    dcc.Location(id='url', refresh=False),
     html.Div(id='page-content'),
 ])
 
@@ -254,7 +241,7 @@ component_ids = ['metric', 'langcode', 'active_veryactive',
                  'year_yearmonth', 'retention_rate', 'percentage_number', 'admin']
 
 
-@dash.callback(Output('main_url', 'search'),
+@dash.callback(Output('url', 'search'),
                inputs=[Input(i, 'value') for i in component_ids])
 def update_url_state(*values):
     #    print (values)
@@ -291,8 +278,7 @@ def main_app_build_layout(params):
         print(params)
         # RESULTS
 
-        main_app.title = "Vital Signs"+title_addenda
-
+        
         # LAYOUT
         layout = html.Div([
             # html.Div(id='title_container', children=[]),
@@ -1558,18 +1544,27 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
                Input(component_id='admin', component_property='value')])
 def change_graph(metric, language, user_type, time_type, retention_rate, value_type, admin_type):
 
-    if isinstance(language, str):
-        language = language.split(',')
-
-    if language == None:
-        languages = []
-
-    langs = []
-    if type(language) != str:
-        for x in language:
-            langs.append(language_names[x])
+    # normalizza sempre in lista
+    if not language:
+        language_list = []
+    elif isinstance(language, str):
+        language_list = [s.strip() for s in language.split(",")]
     else:
-        langs.append(language_names[language])
+        language_list = list(language)
+
+    # mappa nomi → codici, evitando KeyError
+    langs = []
+    for x in language_list:
+        key = x
+        if x in language_names:          # es. 'Ligurian (lij)'
+            key = language_names[x]
+        elif x in language_names_inv:     # già codice 'lij'
+            pass
+        elif x in languages.index:        # ulteriore safety
+            pass
+        else:
+            continue
+        langs.append(key)
 
     params = ""
     for x in langs:
@@ -1582,41 +1577,41 @@ def change_graph(metric, language, user_type, time_type, retention_rate, value_t
 
     fig = ""
 
-    if metric == 'Activity':
+    if metric == 'activity':
 
         fig = activity_graph(language, user_type, time_type)
 
         return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'Retention':
+    elif metric == 'retention':
 
         array = []
         res = html.Div(children=array)
 
         for x in language:
             # print(x)
-            fig = retention_graph(x, retention_rate, len(params))
+            fig = retention_graph(x, retention_rate, len(langs))
             array.append(fig)
 
         return res, False, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y', 'disabled': True}, {'label': 'Monthly', 'value': 'ym', 'disabled': True}], [{'label': 'Active', 'value': '5', 'disabled': True}, {'label': 'Very Active', 'value': '100', 'disabled': True}]
-    elif metric == 'Stability':
+    elif metric == 'stability':
 
         fig = stability_graph(language, user_type, value_type, time_type)
 
         return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y', 'disabled': True}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'Balance':
+    elif metric == 'balance':
 
         fig = balance_graph(language, user_type, value_type, time_type)
 
         return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'Specialists':
+    elif metric == 'special':
         fig = special_graph(language, user_type, value_type, time_type)
 
         return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'Administrators':
+    elif metric == 'admin':
         fig = admin_graph(language, admin_type, time_type)
 
         return fig, True, False, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5', 'disabled': True}, {'label': 'Very Active', 'value': '100', 'disabled': True}]
-    elif metric == 'Global':
+    elif metric == 'global':
 
         # Get current date and format for 2 months ago
 
