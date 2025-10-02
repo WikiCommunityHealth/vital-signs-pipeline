@@ -147,7 +147,7 @@ def main_app_build_layout(params: dict) -> html.Div:
             inject(dcc.Dropdown)(
                 id='langcode',
                 options=[{'label': k, 'value': k} for k in wikilanguagecodes],
-                multi=True, value=['pms'],
+                multi=True, value=['it'],
                 style={'width': '570px'}
             ),
             style={'display': 'inline-block',

@@ -28,4 +28,4 @@ dumps_path = '/opt/airflow/mediawiki_history/'
 #                     'wa', 'wo', 'wuu', 'xal', 'xh', 'xmf', 'yi', 'yo', 'za', 'zea', 'zgh', 'zh_classical', 'zh_min_nan', 'zh_yue', 'zh', 'zu']
 
 
-wikilanguagecodes = ['lij','lmo','pms']
+wikilanguagecodes = ['it']

@@ -40,7 +40,7 @@ metrics = ['activity', 'stability', 'balance',
 
 # languages
 
-wikilanguagecodes = ['lij', 'pms', 'lmo']
+wikilanguagecodes = ['it']
 
 
 admin_type = ['autopatrolled', 'sysop', 'bureaucrat', 'checkuser', 'ipblock-exempt', 'rollbacker', 'confirmed', 'extendedconfirmed', 'interface-admin', 'patroller', 'import', 'abusefilter',
