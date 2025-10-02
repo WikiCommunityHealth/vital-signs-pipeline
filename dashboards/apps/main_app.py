@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 import sys
 import os
 from datetime import datetime, timedelta
+import traceback
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')))
 from config import *
@@ -9,7 +9,6 @@ from config import *
 
 ##### METHODS #####
 # parse
-
 
 def parse_state(url):
     parse_result = urlparse(url)
@@ -19,7 +18,6 @@ def parse_state(url):
     return state
 
 # layout
-
 
 def apply_default_value(params):
     def wrapper(func):
@@ -31,20 +29,6 @@ def apply_default_value(params):
     return wrapper
 
 
-def enrich_dataframe(dataframe):
-    datas = []
-    for x in wikilanguagecodes:
-        datas.append([x, language_names_inv[x]])
-
-    df_created = pd.DataFrame(datas, columns=['m2_value', 'language_name'])
-
-    res = pd.merge(dataframe, df_created, how='inner', on='m2_value')
-
-    return res
-
-
-
-title = "Vital Signs"+title_addenda
 
 layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -279,7 +263,6 @@ def main_app_build_layout(params):
         print(params)
         # RESULTS
 
-        
         # LAYOUT
         layout = html.Div([
             # html.Div(id='title_container', children=[]),
@@ -302,15 +285,15 @@ def main_app_build_layout(params):
                     multi=False,
                     value='activity',
                     style={'width': '290px'}
-                ), style={'display': 'inline-block', 'width': '290'}),
+                ), style={'display': 'inline-block', 'width': '290px'}),
 
             html.Div(
                 apply_default_value(params)(dcc.Dropdown)(
                     id='langcode',
                     options=[{'label': k, 'value': k}
-                             for k in language_names_list],
+                             for k in wikilanguagecodes],
                     multi=True,
-                    value='piedmontese (pms)',
+                    value=['pms'],
                     style={'width': '570px'}
                 ), style={'display': 'inline-block', 'width': '570px', 'padding': '0px 0px 0px 10px'}),
 
@@ -429,9 +412,9 @@ def main_app_build_layout(params):
                 apply_default_value(params)(dcc.Dropdown)(
                     id='langcode',
                     options=[{'label': k, 'value': k}
-                             for k in language_names_list],
+                             for k in wikilanguagecodes],
                     multi=True,
-                    value='piedmontese (pms)',
+                    value=['pms'],
 
                     style={'width': '570px'}
                 ), style={'display': 'inline-block', 'width': '570px', 'padding': '0px 0px 0px 10px'}),
@@ -529,21 +512,17 @@ def main_app_build_layout(params):
 
 
 def activity_graph(language, user_type, time_type):
-    # 1) Normalizza l'input lingua → lista di etichette UI
-    if language is None or language == "":
-        language_list = []
+    # 1) Normalizza -> lista di codici
+    if not language:
+        codes = []
     elif isinstance(language, str):
-        language_list = [s.strip() for s in language.split(",")]
+        codes = [s.strip() for s in language.split(",") if s.strip()]
     else:
-        language_list = list(language)
+        codes = list(language)
 
-    # 2) Mappa etichette UI → codici (es. "piedmontese (pms)" → "pms")
-    langcodes = [language_names[x]
-                 for x in language_list] if language_list else []
-
-    # 3) Costruisci la query parametrica
+    # 2) Query (solo colonne necessarie)
     base_sql = """
-        SELECT *
+        SELECT langcode, year_month, m1_count
         FROM vital_signs_metrics
         WHERE topic = 'active_editors'
           AND year_year_month = :time_type
@@ -552,40 +531,149 @@ def activity_graph(language, user_type, time_type):
           {lang_filter}
         ORDER BY year_month
     """
-    lang_filter = "AND langcode IN :langcodes" if langcodes else ""
+    lang_filter = "AND langcode IN :codes" if codes else ""
     stmt = text(base_sql.format(lang_filter=lang_filter))
-    if langcodes:
-        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
+    if codes:
+        stmt = stmt.bindparams(bindparam("codes", expanding=True))
 
     params = {"time_type": time_type, "user_type": user_type}
-    if langcodes:
-        params["langcodes"] = langcodes
+    if codes:
+        params["codes"] = codes
 
-    # 4) Esegui con pandas + SQLAlchemy (parametrico)
     df = pd.read_sql_query(stmt, engine, params=params)
 
-    # 5) Aggiungi il nome leggibile della lingua senza merge
-    #    (language_names_inv: "pms" -> "piedmontese (pms)")
-    df["language_name"] = df["langcode"].map(language_names_inv)
+    # 3) Empty state
+    if df.empty:
+        fig = px.line(title="No data for current selection")
+        return html.Div(dcc.Graph(id="activity_graph", figure=fig))
 
-    # 6) Testi per etichette
+    # 4) Asse X: prova a usare datetime
+    x_col = "year_month"
+    xaxis_cfg = {}
+    try:
+        df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
+        x_col = "dt"
+        xaxis_cfg = dict(rangeslider=dict(visible=True), type="date")
+    except Exception:
+        pass
+
     incipit = "Active" if user_type == "5" else "Very Active"
-    time_text = "Period of Time (Yearly)" if time_type == "y" else "Period of Time (Monthly)"
+    time_text = "Yearly" if time_type == "y" else "Monthly"
 
-    # 7) Grafico
     fig = px.line(
         df,
-        x="year_month",
+        x=x_col,
         y="m1_count",
-        color="language_name",
+        color="langcode",
         height=500,
         width=1200,
         title=f"{incipit} Users",
-        labels={"m1_count": f"{incipit} Editors",
-                "year_month": time_text, "language_name": "Projects"},
+        labels={
+            "m1_count": f"{incipit} Editors",
+            x_col: f"Period ({time_text})",
+            "langcode": "Project (code)",
+        },
     )
+    if xaxis_cfg:
+        fig.update_layout(xaxis=xaxis_cfg)
+    else:
+        fig.update_layout(xaxis=dict(rangeslider=dict(visible=True)))
+
+    return html.Div(dcc.Graph(id="my_graph", figure=fig))
+
+
+# RETENTION GRAPH
+##########################################################################################################################################################################################################
+
+
+def retention_graph(langcode: str, retention_rate: str, nlangs: int):
+    """
+    langcode: codice wiki (es. "pms")
+    retention_rate: "24h" | "30d" | "60d" | "365d" | "730d"
+    nlangs: numero di lingue selezionate (per scalare l'altezza del grafico)
+    """
+
+    code = (langcode or "").strip()
+
+    # 1) Query unica e parametrica per entrambe le serie (register + first_edit)
+    sql = text("""
+        SELECT year_month, langcode, m1, m1_count, m2_count
+        FROM vital_signs_metrics
+        WHERE topic = 'retention'
+          AND year_year_month = 'ym'
+          AND m2_value = :retention_rate
+          AND langcode = :code
+          AND m1 IN :m1s
+        ORDER BY year_month
+    """).bindparams(bindparam("m1s", expanding=True))
+
+    params = {
+        "retention_rate": retention_rate,
+        "code": code,
+        "m1s": ["register", "first_edit"],
+    }
+
+    df = pd.read_sql_query(sql, engine, params=params)
+
+    # 2) Stato vuoto
+    if df.empty:
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.update_layout(title=f"Retention in {code} — no data")
+        return html.Div(dcc.Graph(id=f"retention_graph_{code}", figure=fig))
+
+    # 3) Prepara le due componenti
+    reg = df[df["m1"] == "register"][["year_month", "m1_count"]].rename(
+        columns={"m1_count": "registered"})
+    fe = df[df["m1"] == "first_edit"][["year_month", "m1_count", "m2_count"]].rename(
+        columns={"m1_count": "fe_m1", "m2_count": "fe_m2"})
+    merged = pd.merge(reg, fe, on="year_month",
+                      how="outer").sort_values("year_month")
+
+    # Retention = 100 * (first_edit.m2_count / first_edit.m1_count)
+    denom = merged["fe_m1"].replace(0, pd.NA)
+    merged["retention"] = (merged["fe_m2"] / denom) * 100
+    merged["retention"] = merged["retention"].fillna(0)
+
+    # 4) Asse X in datetime se possibile
+    x = "year_month"
+    xaxis_type = "linear"
+    try:
+        merged["dt"] = pd.to_datetime(merged["year_month"], format="%Y-%m")
+        x = "dt"
+        xaxis_type = "date"
+    except Exception:
+        pass
+
+    # 5) Grafico: barre (registered) + linea (retention) con secondary y
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    if "registered" in merged:
+        fig.add_bar(
+            x=merged[x],
+            y=merged["registered"].fillna(0),
+            name="Registered Editors",
+        )
+    fig.add_trace(
+        go.Scatter(
+            x=merged[x],
+            y=merged["retention"].fillna(0),
+            name="Retention Rate",
+            hovertemplate="%{y:.2f}%"
+        ),
+        secondary_y=True
+    )
+
+    # 6) Layout
+    titles = {"24h": "24 hours", "30d": "30 days",
+              "60d": "60 days", "365d": "365 days", "730d": "730 days"}
+    rate_label = titles.get(retention_rate, retention_rate)
+    height = 600 if nlangs == 1 else 350
+
     fig.update_layout(
+        title=f"Retention in {code} — editors editing again after {rate_label}",
+        autosize=False, width=1200, height=height,
+        legend=dict(orientation="h"),
         xaxis=dict(
+            type=xaxis_type,
             rangeselector=dict(buttons=[
                 dict(count=6,  label="<b>6M</b>",
                      step="month", stepmode="backward"),
@@ -595,223 +683,117 @@ def activity_graph(language, user_type, time_type):
                      step="year",  stepmode="backward"),
                 dict(count=10, label="<b>10Y</b>",
                      step="year",  stepmode="backward"),
-                dict(label="<b>ALL</b>", step="all")
+                dict(label="<b>ALL</b>", step="all"),
             ]),
-            rangeslider=dict(visible=True),
-            type="date"
-        )
-    )
-
-    return html.Div(dcc.Graph(id="my_graph", figure=fig))
-
-
-# RETENTION GRAPH
-##########################################################################################################################################################################################################
-
-
-def retention_graph(lang: str, retention_rate: str, length: int):
-
-    # 1) Normalizza lang in 'langcode'
-    #    Se 'lang' è un'etichetta presente in language_names -> mappa a codice; altrimenti usa lang come già-codice.
-    try:
-        langcode = language_names[lang]
-    except Exception:
-        langcode = lang
-
-    # 2) SQL parametrico
-    base_sql = text("""
-        SELECT *
-        FROM vital_signs_metrics
-        WHERE topic = 'retention'
-          AND year_year_month = 'ym'
-          AND m1 = :m1
-          AND m2_value = :retention_rate
-          AND langcode = :langcode
-        ORDER BY year_month
-    """)
-
-    params_common = {"retention_rate": retention_rate, "langcode": langcode}
-
-    # 3) Query: registered editors (m1='register')
-    df1 = pd.read_sql_query(base_sql, engine, params={
-                            **params_common, "m1": "register"}).copy()
-    df1.reset_index(inplace=True, drop=True)
-
-    # 4) Query: first_edit (per la linea di retention) (m1='first_edit')
-    df2 = pd.read_sql_query(base_sql, engine, params={
-                            **params_common, "m1": "first_edit"}).copy()
-    df2.reset_index(inplace=True, drop=True)
-
-    # 5) Costruzione figura
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-    height_value = 600 if length == 1 else 350
-
-    # Bar: registered editors
-    if not df1.empty:
-        fig.add_bar(
-            x=df1['year_month'],
-            y=df1['m1_count'],
-            name="Registered Editors",
-            marker_color='gray'
-        )
-
-    # Line: retention rate = 100 * m2_count / m1_count (evita divisioni per zero)
-    if not df2.empty:
-        denom = df2['m1_count'].replace(0, pd.NA)
-        df2['retention'] = (df2['m2_count'] / denom) * 100
-        df2['retention'] = df2['retention'].fillna(0)
-
-        fig.add_trace(
-            go.Scatter(
-                x=df2['year_month'],
-                y=df2['retention'],
-                name="Retention Rate",
-                hovertemplate='%{y:.2f}%',
-                marker_color='orange'
-            ),
-            secondary_y=True
-        )
-
-    # Titolo in base al retention_rate (come in originale)
-    titles = {
-        '24h': "24 hours",
-        '30d': "30 days",
-        '60d': "60 days",
-        '365d': "365 days",
-        '730d': "730 days",
-    }
-    rate_label = titles.get(retention_rate, retention_rate)
-    fig.update_layout(
-        title=f"Retention in {lang} Wikipedia. Editors who edited again after {rate_label} of their first edit")
-
-    # Assi e layout
-    # rimasto come originale
-    fig.update_xaxes(title_text="Period of Time (Yearly)")
-    fig.update_yaxes(title_text="Registered Editors", secondary_y=False)
-    fig.update_yaxes(title_text="Retention Rate", secondary_y=True)
-
-    fig.update_layout(
-        autosize=False,
-        width=1200,
-        height=height_value,
-        xaxis=dict(
-            rangeselector=dict(buttons=list([
-                dict(count=6,  label="<b>6M</b>",
-                     step="month", stepmode="backward"),
-                dict(count=1,  label="<b>1Y</b>",
-                     step="year",  stepmode="backward"),
-                dict(count=5,  label="<b>5Y</b>",
-                     step="year",  stepmode="backward"),
-                dict(count=10, label="<b>10Y</b>",
-                     step="year",  stepmode="backward"),
-                dict(label="<b>ALL</b>", step="all")
-            ])),
             rangeslider=dict(visible=False),
-            type="date"
-        )
+        ),
     )
+    fig.update_yaxes(title_text="Registered Editors", secondary_y=False)
+    fig.update_yaxes(title_text="Retention Rate (%)", secondary_y=True)
 
-    return dcc.Graph(id='my_graph', figure=fig)
+    return html.Div(dcc.Graph(id=f"retention_graph_{code}", figure=fig))
+
 
 # STABILITY GRAPH
 ##########################################################################################################################################################################################################
 
 
 def stability_graph(language, user_type: str, value_type: str, time_type: str):
-    # --- 1) Normalizza lingue in lista di langcode ---
-    if language is None or language == "":
-        ui_langs = []
+    """
+    language: lista di codici (es. ["pms","lij"]) oppure stringa "pms,lij" o None
+    user_type: "5" (Active) | "100" (Very Active)
+    value_type: "perc" | "m2_count"
+    time_type: "y" | "ym"
+    """
+
+    # 1) Normalizza lingue -> lista di codici
+    if not language:
+        codes = []
     elif isinstance(language, str):
-        ui_langs = [s.strip() for s in language.split(",")]
+        codes = [s.strip() for s in language.split(",") if s.strip()]
     else:
-        ui_langs = list(language)
+        codes = list(language)
 
-    # mappa etichette UI -> codici; se già codice, lascialo com'è
-    langcodes = []
-    for x in ui_langs:
-        try:
-            langcodes.append(language_names[x])
-        except Exception:
-            langcodes.append(x)
-    # se nulla selezionato, NON filtriamo per lingua (mostra tutto)
-    filter_lang = bool(langcodes)
+    filter_lang = bool(codes)
 
-    # --- 2) Query parametrica (con IN expanding quando serve) ---
+    # 2) Query parametrica (solo colonne necessarie)
     base_sql = f"""
-        SELECT *
+        SELECT langcode, year_month, m2_value, m1_count, m2_count
         FROM vital_signs_metrics
         WHERE topic = 'stability'
           AND year_year_month = :time_type
           AND m1_value = :user_type
-          {"AND langcode IN :langcodes" if filter_lang else ""}
+          {"AND langcode IN :codes" if filter_lang else ""}
         ORDER BY year_month
     """
     stmt = text(base_sql)
     if filter_lang:
-        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
+        stmt = stmt.bindparams(bindparam("codes", expanding=True))
 
     params = {"time_type": time_type, "user_type": user_type}
     if filter_lang:
-        params["langcodes"] = langcodes
+        params["codes"] = codes
 
-    df = pd.read_sql_query(stmt, engine)
+    df = pd.read_sql_query(stmt, engine, params=params)
 
+    # 3) Empty state
     if df.empty:
-        # Grafico vuoto “gentile”
-        return html.Div(dcc.Graph(
-            id='my_graph',
-            figure=px.bar(title="No data for selected filters")
-        ))
+        return html.Div(
+            dcc.Graph(id="my_graph", figure=px.bar(
+                title="No data for selected filters"))
+        )
 
-    # --- 3) Colonne derivate & testi ---
+    # 4) Colonne derivate
     # perc = 100 * m2_count / m1_count (evita divisioni per zero)
     denom = df["m1_count"].replace(0, pd.NA)
-    df["perc"] = ((df["m2_count"] / denom) * 100).round(2).fillna(0)
+    df["perc"] = (df["m2_count"] / denom) * 100.0
+    df["perc"] = df["perc"].fillna(0).round(2)
 
-    # Mappa langcode -> nome leggibile (es. "pms" -> "piedmontese (pms)")
-    df["language_name"] = df["langcode"].map(language_names_inv)
+    # asse X in datetime se possibile
+    x_col = "year_month"
+    xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
+    try:
+        df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
+        x_col = "dt"
+        xaxis_cfg = {"rangeslider": {"visible": False}, "type": "date"}
+    except Exception:
+        pass
 
-    time_text = "Period of Time (Yearly)" if time_type == "y" else "Period of Time (Monthly)"
+    # 5) Testi e layout
     incipit = "Active" if user_type == "5" else "Very Active"
-    text_template = "%{y:.2f}%" if value_type == "perc" else ""
+    time_text = "Yearly" if time_type == "y" else "Monthly"
+    y_col = "perc" if value_type == "perc" else "m2_count"
+    text_tmpl = "%{y:.2f}%" if value_type == "perc" else ""
 
-    # Altezza: proporzionale al numero di lingue selezionate (se nessuna selezione, 1)
-    n_langs = max(1, len(langcodes) if filter_lang else 1)
-    height_value = 400 if n_langs == 1 else 230 * n_langs
+    # altezza proporzionale alle lingue mostrate
+    n_langs = max(1, df["langcode"].nunique())
+    height_value = 400 if n_langs == 1 else min(230 * n_langs, 1200)
 
-    # --- 4) Grafico ---
+    # 6) Grafico: una riga (facet_row) per ciascun langcode, colori per m2_value
     fig = px.bar(
         df,
-        x="year_month",
-        y=value_type,                 # 'perc' oppure 'm2_count'
-        color="m2_value",             # bucket "1","2","3-6",...
-        text=value_type,
-        facet_row="language_name",    # una riga per lingua
+        x=x_col,
+        y=y_col,
+        color="m2_value",          # bucket: "1","2","3-6","7-12","13-24","24+"
+        text=y_col,
+        facet_row="langcode",      # una riga per lingua (codice)
         width=1200,
         height=height_value,
-        color_discrete_map={
-            "1": "gray",
-            "2": "#00CC96",
-            "3-6": "#FECB52",
-            "7-12": "red",
-            "13-24": "#E377C2",
-            "24+": "#636EFA",
-        },
         labels={
-            "year_month": time_text,
+            x_col: f"Period ({time_text})",
             "perc": f"{incipit} Editors (%)",
-            "m2_value": "Active Months in a row",
             "m2_count": f"{incipit} Editors",
-            "language_name": "Language",
+            "m2_value": "Active Months in a row",
+            "langcode": "Project (code)",
         },
         title=f"{incipit} users stability",
     )
 
+    fig.update_traces(texttemplate=text_tmpl)
     fig.update_layout(font_size=12, uniformtext_minsize=12,
                       uniformtext_mode="hide")
-    fig.update_traces(texttemplate=text_template)
-
+    fig.update_layout(xaxis=xaxis_cfg)
+    # range selector utile anche sui bar con asse datetime
     fig.update_layout(
         xaxis=dict(
             rangeselector=dict(buttons=[
@@ -825,8 +807,6 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
                      step="year",  stepmode="backward"),
                 dict(label="<b>ALL</b>", step="all"),
             ]),
-            rangeslider=dict(visible=False),
-            type="date",
         )
     )
 
@@ -837,108 +817,101 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
 
 
 def balance_graph(language, user_type: str, value_type: str, time_type: str):
+    """
+    language: lista di codici (["pms","lij"]) oppure stringa "pms,lij" o None
+    user_type: "5" (Active) | "100" (Very Active)
+    value_type: "perc" | "m2_count"
+    time_type: "y" | "ym"
+    """
 
-    # --- 1) Normalizza lingue (accetta stringa CSV o lista) -> langcodes ---
-    if language is None or language == "":
-        ui_langs = []
+    # 1) Normalizza lingue -> lista di codici
+    if not language:
+        codes = []
     elif isinstance(language, str):
-        ui_langs = [s.strip() for s in language.split(",")]
+        codes = [s.strip() for s in language.split(",") if s.strip()]
     else:
-        ui_langs = list(language)
+        codes = list(language)
 
-    langcodes = []
-    for x in ui_langs:
-        # se è un'etichetta UI, mappa a codice; se è già codice, lascialo
-        try:
-            langcodes.append(language_names[x])
-        except Exception:
-            langcodes.append(x)
+    filter_lang = bool(codes)
 
-    filter_lang = bool(langcodes)
-
-    # --- 2) Query parametrica (IN expanding se servono lingue filtrate) ---
+    # 2) Query parametrica (solo colonne necessarie)
     base_sql = f"""
-        SELECT *
+        SELECT langcode, year_month, m2_value, m1_count, m2_count
         FROM vital_signs_metrics
         WHERE topic = 'balance'
           AND year_year_month = :time_type
           AND m1_value = :user_type
-          {"AND langcode IN :langcodes" if filter_lang else ""}
+          {"AND langcode IN :codes" if filter_lang else ""}
         ORDER BY year_month
     """
     stmt = text(base_sql)
     if filter_lang:
-        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
+        stmt = stmt.bindparams(bindparam("codes", expanding=True))
 
     params = {"time_type": time_type, "user_type": user_type}
     if filter_lang:
-        params["langcodes"] = langcodes
+        params["codes"] = codes
 
-    df = pd.read_sql_query(stmt, engine)
+    df = pd.read_sql_query(stmt, engine, params=params)
 
+    # 3) Empty state
     if df.empty:
-        return html.Div(dcc.Graph(
-            id="my_graph",
-            figure=px.bar(title="No data for selected filters")
-        ))
+        return html.Div(
+            dcc.Graph(id="balance_graph", figure=px.bar(
+                title="No data for selected filters"))
+        )
 
-    # --- 3) Colonne derivate & testi ---
-    # perc = 100 * m2_count / m1_count (evita divisioni per zero)
+    # 4) Colonne derivate (senza NumPy)
+    # Evita divisioni per zero con where: i 0 diventano NaN
     denom = df["m1_count"].replace(0, pd.NA)
-    df["perc"] = ((df["m2_count"] / denom) * 100).round(2).fillna(0)
+    df["perc"] = (df["m2_count"] / denom) * 100.0
+    df["perc"] = df["perc"].fillna(0).round(2)
 
-    # lingua leggibile (es. "pms" -> "piedmontese (pms)")
-    df["language_name"] = df["langcode"].map(language_names_inv)
+    # Asse X in datetime se possibile
+    x_col = "year_month"
+    xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
+    try:
+        df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
+        x_col = "dt"
+        xaxis_cfg = {"rangeslider": {"visible": False}, "type": "date"}
+    except Exception:
+        pass
 
-    if value_type == "perc":
-        value_y = "perc"
-        text_template = "%{y:.2f}%"
-    else:
-        value_y = "m2_count"
-        text_template = ""
+    # 5) Testi e layout
+    incipit = "Active" if user_type == "5" else "Very Active"
+    time_text = "Yearly" if time_type == "y" else "Monthly"
 
-    time_text = "Period of Time (Yearly)" if time_type == "y" else "Period of Time (Monthly)"
-    if user_type == "5":
-        incipit = "Active"
-        user_text = "Active Editors"
-    else:
-        incipit = "Very active"
-        user_text = "Very Active Editors"
+    y_col = "perc" if value_type == "perc" else "m2_count"
+    text_tmpl = "%{y:.2f}%" if value_type == "perc" else ""
 
-    # altezza grafico in base al numero di lingue selezionate (almeno 1)
-    n_langs = max(1, len(langcodes) if filter_lang else 1)
-    height_value = 400 if n_langs == 1 else 230 * n_langs
+    # Altezza proporzionale al numero di lingue mostrate
+    n_langs = max(1, df["langcode"].nunique())
+    height_value = 400 if n_langs == 1 else min(230 * n_langs, 1200)
 
-    # --- 4) Grafico ---
+    # 6) Grafico: facet per codice, colori per coorti (m2_value = lustri)
     fig = px.bar(
         df,
-        x="year_month",
-        y=value_y,
-        color="m2_value",
-        text=value_type,               # coerente con il comportamento originale
-        facet_row="language_name",
+        x=x_col,
+        y=y_col,
+        color="m2_value",            # es: "2001-2005", "2006-2010", …
+        text=y_col,                  # mostra il valore coerente col tipo selezionato
+        facet_row="langcode",        # una riga per ciascun codice
         width=1200,
         height=height_value,
-        color_discrete_map={
-            "2001-2005": "#3366CC",
-            "2006-2010": "#F58518",
-            "2011-2015": "#E45756",
-            "2016-2020": "#FC0080",
-            "2021-2025": "#1C8356",
-        },
         labels={
-            "year_month": time_text,
+            x_col: f"Period ({time_text})",
             "perc": f"{incipit} Editors (%)",
+            "m2_count": f"{incipit} Editors",
             "m2_value": "Lustrum First Edit",
-            "m2_count": user_text,
-            "language_name": "Language",
+            "langcode": "Project (code)",
         },
-        title=f"{incipit} users balance",
+        title=f"{incipit} editors balance",
     )
 
-    fig.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
-    fig.update_traces(texttemplate=text_template)
-
+    fig.update_traces(texttemplate=text_tmpl)
+    fig.update_layout(font_size=12, uniformtext_minsize=12,
+                      uniformtext_mode="hide")
+    fig.update_layout(xaxis=xaxis_cfg)
     fig.update_layout(
         xaxis=dict(
             rangeselector=dict(buttons=[
@@ -952,118 +925,114 @@ def balance_graph(language, user_type: str, value_type: str, time_type: str):
                      step="year",  stepmode="backward"),
                 dict(label="<b>ALL</b>", step="all"),
             ]),
-            rangeslider=dict(visible=False),
-            type="date",
         )
     )
 
-    return html.Div(dcc.Graph(id="my_graph", figure=fig))
+    return html.Div(dcc.Graph(id="balance_graph", figure=fig))
 
 # SPECIALISTS GRAPH
 ##########################################################################################################################################################################################################
 
 
 def special_graph(language, user_type: str, value_type: str, time_type: str):
-    # --- 1) Normalizza lingue -> lista di langcode ---
-    if language is None or language == "":
-        ui_langs = []
+    """
+    language: lista di codici (es. ["pms","lij"]) oppure stringa "pms,lij" o None
+    user_type: "5" (Active) | "100" (Very Active)
+    value_type: "perc" | "m2_count"
+    time_type: "y" | "ym"
+    """
+
+    # 1) Normalizza lingue -> lista di codici
+    if not language:
+        codes = []
     elif isinstance(language, str):
-        ui_langs = [s.strip() for s in language.split(",")]
+        codes = [s.strip() for s in language.split(",") if s.strip()]
     else:
-        ui_langs = list(language)
+        codes = list(language)
 
-    langcodes = []
-    for x in ui_langs:
-        try:
-            # etichetta UI -> codice
-            langcodes.append(language_names[x])
-        except Exception:
-            # già codice
-            langcodes.append(x)
+    filter_lang = bool(codes)
 
-    filter_lang = bool(langcodes)
-
-    # --- 2) Query parametrica (riusabile per i due topic) ---
+    # 2) Query parametrica riusabile (solo colonne necessarie)
     base_sql = f"""
-        SELECT *
+        SELECT langcode, year_month, m2_value, m1_count, m2_count
         FROM vital_signs_metrics
         WHERE year_year_month = :time_type
-          AND m1_value = :user_type
-          AND topic = :topic
-          {"AND langcode IN :langcodes" if filter_lang else ""}
+          AND m1_value       = :user_type
+          AND topic          = :topic
+          {"AND langcode IN :codes" if filter_lang else ""}
         ORDER BY year_month
     """
     stmt = text(base_sql)
     if filter_lang:
-        stmt = stmt.bindparams(bindparam("langcodes", expanding=True))
+        stmt = stmt.bindparams(bindparam("codes", expanding=True))
 
-    common_params = {"time_type": time_type, "user_type": user_type}
+    common = {"time_type": time_type, "user_type": user_type}
     if filter_lang:
-        common_params["langcodes"] = langcodes
+        common["codes"] = codes
 
-    # --- 3) Esegui le due query ---
-    params_tech = {**common_params, "topic": "technical_editors"}
-    params_coord = {**common_params, "topic": "coordinators"}
+    # 3) Esegui le due query
+    df_tech = pd.read_sql_query(
+        stmt, engine, params={**common, "topic": "technical_editors"})
+    df_coord = pd.read_sql_query(
+        stmt, engine, params={**common, "topic": "coordinators"})
 
-    df_tech = pd.read_sql_query(stmt, engine, params=params_tech)
-    df_coord = pd.read_sql_query(stmt, engine, params=params_coord)
-
-    # --- 4) Colonne derivate + mapping nome lingua ---
-    for df in (df_tech, df_coord):
+    def prep(df: pd.DataFrame) -> tuple[pd.DataFrame, str, dict]:
         if df.empty:
-            continue
-        denom = df["m1_count"].replace(0, pd.NA)
-        df["perc"] = ((df["m2_count"] / denom) * 100).round(2).fillna(0)
-        df["language_name"] = df["langcode"].map(language_names_inv)
+            return df, "year_month", {"rangeslider": {"visible": False}, "type": "category"}
+        # evita divisione per zero
+        denom = df["m1_count"].where(df["m1_count"] != 0)
+        df["perc"] = (df["m2_count"] / denom) * 100.0
+        df["perc"] = df["perc"].fillna(0).round(2)
+        x_col = "year_month"
+        xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
+        try:
+            df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
+            x_col = "dt"
+            xaxis_cfg = {"rangeslider": {"visible": False}, "type": "date"}
+        except Exception:
+            pass
+        return df, x_col, xaxis_cfg
 
-    # --- 5) Etichette & layout comuni ---
-    time_text = "Period of Time(Yearly)" if time_type == "y" else "Period of Time(Monthly)"
-    user_text = "Active" if user_type == "5" else "Very Active"
+    df_tech,  x1, xaxis1 = prep(df_tech)
+    df_coord, x2, xaxis2 = prep(df_coord)
 
-    if value_type == "perc":
-        value_y = "perc"
-        text_template = "%{y:.2f}%"
-    else:
-        value_y = "m2_count"
-        text_template = ""
+    # 5) Testi/layout comuni
+    incipit = "Active" if user_type == "5" else "Very Active"
+    time_text = "Yearly" if time_type == "y" else "Monthly"
+    y_col = "perc" if value_type == "perc" else "m2_count"
+    text_tmpl = "%{y:.2f}%" if value_type == "perc" else ""
 
-    # Altezza: proporzionale al numero di lingue selezionate (almeno 1)
-    n_langs = max(1, len(langcodes) if filter_lang else 1)
-    height_value = 400 if n_langs == 1 else 230 * n_langs
+    # Altezza proporzionale ai progetti (codici) visualizzati
+    n_langs_tech = max(
+        1, df_tech["langcode"].nunique()) if not df_tech.empty else 1
+    n_langs_coord = max(
+        1, df_coord["langcode"].nunique()) if not df_coord.empty else 1
+    h1 = 400 if n_langs_tech == 1 else min(230 * n_langs_tech,  1200)
+    h2 = 400 if n_langs_coord == 1 else min(230 * n_langs_coord, 1200)
 
-    color_map = {
-        "2001-2005": "#636EFA",
-        "2006-2010": "#F58518",
-        "2011-2015": "#E45756",
-        "2016-2020": "#FC0080",
-        "2021-2025": "#1C8356",
-    }
-
-    # --- 6) Costruisci i grafici ---
+    # 6) Costruzione grafici (facet per langcode, colori per coorti m2_value)
     if df_tech.empty:
-        fig1 = px.bar(title=f"{user_text} Technical Contributors — No data")
+        fig1 = px.bar(title=f"{incipit} Technical Contributors — No data")
     else:
         fig1 = px.bar(
             df_tech,
-            x="year_month",
-            y=value_y,
-            color="m2_value",
-            text=value_y,
-            facet_row="language_name",
-            width=1200,
-            height=height_value,
-            title=f"{user_text} Technical Contributors",
-            color_discrete_map=color_map,
+            x=x1, y=y_col,
+            color="m2_value",             # coorti (lustri)
+            text=y_col,
+            facet_row="langcode",         # una riga per codice
+            width=1200, height=h1,
             labels={
-                "language_name": "Language",
-                "year_month": time_text,
-                "perc": f"{user_text} editors (%)",
-                "m2_count": f"{user_text} editors",
+                x1: f"Period ({time_text})",
+                "perc": f"{incipit} editors (%)",
+                "m2_count": f"{incipit} editors",
                 "m2_value": "Lustrum First Edit",
+                "langcode": "Project (code)",
             },
+            title=f"{incipit} Technical Contributors",
         )
-        fig1.update_layout(uniformtext_minsize=8, uniformtext_mode="hide")
-        fig1.update_traces(texttemplate=text_template)
+        fig1.update_traces(texttemplate=text_tmpl)
+        fig1.update_layout(font_size=12, uniformtext_minsize=12,
+                           uniformtext_mode="hide", xaxis=xaxis1)
         fig1.update_layout(
             xaxis=dict(
                 rangeselector=dict(buttons=[
@@ -1077,35 +1046,31 @@ def special_graph(language, user_type: str, value_type: str, time_type: str):
                          step="year",  stepmode="backward"),
                     dict(label="<b>ALL</b>", step="all"),
                 ]),
-                rangeslider=dict(visible=False),
-                type="date",
             )
         )
 
     if df_coord.empty:
-        fig2 = px.bar(title=f"{user_text} Project Coordinators — No data")
+        fig2 = px.bar(title=f"{incipit} Project Coordinators — No data")
     else:
         fig2 = px.bar(
             df_coord,
-            x="year_month",
-            y=value_y,
+            x=x2, y=y_col,
             color="m2_value",
-            text=value_y,
-            facet_row="language_name",
-            height=height_value,
-            title=f"{user_text} Project Coordinators",
-            color_discrete_map=color_map,
+            text=y_col,
+            facet_row="langcode",
+            width=1200, height=h2,
             labels={
-                "language_name": "Language",
-                "m1_count": "Editors",
-                "year_month": time_text,
-                "perc": f"{user_text} editors (%)",
-                "m2_count": f"{user_text} editors",
+                x2: f"Period ({time_text})",
+                "perc": f"{incipit} editors (%)",
+                "m2_count": f"{incipit} editors",
                 "m2_value": "Lustrum First Edit",
+                "langcode": "Project (code)",
             },
+            title=f"{incipit} Project Coordinators",
         )
-        fig2.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
-        fig2.update_traces(texttemplate=text_template)
+        fig2.update_traces(texttemplate=text_tmpl)
+        fig2.update_layout(font_size=12, uniformtext_minsize=12,
+                           uniformtext_mode="hide", xaxis=xaxis2)
         fig2.update_layout(
             xaxis=dict(
                 rangeselector=dict(buttons=[
@@ -1119,20 +1084,16 @@ def special_graph(language, user_type: str, value_type: str, time_type: str):
                          step="year",  stepmode="backward"),
                     dict(label="<b>ALL</b>", step="all"),
                 ]),
-                rangeslider=dict(visible=False),
-                type="date",
             )
         )
 
-    # --- 7) Output Dash ---
+    # 7) Output
     return html.Div(
         children=[
-            dcc.Graph(id="my_graph1", figure=fig1),
-
+            dcc.Graph(id="special_graph_tech",  figure=fig1),
             html.H5("Highlights"),
             html.Div(id="highlights_container_additional", children=[]),
-
-            dcc.Graph(id="my_graph2", figure=fig2),
+            dcc.Graph(id="special_graph_coord", figure=fig2),
         ]
     )
 
@@ -1142,29 +1103,27 @@ def special_graph(language, user_type: str, value_type: str, time_type: str):
 
 
 def admin_graph(language, admin_type: str, time_type: str):
-    # --- 1) Normalizza lingue -> lista di langcode ---
-    if language is None or language == "":
-        ui_langs = []
+    """
+    language: lista di codici (es. ["pms","lij"]) oppure stringa "pms,lij" o None
+    admin_type: es. "sysop", "bureaucrat", ...
+    time_type: "y" | "ym"
+    """
+
+    # 1) Normalizza lingue -> lista di codici
+    if not language:
+        codes = []
     elif isinstance(language, str):
-        ui_langs = [s.strip() for s in language.split(",")]
+        codes = [s.strip() for s in language.split(",") if s.strip()]
     else:
-        ui_langs = list(language)
+        codes = list(language)
 
-    langcodes = []
-    for x in ui_langs:
-        try:
-            langcodes.append(language_names[x])   # etichetta UI -> codice
-        except Exception:
-            langcodes.append(x)                   # già codice
-
-    filter_lang = bool(langcodes)
+    filter_lang = bool(codes)
     time_text = "Yearly" if time_type == "y" else "Monthly"
 
-    # --- 2) Query 1: conteggio per mese e lustrum (per lingua) ---
+    # 2) Query 1: flags per mese e lustrum (per lingua)
     sql_q1 = f"""
         SELECT
             langcode,
-            year_year_month,
             year_month,
             m2_value,
             SUM(m2_count) AS count
@@ -1173,20 +1132,19 @@ def admin_graph(language, admin_type: str, time_type: str):
           AND m1 = 'granted_flag'
           AND m1_value = :admin_type
           AND m2_value IS NOT NULL
-          {"AND langcode IN :langcodes" if filter_lang else ""}
-        GROUP BY langcode, year_year_month, year_month, m2_value
+          {"AND langcode IN :codes" if filter_lang else ""}
+        GROUP BY langcode, year_month, m2_value
         ORDER BY langcode, year_month, m2_value
     """
     stmt_q1 = text(sql_q1)
     if filter_lang:
-        stmt_q1 = stmt_q1.bindparams(bindparam("langcodes", expanding=True))
+        stmt_q1 = stmt_q1.bindparams(bindparam("codes", expanding=True))
     params_q1 = {"admin_type": admin_type}
     if filter_lang:
-        params_q1["langcodes"] = langcodes
+        params_q1["codes"] = codes
+    df1 = pd.read_sql_query(stmt_q1, engine, params=params_q1)
 
-    df1 = pd.read_sql_query(stmt_q1, engine)
-
-    # --- 3) Query 2: totale per lustrum (per lingua) ---
+    # 3) Query 2: totale per lustrum (per lingua)
     sql_q2 = f"""
         SELECT
             langcode,
@@ -1197,88 +1155,96 @@ def admin_graph(language, admin_type: str, time_type: str):
           AND m1 = 'granted_flag'
           AND m1_value = :admin_type
           AND m2_value IS NOT NULL
-          {"AND langcode IN :langcodes" if filter_lang else ""}
-    GROUP BY langcode, m2_value
-    ORDER BY langcode, m2_value
+          {"AND langcode IN :codes" if filter_lang else ""}
+        GROUP BY langcode, m2_value
+        ORDER BY langcode, m2_value
     """
     stmt_q2 = text(sql_q2)
     if filter_lang:
-        stmt_q2 = stmt_q2.bindparams(bindparam("langcodes", expanding=True))
+        stmt_q2 = stmt_q2.bindparams(bindparam("codes", expanding=True))
     params_q2 = {"admin_type": admin_type}
     if filter_lang:
-        params_q2["langcodes"] = langcodes
-
-    df2 = pd.read_sql_query(stmt_q2, engine)
+        params_q2["codes"] = codes
+    df2 = pd.read_sql_query(stmt_q2, engine, params=params_q2)
     if not df2.empty:
-        df2["x"] = ""  # per il bar compatto a colonne uniche
+        df2["x"] = ""  # asse X “finto” per impilare per-facet
 
-    # --- 4) Query 3: percentuale admin tra active editors (per mese/lingua) ---
-    # Nota: mantengo il calcolo in SQL come in origine, ma parametricamente.
+    # 4) Query 3: % admin tra active editors (per mese/lingua)
+    # Nota: manteniamo il filtro che hai in origine (m2_value = :admin_type).
     sql_q3 = f"""
-        SELECT
-            *,
-            ROUND((m2_count::numeric / NULLIF(m1_count,0)) * 100, 2) AS perc
+        SELECT langcode, year_month, m1_count, m2_count
         FROM vital_signs_metrics
         WHERE topic = 'flags'
           AND year_year_month = :time_type
           AND m2_value = :admin_type
-          {"AND langcode IN :langcodes" if filter_lang else ""}
+          {"AND langcode IN :codes" if filter_lang else ""}
         ORDER BY langcode, year_month
     """
     stmt_q3 = text(sql_q3)
     if filter_lang:
-        stmt_q3 = stmt_q3.bindparams(bindparam("langcodes", expanding=True))
+        stmt_q3 = stmt_q3.bindparams(bindparam("codes", expanding=True))
     params_q3 = {"time_type": time_type, "admin_type": admin_type}
     if filter_lang:
-        params_q3["langcodes"] = langcodes
+        params_q3["codes"] = codes
+    df3 = pd.read_sql_query(stmt_q3, engine, params=params_q3)
 
-    df3 = pd.read_sql_query(stmt_q3, engine)
-
-    # --- 5) Mapping nome lingua & altezze ---
-    def add_language_name(df):
+    # 5) Derivate + asse tempo
+    def to_datetime_if_possible(df: pd.DataFrame) -> tuple[pd.DataFrame, str, dict]:
         if df.empty:
-            return df
-        df["language_name"] = df["langcode"].map(language_names_inv)
-        return df
+            return df, "year_month", {"rangeslider": {"visible": False}, "type": "category"}
+        x_col = "year_month"
+        xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
+        try:
+            df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
+            x_col = "dt"
+            xaxis_cfg = {"rangeslider": {"visible": False}, "type": "date"}
+        except Exception:
+            pass
+        return df, x_col, xaxis_cfg
 
-    df1 = add_language_name(df1)
-    df2 = add_language_name(df2)
-    df3 = add_language_name(df3)
+    df1, x1, xcfg1 = to_datetime_if_possible(df1)
+    df3, x3, xcfg3 = to_datetime_if_possible(df3)
 
-    n_langs = max(1, len(langcodes) if filter_lang else 1)
-    height_value = 400 if n_langs == 1 else 230 * n_langs
+    # % tra active editors (senza NumPy)
+    if not df3.empty:
+        denom = df3["m1_count"].where(df3["m1_count"] != 0)
+        df3["perc"] = (df3["m2_count"] / denom) * 100.0
+        df3["perc"] = df3["perc"].fillna(0).round(2)
 
-    color_map = {
-        "2001-2005": "#3366CC",
-        "2006-2010": "#F58518",
-        "2011-2015": "#E45756",
-        "2016-2020": "#FC0080",
-        "2021-2025": "#1C8356",
-    }
+    # 6) Altezze
+    n_langs = max(
+        1,
+        max(
+            df1["langcode"].nunique() if not df1.empty else 0,
+            df2["langcode"].nunique() if not df2.empty else 0,
+            df3["langcode"].nunique() if not df3.empty else 0,
+        )
+    )
+    height_value = 400 if n_langs == 1 else min(230 * n_langs, 1200)
 
-    # --- 6) Figure 1: flags per mese e lustrum ---
+    # 7) Figure 1: flags per mese e lustrum
     if df1.empty:
-        fig1 = px.bar(title=f"[{admin_type}] flags granted — No data")
+        fig1 = px.bar(
+            title=f"[{admin_type}] flags granted — No data", width=850, height=height_value)
     else:
         fig1 = px.bar(
             df1,
-            x="year_month",
-            y="count",
+            x=x1, y="count",
             color="m2_value",
             text="count",
-            facet_row="language_name",
-            height=height_value,
-            width=850,
-            color_discrete_map=color_map,
-            title=f"[{admin_type}] flags granted over the years by lustrum of first edit",
+            facet_row="langcode",
+            width=850, height=height_value,
             labels={
-                "language_name": "Language",
+                x1: f"Period ({time_text})",
                 "count": "Number of Admins",
-                "year_month": f"Period of Time({time_text})",
                 "m2_value": "Lustrum First Edit",
+                "langcode": "Project (code)",
             },
+            title=f"[{admin_type}] flags granted over the years by lustrum of first edit",
         )
-        fig1.update_layout(uniformtext_minsize=8, uniformtext_mode="hide")
+        fig1.update_traces(texttemplate="%{text}")
+        fig1.update_layout(uniformtext_minsize=8,
+                           uniformtext_mode="hide", xaxis=xcfg1)
         fig1.update_layout(
             xaxis=dict(
                 rangeselector=dict(buttons=[
@@ -1292,58 +1258,49 @@ def admin_graph(language, admin_type: str, time_type: str):
                          step="year",  stepmode="backward"),
                     dict(label="<b>ALL</b>", step="all"),
                 ]),
-                rangeslider=dict(visible=False),
-                type="date",
             )
         )
 
-    # --- 7) Figure 2: totale per lustrum (per lingua) ---
+    # 8) Figure 2: totale per lustrum (per lingua)
     if df2.empty:
         fig2 = px.bar(
             title=f"Total Num. of [{admin_type}] — No data", width=300, height=height_value)
     else:
         fig2 = px.bar(
             df2,
-            x="x",
-            y="count",
+            x="x", y="count",
             color="m2_value",
             text="count",
-            facet_row="language_name",
-            height=height_value,
-            width=300,
-            color_discrete_map=color_map,
+            facet_row="langcode",
+            width=300, height=height_value,
+            labels={"count": "", "x": "", "langcode": "Project (code)"},
             title=f"Total Num. of [{admin_type}]",
-            labels={
-                "count": "",
-                "x": "",
-                "language_name": "Language",
-            },
         )
-        fig2.layout.update(showlegend=False)
+        fig2.update_traces(texttemplate="%{text}")
+        fig2.update_layout(uniformtext_minsize=8,
+                           uniformtext_mode="hide", showlegend=False)
 
-    # --- 8) Figure 3: percentuale admin tra active editors ---
+    # 9) Figure 3: percentuale admin tra active editors
     if df3.empty:
         fig3 = px.bar(title=f"Percentage of [{admin_type}] flags among active editors — No data",
                       width=1000, height=height_value)
     else:
         fig3 = px.bar(
             df3,
-            x="year_month",
-            y="perc",
+            x=x3, y="perc",
             text="perc",
-            facet_row="language_name",
-            height=height_value,
-            width=1000,
-            title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
+            facet_row="langcode",
+            width=1000, height=height_value,
             labels={
-                "language_name": "Language",
-                "m2_count": "Number of Admins per Active Editors",
+                x3: f"Period ({time_text})",
                 "perc": "Percentage",
-                "year_month": f"Period of Time({time_text})",
+                "langcode": "Project (code)",
             },
+            title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
         )
-        fig3.update_traces(marker_color="indigo", texttemplate="%{y}%")
-        fig3.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
+        fig3.update_traces(texttemplate="%{y}%")
+        fig3.update_layout(uniformtext_minsize=12,
+                           uniformtext_mode="hide", xaxis=xcfg3)
         fig3.update_layout(
             xaxis=dict(
                 rangeselector=dict(buttons=[
@@ -1357,21 +1314,19 @@ def admin_graph(language, admin_type: str, time_type: str):
                          step="year",  stepmode="backward"),
                     dict(label="<b>ALL</b>", step="all"),
                 ]),
-                rangeslider=dict(visible=False),
-                type="date",
             )
         )
 
-    # --- 9) Output ---
+    # 10) Output
     return html.Div(children=[
-        dcc.Graph(id="my_graph", figure=fig1, style={
-                  'display': 'inline-block'}),
-        dcc.Graph(id="my_subgraph", figure=fig2,
+        dcc.Graph(id="admin_graph_flags_over_time", figure=fig1,
+                  style={'display': 'inline-block'}),
+        dcc.Graph(id="admin_graph_totals", figure=fig2,
                   style={'display': 'inline-block'}),
         html.Hr(),
         html.H5('Highlights'),
         html.Div(id='highlights_container_additional', children=[]),
-        dcc.Graph(id="my_graph2", figure=fig3),
+        dcc.Graph(id="admin_graph_percentage", figure=fig3),
     ])
 
 
@@ -1379,102 +1334,109 @@ def admin_graph(language, admin_type: str, time_type: str):
 ##########################################################################################################################################################################################################
 
 def global_graph(language, user_type: str, value_type: str, time_type: str, year: str, month: str):
-    # --- 1) Normalizza lingue -> lista di langcode ---
-    if language is None or language == "":
-        ui_langs = []
+    """
+    language: lista di codici (es. ["pms","lij"]) oppure stringa "pms,lij" o None
+    user_type: "5" (Active) | "100" (Very Active)
+    value_type: "perc" | "m2_count"
+    time_type: "y" | "ym"
+    year, month: periodo per lo snapshot (es. "2024", "03")
+    """
+
+    # 1) Normalizza lingue -> lista di codici
+    if not language:
+        codes = []
     elif isinstance(language, str):
-        ui_langs = [s.strip() for s in language.split(",")]
+        codes = [s.strip() for s in language.split(",") if s.strip()]
     else:
-        ui_langs = list(language)
+        codes = list(language)
 
-    langcodes = []
-    for x in ui_langs:
-        try:
-            langcodes.append(language_names[x])   # etichetta UI -> codice
-        except Exception:
-            langcodes.append(x)                   # già codice
+    filter_lang = bool(codes)
 
-    filter_lang = bool(langcodes)
-
-    # --- 2) Query 1: primary_editors filtrati per periodo/utente/(lingue) ---
-    sql_q1 = f"""
-        SELECT *
+    # 2) Query 1 — serie temporale primary_editors
+    base_q1 = f"""
+        SELECT langcode, year_month, m1_count, m2_count, m2_value
         FROM vital_signs_metrics
         WHERE topic = 'primary_editors'
           AND year_year_month = :time_type
           AND m1_value = :user_type
-          {"AND langcode IN :langcodes" if filter_lang else ""}
+          {"AND langcode IN :codes" if filter_lang else ""}
         ORDER BY year_month
     """
-    stmt_q1 = text(sql_q1)
+    stmt_q1 = text(base_q1)
     if filter_lang:
-        stmt_q1 = stmt_q1.bindparams(bindparam("langcodes", expanding=True))
+        stmt_q1 = stmt_q1.bindparams(bindparam("codes", expanding=True))
 
     params_q1 = {"time_type": time_type, "user_type": user_type}
     if filter_lang:
-        params_q1["langcodes"] = langcodes
+        params_q1["codes"] = codes
 
-    df1 = pd.read_sql_query(stmt_q1, engine)
+    df1 = pd.read_sql_query(stmt_q1, engine, params=params_q1)
+
+    # Stato totalmente vuoto → restituisco due grafici "gentili"
     if df1.empty:
-        # Grafico “gentile” se non ci sono dati
-        empty_fig = px.bar(title="No data for selected filters")
-        return html.Div(children=[
-            dcc.Graph(id="my_graph", figure=empty_fig,
+        empty = px.bar(title="No data for selected filters")
+        return html.Div([
+            dcc.Graph(id="global_graph_timeseries", figure=empty,
                       style={'display': 'inline-block'}),
             html.Hr(),
             html.H5('Highlights'),
             html.Div(id='highlights_container_additional', children=[]),
-            dcc.Graph(id="my_graph2", figure=empty_fig)
+            dcc.Graph(id="global_graph_treemap", figure=empty),
         ])
 
-    # --- 3) Derivate + mapping lingua ---
-    denom = df1["m1_count"].replace(0, pd.NA)
-    df1["perc"] = ((df1["m2_count"] / denom) * 100).round(2).fillna(0)
-    # enrich + language names
-    df1 = enrich_dataframe(df1)  # mantiene compatibilità con il tuo flusso
-    # Se vuoi solo il nome leggibile: df1["language_name"] = df1["langcode"].map(language_names_inv)
+    # 3) Derivate + asse tempo
+    # perc = 100 * m2_count / m1_count, evitando divisione per zero
+    denom = df1["m1_count"].where(df1["m1_count"] != 0)
+    df1["perc"] = (df1["m2_count"] / denom) * 100.0
+    df1["perc"] = df1["perc"].fillna(0).round(2)
 
-    time_text = "(Yearly)" if time_type == "y" else "(Monthly)"
-    user_text = "Active Editors" if user_type == "5" else "Very Active Editors"
+    # year_month -> datetime se possibile
+    x_col = "year_month"
+    xaxis_cfg = {"rangeslider": {"visible": True}, "type": "category"}
+    try:
+        df1["dt"] = pd.to_datetime(df1["year_month"], format="%Y-%m")
+        x_col = "dt"
+        xaxis_cfg = {"rangeslider": {"visible": True}, "type": "date"}
+    except Exception:
+        pass
 
-    # Altezza grafico proporzionale al numero di lingue selezionate (almeno 1)
-    n_langs = max(1, len(langcodes) if filter_lang else 1)
-    height_value = 400 if n_langs == 1 else 270 * n_langs
+    # 4) Etichette/layout
+    incipit = "Active" if user_type == "5" else "Very Active"
+    time_text = "Yearly" if time_type == "y" else "Monthly"
+    y_col = "perc" if value_type == "perc" else "m2_count"
+    text_tmpl = "%{y:.2f}%" if value_type == "perc" else ""
 
-    # --- 4) Figure 1: bar facet per language/primary language ---
+    # altezza proporzionale ai progetti mostrati
+    n_langs = max(1, df1["langcode"].nunique())
+    h1 = 400 if n_langs == 1 else min(270 * n_langs, 1200)
+
+    # 5) Figura 1 — bar facet per progetto, colori per primary language (m2_value)
     fig1 = px.bar(
         df1,
-        y=value_type,                # 'perc' o 'm2_count' ecc.
-        x='year_month',
-        color='language_name',
-        text=value_type,
-        title=f"{user_text} by primary language",
-        facet_row=df1['langcode'],   # coerente con codice originale
-        height=height_value,
+        x=x_col,
+        y=y_col,
+        color="m2_value",           # primary language
+        text=y_col,
+        facet_row="langcode",       # una riga per ciascun codice
+        width=1300,
+        height=h1,
         labels={
-            "language_name": "Language",
-            "m1_count": "Active Editors",
-            "year_month": f"Period of Time {time_text}",
-            "perc": user_text,
+            x_col: f"Period ({time_text})",
+            "perc": f"{incipit} editors (%)",
+            "m2_count": f"{incipit} editors",
             "m2_value": "Primary language",
-            "m2_count": user_text,
-            "langcode": "Language",
+            "langcode": "Project (code)",
         },
-        color_discrete_map={
-            "de": "#FEAF16",
-            "en": "#3366CC",
-            "it": "#3283FE",
-            "ru": "#FD3216",
-            "pl": "#1C8356",
-        },
+        title=f"{incipit} editors by primary language",
     )
-    fig1.update_layout(width=1300)
+    fig1.update_traces(texttemplate=text_tmpl)
+    fig1.update_layout(uniformtext_minsize=10,
+                       uniformtext_mode="hide", xaxis=xaxis_cfg)
 
-    # --- 5) Query 2: snapshot per treemap (meta, anno/mese scelti) ---
-    #   L'originale fissava 'ym' e '2022-03' su 'meta'.
+    # 6) Query 2 — snapshot per treemap (Meta, anno/mese selezionati, sempre 'ym')
     ym_value = f"{year}-{month}"
-    sql_q2 = text("""
-        SELECT *
+    stmt_q2 = text("""
+        SELECT langcode, m2_value, m1_count, m2_count, year_month
         FROM vital_signs_metrics
         WHERE topic = 'primary_editors'
           AND year_year_month = 'ym'
@@ -1483,147 +1445,139 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
           AND langcode = 'meta'
         ORDER BY m2_value
     """)
-    df2 = pd.read_sql_query(sql_q2, engine, params={
+    df2 = pd.read_sql_query(stmt_q2, engine, params={
                             "ym_value": ym_value, "user_type": user_type})
 
     if df2.empty:
         fig2 = px.treemap(
-            title=f"Meta-wiki {user_text} by primary language — No data for {ym_value}")
+            title=f"Meta-wiki {incipit} editors by primary language — No data for {ym_value}")
     else:
-        denom2 = df2["m1_count"].replace(0, pd.NA)
-        df2["perc"] = ((df2["m2_count"] / denom2) * 100).round(2).fillna(0)
-        df2 = enrich_dataframe(df2)
+        denom2 = df2["m1_count"].where(df2["m1_count"] != 0)
+        df2["perc"] = (df2["m2_count"] / denom2) * 100.0
+        df2["perc"] = df2["perc"].fillna(0).round(2)
 
-        fig2 = go.Figure()
-        fig2.add_trace(go.Treemap(
-            parents=df2["langcode"],
-            labels=df2["language_name"],
+        # Treemap: metto i riquadri come “root” (niente genitore), etichetta = primary language (m2_value)
+        fig2 = go.Figure(go.Treemap(
+            labels=df2["m2_value"],                         # primary language
+            # nessun genitore esplicito
+            parents=[""] * len(df2),
             values=df2["m2_count"],
             customdata=df2["perc"],
             text=df2["m2_value"],
-            texttemplate="<b>%{label}</b><br>Percentage: %{customdata}%<br>Editors: %{value}<br>",
-            hovertemplate='<b>%{label}</b><br>Percentage: %{customdata}%<br>Editors: %{value}<br>%{text}<br><extra></extra>',
+            texttemplate="<b>%{label}</b><br>%{value} editors<br>%{customdata}% retention",
+            hovertemplate="<b>%{label}</b><br>Editors: %{value}<br>Percent: %{customdata}%<extra></extra>",
         ))
         fig2.update_layout(
-            width=1200, title_text=f"Meta-wiki {user_text} by primary language — {ym_value}")
+            width=1200,
+            title_text=f"Meta-wiki {incipit} editors by primary language — {ym_value}"
+        )
 
-    # --- 6) Output ---
-    return html.Div(children=[
-        dcc.Graph(id="my_graph", figure=fig1, style={
-                  'display': 'inline-block'}),
-
+    # 7) Output
+    return html.Div([
+        dcc.Graph(id="global_graph_timeseries", figure=fig1,
+                  style={'display': 'inline-block'}),
         html.Hr(),
         html.H5('Highlights'),
         html.Div(id='highlights_container_additional', children=[]),
-
-        dcc.Graph(id="my_graph2", figure=fig2),
+        dcc.Graph(id="global_graph_treemap", figure=fig2),
     ])
 
 
-@dash.callback([Output(component_id='graph_container', component_property='children'),
-               Output(component_id='retention_rate',
-                      component_property='disabled'),
-               Output(component_id='admin', component_property='disabled'),
-               Output(component_id='percentage_number',
-                      component_property='options'),
-               Output(component_id='year_yearmonth',
-                      component_property='options'),
-               Output(component_id='active_veryactive', component_property='options')],
-               [Input(component_id='metric', component_property='value'),
-               Input(component_id='langcode', component_property='value'),
-               Input(component_id='active_veryactive',
-                     component_property='value'),
-               Input(component_id='year_yearmonth',
-                     component_property='value'),
-               Input(component_id='retention_rate',
-                     component_property='value'),
-               Input(component_id='percentage_number',
-                     component_property='value'),
-               Input(component_id='admin', component_property='value')])
+def _opts_percentage(disabled=False):
+    return [
+        {'label': 'Percentage', 'value': 'perc', 'disabled': disabled},
+        {'label': 'Number',     'value': 'm2_count', 'disabled': disabled},
+    ]
+
+
+def _opts_yearmonth(disabled=False):
+    return [
+        {'label': 'Yearly',  'value': 'y',  'disabled': disabled},
+        {'label': 'Monthly', 'value': 'ym', 'disabled': disabled},
+    ]
+
+
+def _opts_active(disabled=False):
+    return [
+        {'label': 'Active',       'value': '5',   'disabled': disabled},
+        {'label': 'Very Active',  'value': '100', 'disabled': disabled},
+    ]
+
+
+@dash.callback(
+    [
+        Output('graph_container', 'children'),
+        Output('retention_rate', 'disabled'),
+        Output('admin', 'disabled'),
+        Output('percentage_number', 'options'),
+        Output('year_yearmonth', 'options'),
+        Output('active_veryactive', 'options'),
+    ],
+    [
+        Input('metric', 'value'),
+        Input('langcode', 'value'),
+        Input('active_veryactive', 'value'),
+        Input('year_yearmonth', 'value'),
+        Input('retention_rate', 'value'),
+        Input('percentage_number', 'value'),
+        Input('admin', 'value'),
+    ],
+)
 def change_graph(metric, language, user_type, time_type, retention_rate, value_type, admin_type):
+    # Normalizza: vogliamo sempre una lista di codici
+    langs = [] if not language else list(language)
+    nlangs = max(1, len(langs))
 
-    # normalizza sempre in lista
-    if not language:
-        language_list = []
-    elif isinstance(language, str):
-        language_list = [s.strip() for s in language.split(",")]
-    else:
-        language_list = list(language)
+    try:
+        if metric == 'activity':
+            fig = activity_graph(langs, user_type, time_type)
+            return (fig, True, True, _opts_percentage(True), _opts_yearmonth(False), _opts_active(False))
 
-    # mappa nomi → codici, evitando KeyError
-    langs = []
-    for x in language_list:
-        key = x
-        if x in language_names:          # es. 'Ligurian (lij)'
-            key = language_names[x]
-        elif x in language_names_inv:     # già codice 'lij'
-            pass
-        elif x in languages.index:        # ulteriore safety
-            pass
-        else:
-            continue
-        langs.append(key)
+        elif metric == 'retention':
+            # Un grafico per lingua
+            children = [retention_graph(
+                code, retention_rate, nlangs) for code in langs]
+            if not children:
+                children = [
+                    html.Div("Select at least one language.", className="text-muted m-2")]
+            return (html.Div(children), False, True, _opts_percentage(True), _opts_yearmonth(True), _opts_active(True))
 
-    params = ""
-    for x in langs:
-        # count+=1
-        params += "'"
-        params += x
-        params += "',"
+        elif metric == 'stability':
+            fig = stability_graph(langs, user_type, value_type, time_type)
+            return (fig, True, True, _opts_percentage(False), _opts_yearmonth(False), _opts_active(False))
 
-    params = params[:-1]
+        elif metric == 'balance':
+            fig = balance_graph(langs, user_type, value_type, time_type)
+            return (fig, True, True, _opts_percentage(False), _opts_yearmonth(False), _opts_active(False))
 
-    fig = ""
+        elif metric == 'special':
+            fig = special_graph(langs, user_type, value_type, time_type)
+            return (fig, True, True, _opts_percentage(False), _opts_yearmonth(False), _opts_active(False))
 
-    if metric == 'activity':
+        elif metric == 'admin':
+            fig = admin_graph(langs, admin_type, time_type)
+            return (fig, True, False, _opts_percentage(True), _opts_yearmonth(True), _opts_active(True))
 
-        fig = activity_graph(language, user_type, time_type)
+        elif metric == 'global':
+            two_months_ago = (datetime.now().replace(
+                day=1) - timedelta(days=32)).replace(day=1)
+            year, month = str(
+                two_months_ago.year), f"{two_months_ago.month:02d}"
+            fig = global_graph(langs, user_type, value_type,
+                               time_type, year, month)
+            return (fig, True, True, _opts_percentage(False), _opts_yearmonth(False), _opts_active(False))
 
-        return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'retention':
+        # metric sconosciuto → fallback
+        return (
+            html.Div("Select a Vital Sign."), True, True,
+            _opts_percentage(False), _opts_yearmonth(
+                False), _opts_active(False)
+        )
 
-        array = []
-        res = html.Div(children=array)
-
-        for x in language:
-            # print(x)
-            fig = retention_graph(x, retention_rate, len(langs))
-            array.append(fig)
-
-        return res, False, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y', 'disabled': True}, {'label': 'Monthly', 'value': 'ym', 'disabled': True}], [{'label': 'Active', 'value': '5', 'disabled': True}, {'label': 'Very Active', 'value': '100', 'disabled': True}]
-    elif metric == 'stability':
-
-        fig = stability_graph(language, user_type, value_type, time_type)
-
-        return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y', 'disabled': True}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'balance':
-
-        fig = balance_graph(language, user_type, value_type, time_type)
-
-        return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'special':
-        fig = special_graph(language, user_type, value_type, time_type)
-
-        return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-    elif metric == 'admin':
-        fig = admin_graph(language, admin_type, time_type)
-
-        return fig, True, False, [{'label': 'Percentage', 'value': 'perc', 'disabled': True}, {'label': 'Number', 'value': 'm2_count', 'disabled': True}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5', 'disabled': True}, {'label': 'Very Active', 'value': '100', 'disabled': True}]
-    elif metric == 'global':
-
-        # Get current date and format for 2 months ago
-
-        # Get 2 months ago year and month
-        two_months_ago = (datetime.now().replace(day=1) -
-                          timedelta(days=32)).replace(day=1)
-        year = str(two_months_ago.year)
-        month = str(two_months_ago.month).zfill(2)  # Ensure 2-digit format
-
-        fig = global_graph(language, user_type, value_type,
-                           time_type, year, month)
-
-        return fig, True, True, [{'label': 'Percentage', 'value': 'perc', 'disabled': False}, {'label': 'Number', 'value': 'm2_count', 'disabled': False}], [{'label': 'Yearly', 'value': 'y'}, {'label': 'Monthly', 'value': 'ym'}], [{'label': 'Active', 'value': '5'}, {'label': 'Very Active', 'value': '100'}]
-
-####################################################################################################################################################################################
-####################################################################################################################################################################################
-####################################################################################################################################################################################
+    except Exception as e:
+        # Non far mai fallire la shape degli output
+        traceback.print_exc()
+        return (
+            html.Div(f"Errore nel grafico: {e}"),
+            True, True, [], [], []
+        )

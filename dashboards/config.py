@@ -41,27 +41,8 @@ metrics = ['activity', 'stability', 'balance',
 
 # languages
 
-languages = pd.DataFrame({
-    'Wikimedialanguagecode': ['lij', 'pms', 'lmo'],
-    'languagename': ['ligurian', 'piedmontese', 'lombard']
-}).set_index('Wikimedialanguagecode')
+wikilanguagecodes = ['lij', 'pms', 'lmo']
 
-wikilanguagecodes = list(languages.index.tolist())
-
-language_names_list = []
-language_names = {}
-language_names_full = {}
-language_name_wiki = {}
-for languagecode in wikilanguagecodes:
-    lang_name = languages.loc[languagecode]['languagename'] + \
-        ' ('+languagecode+')'
-    language_name_wiki[lang_name] = languages.loc[languagecode]['languagename']
-    language_names_full[languagecode] = languages.loc[languagecode]['languagename']
-    language_names[lang_name] = languagecode
-    language_names_list.append(lang_name)
-
-language_names_list = sorted(language_names_list)
-language_names_inv = {v: k for k, v in language_names.items()}
 
 admin_type = ['autopatrolled', 'sysop', 'bureaucrat', 'checkuser', 'ipblock-exempt', 'rollbacker', 'confirmed', 'extendedconfirmed', 'interface-admin', 'patroller', 'import', 'abusefilter',
               'reviewer', 'accountcreator', 'oversight', 'founder', 'autoreviewer', 'eventcoordinator', 'filemover', 'researcher', 'massmessage-sender', 'extendedmover', 'templateeditor', 'steward']
