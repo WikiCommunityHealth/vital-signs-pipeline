@@ -325,7 +325,7 @@ def change_graph(metric, language, user_type, time_type, retention_rate, value_t
             return (fig, True, True, _opts_percentage(False), _opts_yearmonth(False), _opts_active(False))
         elif metric == 'admin':
             fig = admin_graph(langs, admin_type, time_type)
-            return (fig, True, False, _opts_percentage(True), _opts_yearmonth(True), _opts_active(True))
+            return (fig, True, False, _opts_percentage(True), _opts_yearmonth(False), _opts_active(True))
         elif metric == 'global':
             import datetime as _dt
             t2 = (_dt.datetime.now().replace(day=1) -
@@ -1129,17 +1129,15 @@ def admin_graph(language, admin_type: str, time_type: str):
         fig3 = px.bar(
             df3,
             x=x3, y="perc",
-            text="perc",
             facet_row="langcode",
             width=1000, height=height_value,
-            labels={
-                x3: f"Period ({time_text})",
-                "perc": "Percentage",
-                "langcode": "Project (code)",
-            },
+            labels={x3: f"Period ({time_text})", "perc": "Percentage",
+                    "langcode": "Project (code)"},
             title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
         )
-        fig3.update_traces(texttemplate="%{y}%")
+
+        # una sola etichetta
+        fig3.update_traces(texttemplate="%{y:.2f}%", textposition="outside")
         fig3.update_layout(uniformtext_minsize=12,
                            uniformtext_mode="hide", xaxis=xcfg3)
         fig3.update_layout(
@@ -1165,7 +1163,6 @@ def admin_graph(language, admin_type: str, time_type: str):
         dcc.Graph(id="admin_graph_totals", figure=fig2,
                   style={'display': 'inline-block'}),
         html.Hr(),
-        html.H5('Highlights'),
         html.Div(id='highlights_container_additional', children=[]),
         dcc.Graph(id="admin_graph_percentage", figure=fig3),
     ])
@@ -1220,7 +1217,6 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
             dcc.Graph(id="global_graph_timeseries", figure=empty,
                       style={'display': 'inline-block'}),
             html.Hr(),
-            html.H5('Highlights'),
             html.Div(id='highlights_container_additional', children=[]),
             dcc.Graph(id="global_graph_treemap", figure=empty),
         ])
@@ -1322,7 +1318,6 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
         html.Div(id='highlights_container_additional', children=[]),
         dcc.Graph(id="global_graph_treemap", figure=fig2),
     ])
-
 
 
 # ---------- MAIN ----------

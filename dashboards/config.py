@@ -66,23 +66,6 @@ navbar = html.Div([
     )
 ])
 
-# Dropdown menu (commented out)
-# dbc.Nav([
-#     dbc.DropdownMenu(
-#         label="Metrics",
-#         children=[
-#             dbc.DropdownMenuItem("Activity", href="/activity"),
-#             dbc.DropdownMenuItem("Retention", href="/retention"),
-#             dbc.DropdownMenuItem("Stability", href="/stability"),
-#             dbc.DropdownMenuItem("Balance", href="/balance"),
-#             dbc.DropdownMenuItem("Admin", href="/admin"),
-#             dbc.DropdownMenuItem("Special", href="/special"),
-#             dbc.DropdownMenuItem("Global", href="/global")
-#         ],
-#         nav=True,
-#     ),
-# ], className="ms-auto")
-
 
 footbar = html.Div([
     html.Br(), html.Hr(),
