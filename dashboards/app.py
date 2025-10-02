@@ -219,8 +219,6 @@ def main_app_build_layout(params: dict) -> html.Div:
         html.Br(),
         html.Div(id='graph_container'),
         html.Hr(),
-        html.H5('Highlights'),
-        html.Div(id='highlights_container'),
         html.Div(id='highlights_container_additional',
                  style={'visibility': 'hidden'}),
     ], className="container")
@@ -1123,38 +1121,44 @@ def admin_graph(language, admin_type: str, time_type: str):
 
     # 9) Figure 3: percentuale admin tra active editors
     if df3.empty:
-        fig3 = px.bar(title=f"Percentage of [{admin_type}] flags among active editors — No data",
-                      width=1000, height=height_value)
+        fig3 = px.bar(
+            title=f"Percentage of [{admin_type}] flags among active editors — No data",
+            width=1000, height=height_value
+        )
     else:
+        # prepara l’etichetta già formattata (opzionale ma pulito)
+        df3["label"] = df3["perc"].round(2).astype(str) + "%"
+    
         fig3 = px.bar(
             df3,
             x=x3, y="perc",
             facet_row="langcode",
+            text=None,                      # <— forza: nessun testo di base
             width=1000, height=height_value,
-            labels={x3: f"Period ({time_text})", "perc": "Percentage",
-                    "langcode": "Project (code)"},
+            labels={x3: f"Period ({time_text})", "perc": "Percentage", "langcode": "Project (code)"},
             title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
         )
-
-        # una sola etichetta
-        fig3.update_traces(texttemplate="%{y:.2f}%", textposition="outside")
-        fig3.update_layout(uniformtext_minsize=12,
-                           uniformtext_mode="hide", xaxis=xcfg3)
+    
+        # azzera ogni eventuale testo residuo nel/i trace
+        fig3.update_traces(text=None, texttemplate=None)
+    
+        # imposta UNA sola etichetta, esterna
+        # (se preferisci usare direttamente y: texttemplate="%{y:.2f}%")
+        fig3.update_traces(text=df3["label"], texttemplate="%{text}", textposition="outside", cliponaxis=False)
+    
+        fig3.update_layout(uniformtext_minsize=12, uniformtext_mode="hide", xaxis=xcfg3)
         fig3.update_layout(
             xaxis=dict(
                 rangeselector=dict(buttons=[
-                    dict(count=6,  label="<b>6M</b>",
-                         step="month", stepmode="backward"),
-                    dict(count=1,  label="<b>1Y</b>",
-                         step="year",  stepmode="backward"),
-                    dict(count=5,  label="<b>5Y</b>",
-                         step="year",  stepmode="backward"),
-                    dict(count=10, label="<b>10Y</b>",
-                         step="year",  stepmode="backward"),
+                    dict(count=6,  label="<b>6M</b>", step="month", stepmode="backward"),
+                    dict(count=1,  label="<b>1Y</b>", step="year",  stepmode="backward"),
+                    dict(count=5,  label="<b>5Y</b>", step="year",  stepmode="backward"),
+                    dict(count=10, label="<b>10Y</b>", step="year",  stepmode="backward"),
                     dict(label="<b>ALL</b>", step="all"),
                 ]),
             )
         )
+
 
     # 10) Output
     return html.Div(children=[
