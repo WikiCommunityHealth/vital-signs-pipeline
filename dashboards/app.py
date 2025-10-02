@@ -1016,6 +1016,8 @@ def admin_graph(language, admin_type: str, time_type: str):
         WHERE topic = 'flags'
           AND year_year_month = :time_type
           AND m2_value = :admin_type
+          AND m1 = 'monthly_edits'
+          AND m1_value = '5'
           {"AND langcode IN :codes" if filter_lang else ""}
         ORDER BY langcode, year_month
     """
