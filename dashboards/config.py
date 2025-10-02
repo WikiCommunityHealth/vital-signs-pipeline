@@ -1,7 +1,7 @@
 import dash
 import pandas as pd
 import dash_bootstrap_components as dbc
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, no_update
 from dash.dependencies import Input, Output, State
 import datetime
 import time
@@ -24,7 +24,6 @@ LOGO_foot = "./assets/wikimedia-logo.png"
 title_addenda = ' - Wikimedia Community Health Metrics'
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
-webtype = ''
 PG_USER = os.getenv("POSTGRES_USER")
 PG_PASS = os.getenv("POSTGRES_PASSWORD")
 PG_HOST = os.getenv("POSTGRES_HOST", "postgres")
