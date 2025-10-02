@@ -218,7 +218,6 @@ def main_app_build_layout(params: dict) -> html.Div:
         html.Div(id='output_container'),
         html.Br(),
         html.Div(id='graph_container'),
-        html.Hr(),
         html.Div(id='highlights_container_additional',
                  style={'visibility': 'hidden'}),
     ], className="container")
