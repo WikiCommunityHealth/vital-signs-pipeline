@@ -22,34 +22,35 @@ app.layout = html.Div([
     footbar
 ])
 
-from apps import activity, admin, balance, globall, main_app, retention, special, stability
+from apps import main_app
 
 @app.callback(
     Output('content', 'children'),
     Input('url', 'pathname')
 )
 def display_page(pathname):
-    if pathname == '/main':
-        return main_app.layout
-    elif pathname == '/activity':
-        return activity.layout
-    elif pathname == '/admin':
-        return admin.layout
-    elif pathname == '/balance':
-        return balance.layout
-    elif pathname == '/global':
-        return globall.layout
-    elif pathname == '/retention':
-        return retention.layout
-    elif pathname == '/special':
-        return special.layout
-    elif pathname == '/stability':
-        return stability.layout
-    else:
-        return html.A("Welcome!", href="/main")
+    return html.A("Welcome!", href="/main")
         # default: main
 
-##### APP LAYOUT #####
+#if pathname == '/main':
+#        return main_app.layout
+#    elif pathname == '/activity':
+#        return activity.layout
+#    elif pathname == '/admin':
+#        return admin.layout
+#    elif pathname == '/balance':
+#        return balance.layout
+#    elif pathname == '/global':
+#        return globall.layout
+#    elif pathname == '/retention':
+#        return retention.layout
+#    elif pathname == '/special':
+#        return special.layout
+#    elif pathname == '/stability':
+#        return stability.layout
+#    else:
+#
+###### APP LAYOUT #####
 
 
 ##### RUN LOCAL SERVER #####
