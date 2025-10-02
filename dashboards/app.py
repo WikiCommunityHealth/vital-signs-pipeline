@@ -29,7 +29,8 @@ from apps import main_app
     Input('url', 'pathname')
 )
 def display_page(pathname):
-    return html.A("Welcome!", href="/main")
+    if pathname == '/' or pathname == '/main':
+        return main_app.layout
         # default: main
 
 #if pathname == '/main':
