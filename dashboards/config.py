@@ -27,13 +27,13 @@ external_stylesheets = [dbc.themes.BOOTSTRAP]
 external_scripts = []
 PG_USER = os.getenv("POSTGRES_USER")
 PG_PASS = os.getenv("POSTGRES_PASSWORD")
-PG_HOST = os.getenv("POSTGRES_HOST", "postgres")
+PG_HOST = os.getenv("POSTGRES_HOST", "postgres-frontend")
 PG_DB = os.getenv("POSTGRES_DB", "vital_signs_web")
 
 assert PG_USER and PG_PASS, "Missing POSTGRES_USER/POSTGRES_PASSWORD in env"
 
 engine = create_engine(
-    f"postgresql+psycopg2://{PG_USER}:{PG_PASS}@{PG_HOST}:5432/{PG_DB}",
+    f"postgresql+psycopg2://{PG_USER}:{PG_PASS}@{PG_HOST}:5434/{PG_DB}",
     pool_pre_ping=True,
 )
 metrics = ['activity', 'stability', 'balance',

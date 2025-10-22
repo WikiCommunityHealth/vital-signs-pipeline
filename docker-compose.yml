@@ -2,7 +2,7 @@ x-airflow-env: &airflow-env
   TMPDIR: /opt/airflow/tmp
   POSTGRES_USER: ${POSTGRES_USER}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-backend/${POSTGRES_DB}
   AIRFLOW__CORE__EXECUTOR: LocalExecutor
   AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
   AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE: utc
@@ -76,21 +76,39 @@ services:
     depends_on:
       - postgres
 
-  postgres:
+  postgres-backend:
       image: postgres:15
-      container_name: postgres
+      container_name: postgres-backend
       restart: always
       environment:
         POSTGRES_USER: ${POSTGRES_USER}
         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
         POSTGRES_DB: ${POSTGRES_DB}
       volumes:
-        - ./postgres-data:/var/lib/postgresql/data
+        - ./postgres-backend-data:/var/lib/postgresql/data
         - ./init_multidb.sql:/docker-entrypoint-initdb.d/init-multidb.sql
       healthcheck:
         test: ["CMD-SHELL", "pg_isready -U airflow"]
         interval: 10s
         retries: 5
+
+  postgres-frontend:
+    image: postgres:15
+    container_name: postgres-frontend
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vital_signs_web   
+    volumes:
+      - ./postgres-frontend-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"   
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      retries: 5
+
 
   prometheus:
       image: prom/prometheus:v2.53.5

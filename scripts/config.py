@@ -3,8 +3,8 @@ import os
 POSTGRES_USER = os.getenv('POSTGRES_USER')
 POSTGRES_PASS = os.getenv('POSTGRES_PASSWORD')
 
-db_uri_editors = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres/vital_signs_editors'
-db_uri_web = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres/vital_signs_web'
+db_uri_editors = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres-backend/vital_signs_editors'
+db_uri_web = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres-backend/vital_signs_web'
 dumps_path = '/opt/airflow/mediawiki_history/'
 
 
