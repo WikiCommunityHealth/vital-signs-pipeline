@@ -908,7 +908,7 @@ def calculate_editor_activity_streaks(languagecode):
         logger.info("Processed all activity streaks")
 
 
-def process_editor_metrics_from_dump(path, cym):
+def process_editor_metrics_from_dump_en(path, cym):
     logger = logging.getLogger(path + __name__)
     cym_timestamp_dt = datetime.datetime.today().replace(
         day=1)

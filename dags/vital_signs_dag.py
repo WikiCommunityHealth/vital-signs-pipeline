@@ -101,7 +101,7 @@ with DAG(
         for dump_path in endpaths:
             PythonOperator(
                 task_id=f"en_process_{Path(dump_path).stem}",
-                python_callable=fill_editors_db.process_editor_metrics_from_dump,
+                python_callable=fill_editors_db.process_editor_metrics_from_dump_en,
                 op_args=[dump_path, cym],
                 on_success_callback=log_task_end,
                 on_failure_callback=log_task_failure,
