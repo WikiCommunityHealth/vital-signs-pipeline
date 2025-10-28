@@ -97,7 +97,6 @@ services:
         - ./postgres-backend-data:/var/lib/postgresql/data
         - ./init_multidb.sql:/docker-entrypoint-initdb.d/init-multidb.sql
       healthcheck:
-        healthcheck:
         test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost"]
         interval: 10s
         retries: 5
