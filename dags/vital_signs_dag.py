@@ -8,6 +8,7 @@ from scripts import fill_editors_db
 from scripts.utils import get_mediawiki_paths
 from scripts.config import wikilanguagecodes
 from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
 from airflow import DAG
@@ -148,4 +149,9 @@ with DAG(
 
     #todo: script per fare la replica del database sul database del frontend 
 
-    start >> create_dbs_task >> editors_db_group >> primary_language_task >> web_db_group >> end
+    copy_db_task = BashOperator(
+        task_id="copy_db",
+        bash_command="bash /opt/airflow/scripts/copy_vs_web.sh"
+    )
+
+    start >> create_dbs_task >> editors_db_group >> primary_language_task >> web_db_group >> copy_db_task >> end
