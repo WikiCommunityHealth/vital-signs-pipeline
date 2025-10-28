@@ -74,7 +74,7 @@ services:
       airflow users create --username ${AIRFLOW_USER} --password ${AIRFLOW_PASSWORD} --firstname Andrea --lastname Denina --role Admin --email andredeninaf@gmail.com
       "
     depends_on:
-      - postgres
+      - postgres-backend
 
   postgres-backend:
       image: postgres:15
@@ -153,6 +153,6 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_DB=vital_signs_web
     depends_on:
-      - postgres
+      - postgres-frontend
     ports:
       - "8050:8050"
