@@ -937,7 +937,7 @@ def process_editor_metrics_from_dump_en(path, cym):
     last_year_month = 0
 
     with engine_editors.begin() as conn:
-        file_name =  Path(path).stem()
+        file_name =  Path(path).stem
         tmp_tablename = "enwiki_editors_" + file_name
         conn.execute(text(f"""
         CREATE TABLE IF NOT EXISTS {tmp_tablename}

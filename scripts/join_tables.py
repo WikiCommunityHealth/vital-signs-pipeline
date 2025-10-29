@@ -14,7 +14,7 @@ def join_tables(paths: list):
 
     with engine.begin() as conn:
         for p in paths:
-            path = Path(p).stem()
+            path = Path(p).stem
             editors_stg = f"{EDITORS_FINAL}_{path}"
             metrics_stg = f"{METRICS_FINAL}_{path}"
 
