@@ -909,6 +909,9 @@ def calculate_editor_activity_streaks(languagecode):
 
 
 def process_editor_metrics_from_dump_en(path, cym):
+
+
+    
     logger = logging.getLogger(path + __name__)
     cym_timestamp_dt = datetime.datetime.today().replace(
         day=1)
@@ -933,6 +936,18 @@ def process_editor_metrics_from_dump_en(path, cym):
     last_year_month = 0
 
     with engine_editors.begin() as conn:
+        tmp_tablename = "enwiki_editors_" + path
+        conn.execute(text(f"""
+        CREATE TABLE IF NOT EXISTS {tmp_tablename}
+        (LIKE enwiki_editors INCLUDING ALL);
+        """))
+
+        tmp_tablename = "enwiki_editor_metrics_" + path
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {tmp_tablename}
+            (LIKE enwiki_editor_metrics INCLUDING ALL);
+        """))
+
         logger.info(f"processing {path}")
         dump_in = bz2.open(path, 'r')
 
@@ -1127,7 +1142,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                             f"DEBUG: Sample namespaces: {namespaces[:3]}")
 
                     query = text(f"""
-                        INSERT INTO enwiki_editor_metrics
+                        INSERT INTO enwiki_editor_metrics_{path}
                         (user_id, user_name, abs_value, rel_value,
                          metric_name, year_month, timestamp)
                         VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
@@ -1258,7 +1273,7 @@ def process_editor_metrics_from_dump_en(path, cym):
 
             # SURVIVAL MEASURES INSERT
             query = text(f"""
-                            INSERT INTO enwiki_editor_metrics
+                            INSERT INTO enwiki_editor_metrics_{path}
                             (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
                             VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                             ON CONFLICT DO NOTHING
@@ -1292,7 +1307,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                         })
 
                 query = text(f"""
-                    INSERT INTO enwiki_editor_metrics
+                    INSERT INTO enwiki_editor_metrics_{path}
                     (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
                     VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                     ON CONFLICT DO NOTHING
@@ -1344,7 +1359,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                         })
 
                 query = text(f"""
-                        INSERT INTO enwiki_editor_metrics
+                        INSERT INTO enwiki_editor_metrics_{path}
                         (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
                         VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                         ON CONFLICT DO NOTHING
@@ -1486,7 +1501,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                     })
 
             query = text(f"""
-                INSERT INTO enwiki_editors 
+                INSERT INTO enwiki_editors_{path} 
                 (user_id, user_name, registration_date, year_month_registration, first_edit_timestamp, year_month_first_edit, year_first_edit, lustrum_first_edit) 
                 VALUES (:user_id, :user_name, :registration_date, :year_month_registration, :first_edit_timestamp, :year_month_first_edit, :year_first_edit, :lustrum_first_edit)
                 ON CONFLICT DO NOTHING
@@ -1496,7 +1511,7 @@ def process_editor_metrics_from_dump_en(path, cym):
 
             # upsert
             query = text(f"""
-                INSERT INTO enwiki_editors (
+                INSERT INTO enwiki_editors_{path} (
                     user_id, user_name, registration_date, year_month_registration, 
                     first_edit_timestamp, year_month_first_edit, year_first_edit, lustrum_first_edit,
                     bot, user_flags, last_edit_timestamp, year_last_edit, lifetime_days,
@@ -1507,7 +1522,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                     :bot, :user_flags, :last_edit_timestamp, :year_last_edit, :lifetime_days,
                     :days_since_last_edit, :survived60d, :edit_count
                 )
-                ON CONFLICT (user_name) DO UPDATE SET
+                ON CONFLICT (user_id) DO UPDATE SET
                     bot = EXCLUDED.bot,
                     user_flags = EXCLUDED.user_flags,
                     last_edit_timestamp = EXCLUDED.last_edit_timestamp,
@@ -1516,7 +1531,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                     days_since_last_edit = EXCLUDED.days_since_last_edit,
                     survived60d = EXCLUDED.survived60d,
                     edit_count = EXCLUDED.edit_count,
-                    user_id = EXCLUDED.user_id,
+                    user_name = EXCLUDED.user_name,
                     registration_date = EXCLUDED.registration_date,
                     year_month_registration = EXCLUDED.year_month_registration,
                     first_edit_timestamp = EXCLUDED.first_edit_timestamp,

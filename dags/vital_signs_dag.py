@@ -4,6 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from scripts.fill_web_db import compute_wiki_vital_signs
 from scripts.primary_language import cross_wiki_editor_metrics
 from scripts.create_db import create_db
+from scripts.join_tables import join_tables
 from scripts import fill_editors_db
 from scripts.utils import get_mediawiki_paths
 from scripts.config import wikilanguagecodes
@@ -106,6 +107,13 @@ with DAG(
                 on_success_callback=log_task_end,
                 on_failure_callback=log_task_failure,
             )
+    join_en_tables_task = PythonOperator(
+        task_id="en_join_tables",
+        python_callable=join_tables,
+        op_args=[endpaths],
+        on_success_callback=log_task_end,
+        on_failure_callback=log_task_failure,
+    )
     calculate_flags_task = PythonOperator(
         task_id=f"en_calc_flags",
         python_callable=fill_editors_db.calculate_editors_flag,
@@ -120,8 +128,9 @@ with DAG(
         on_success_callback=log_task_end,
         on_failure_callback=log_task_failure,
     )
-    en_dump_group >> calculate_flags_task >> calculate_streaks_task
+    en_dump_group >> join_en_tables_task >> calculate_flags_task >> calculate_streaks_task
     editors_db_group.append(en_dump_group)
+    editors_db_group.append(join_en_tables_task)
     editors_db_group.append(calculate_flags_task)
     editors_db_group.append(calculate_streaks_task)
 
