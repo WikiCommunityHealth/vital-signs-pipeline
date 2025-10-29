@@ -22,8 +22,8 @@ def create_db(wikilanguagecodes):
                 logger.warning(f"Failed to drop {table_name}: {e}")
             query = f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
-                user_id INTEGER,
-                user_name TEXT PRIMARY KEY,
+                user_id INTEGER PRIMARY KEY,
+                user_name TEXT,
                 bot TEXT,
                 user_flags TEXT,
                 highest_flag TEXT,
