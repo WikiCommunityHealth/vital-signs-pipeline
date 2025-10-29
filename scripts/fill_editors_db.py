@@ -6,6 +6,7 @@ import bz2
 from sqlalchemy import create_engine, text
 from dateutil import relativedelta
 import logging
+from pathlib import Path
 
 
 def process_editor_metrics_from_dump(languagecode):
@@ -936,13 +937,13 @@ def process_editor_metrics_from_dump_en(path, cym):
     last_year_month = 0
 
     with engine_editors.begin() as conn:
-        tmp_tablename = "enwiki_editors_" + path
+        tmp_tablename = "enwiki_editors_" + Path(path).stem()
         conn.execute(text(f"""
         CREATE TABLE IF NOT EXISTS {tmp_tablename}
         (LIKE enwiki_editors INCLUDING ALL);
         """))
 
-        tmp_tablename = "enwiki_editor_metrics_" + path
+        tmp_tablename = "enwiki_editor_metrics_" + Path(path).stem()
         conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {tmp_tablename}
             (LIKE enwiki_editor_metrics INCLUDING ALL);

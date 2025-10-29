@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy import create_engine, text
 from scripts import config
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -13,8 +14,9 @@ def join_tables(paths: list):
 
     with engine.begin() as conn:
         for p in paths:
-            editors_stg = f"{EDITORS_FINAL}_{p}"
-            metrics_stg = f"{METRICS_FINAL}_{p}"
+            path = Path(p).stem()
+            editors_stg = f"{EDITORS_FINAL}_{path}"
+            metrics_stg = f"{METRICS_FINAL}_{path}"
 
             logger.info("Merging %s -> %s", editors_stg, EDITORS_FINAL)
             conn.execute(text(f"""
