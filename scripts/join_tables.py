@@ -2,6 +2,7 @@ import logging
 from sqlalchemy import create_engine, text
 from scripts import config
 from pathlib import Path
+import re
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -9,12 +10,18 @@ logger.setLevel(logging.INFO)
 EDITORS_FINAL = "enwiki_editors"
 METRICS_FINAL = "enwiki_editor_metrics"
 
+PG_MAX_IDENT = 63
+
+def safe_suffix(path: str) -> str:
+    s = re.sub(r"[^A-Za-z0-9_]+", "_", path).strip("_")
+    return s[:PG_MAX_IDENT - 32]
+
 def join_tables(paths: list):
     engine = create_engine(config.db_uri_editors, pool_pre_ping=True)
 
     with engine.begin() as conn:
         for p in paths:
-            path = Path(p).stem
+            path = safe_suffix(Path(p).stem)
             editors_stg = f"{EDITORS_FINAL}_{path}"
             metrics_stg = f"{METRICS_FINAL}_{path}"
 

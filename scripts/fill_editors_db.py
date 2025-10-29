@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, text
 from dateutil import relativedelta
 import logging
 from pathlib import Path
+import re
 
 
 def process_editor_metrics_from_dump(languagecode):
@@ -908,6 +909,11 @@ def calculate_editor_activity_streaks(languagecode):
 
         logger.info("Processed all activity streaks")
 
+PG_MAX_IDENT = 63
+
+def safe_suffix(path: str) -> str:
+    s = re.sub(r"[^A-Za-z0-9_]+", "_", path).strip("_")
+    return s[:PG_MAX_IDENT - 32]
 
 def process_editor_metrics_from_dump_en(path, cym):
 
@@ -937,7 +943,7 @@ def process_editor_metrics_from_dump_en(path, cym):
     last_year_month = 0
 
     with engine_editors.begin() as conn:
-        file_name =  Path(path).stem
+        file_name =  safe_suffix(Path(path).stem)
         tmp_tablename = "enwiki_editors_" + file_name
         conn.execute(text(f"""
         CREATE TABLE IF NOT EXISTS {tmp_tablename}
