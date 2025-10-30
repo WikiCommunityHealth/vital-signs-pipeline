@@ -13,8 +13,9 @@ import shutil
 import subprocess
 
 
-def iter_lines_bz2_fast(path: str):
+def iter_lines_bz2_fast(path: str, logger):
     if shutil.which("lbzip2"):
+        logger.info("lbzip2")
         p = subprocess.Popen(["lbzip2", "-dcq", path],
                              stdout=subprocess.PIPE, bufsize=1 << 20)
         stream = io.TextIOWrapper(p.stdout, encoding="utf-8", newline="")
@@ -28,6 +29,7 @@ def iter_lines_bz2_fast(path: str):
                 pass
             p.wait()
     else:
+        logger.info("bz2")
         with bz2.open(path, mode="rt", encoding="utf-8", newline="") as f:
             for line in f:
                 yield line
@@ -973,16 +975,18 @@ def process_editor_metrics_from_dump_en(path, cym):
         CREATE TABLE IF NOT EXISTS {tmp_tablename}
         (LIKE enwiki_editors INCLUDING ALL);
         """))
+        logger.info(f"created {tmp_tablename}")
 
         tmp_tablename = "enwiki_editor_metrics_" + file_name
         conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {tmp_tablename}
             (LIKE enwiki_editor_metrics INCLUDING ALL);
         """))
+        logger.info(f"created {tmp_tablename}")
 
         logger.info(f"processing {path}")
 
-        for raw_line in iter_lines_bz2_fast(path):
+        for raw_line in iter_lines_bz2_fast(path, logger):
             line = raw_line.rstrip("\n")
             if line == b'':
                 break
