@@ -1302,205 +1302,185 @@ def process_editor_metrics_from_dump_en(path, cym):
 
                 # ---------
 
-            # SURVIVAL MEASURES INSERT
-            query = text(f"""
-                            INSERT INTO enwiki_editor_metrics_{file_name}
-                            (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
-                            VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
-                            ON CONFLICT DO NOTHING
-                        """)
-            if survival_measures:
-                conn.execute(query, survival_measures)
-
-            survival_measures = []
-
-            # MONTHLY EDITS/NAMESPACES INSERT (LAST ROUND)
-
-            try:
-                lym = last_year_month.strftime('%Y-%m')
-            except:
-                lym = ''
-
-            if lym != cym and lym:
-
-                monthly_edits = []
-                for event_user_id, edits in editor_monthly_edits.items():
-
-                    if event_user_id in user_id_user_name_dict:
-                        monthly_edits.append({
-                            'user_id': event_user_id,
-                            'user_name': user_id_user_name_dict[event_user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
-
-                query = text(f"""
-                    INSERT INTO enwiki_editor_metrics_{file_name}
-                    (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
-                    VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
-                    ON CONFLICT DO NOTHING
-                """)
-                if monthly_edits:
-                    conn.execute(query, monthly_edits)
-
-                namespaces = []
-                for key, data in editor_user_group_dict_timestamp.items():
-                    user_id = key[0]
-                    timestamp = key[1]
-
-                    metric_name = data[0]
-                    flags = data[1]
-
-                    if user_id in user_id_user_name_dict:
-                        namespaces.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': flags,
-                            'rel_value': None,
-                            'metric_name': metric_name,
-                            'year_month': lym,
-                            'timestamp': timestamp
-                        })
-
-                for user_id, edits in editor_monthly_namespace_coordination.items():
-                    if user_id in user_id_user_name_dict:
-                        namespaces.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits_coordination',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
-
-                for user_id, edits in editor_monthly_namespace_technical.items():
-                    if user_id in user_id_user_name_dict:
-                        namespaces.append({
-                            'user_id': user_id,
-                            'user_name': user_id_user_name_dict[user_id],
-                            'abs_value': edits,
-                            'rel_value': None,
-                            'metric_name': 'monthly_edits_technical',
-                            'year_month': lym,
-                            'timestamp': ''
-                        })
-
-                query = text(f"""
+        # SURVIVAL MEASURES INSERT
+        query = text(f"""
                         INSERT INTO enwiki_editor_metrics_{file_name}
                         (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
                         VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
                         ON CONFLICT DO NOTHING
                     """)
-                if namespaces:
-                    conn.execute(query, namespaces)
-
-                namespaces = []
-                monthly_edits = []
-
-                editor_monthly_edits = {}
-                editor_monthly_namespace_coordination = {}
-                editor_monthly_namespace_technical = {}
-                editor_user_group_dict_timestamp = {}
-
-            # USER CHARACTERISTICS INSERT
-            user_characteristics1 = []
-            user_characteristics2 = []
-            for user_id, user_name in user_id_user_name_dict.items():
-
+        if survival_measures:
+            conn.execute(query, survival_measures)
+        survival_measures = []
+        # MONTHLY EDITS/NAMESPACES INSERT (LAST ROUND)
+        try:
+            lym = last_year_month.strftime('%Y-%m')
+        except:
+            lym = ''
+        if lym != cym and lym:
+            monthly_edits = []
+            for event_user_id, edits in editor_monthly_edits.items():
+                if event_user_id in user_id_user_name_dict:
+                    monthly_edits.append({
+                        'user_id': event_user_id,
+                        'user_name': user_id_user_name_dict[event_user_id],
+                        'abs_value': edits,
+                        'rel_value': None,
+                        'metric_name': 'monthly_edits',
+                        'year_month': lym,
+                        'timestamp': ''
+                    })
+            query = text(f"""
+                INSERT INTO enwiki_editor_metrics_{file_name}
+                (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
+                VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
+                ON CONFLICT DO NOTHING
+            """)
+            if monthly_edits:
+                conn.execute(query, monthly_edits)
+            namespaces = []
+            for key, data in editor_user_group_dict_timestamp.items():
+                user_id = key[0]
+                timestamp = key[1]
+                metric_name = data[0]
+                flags = data[1]
+                if user_id in user_id_user_name_dict:
+                    namespaces.append({
+                        'user_id': user_id,
+                        'user_name': user_id_user_name_dict[user_id],
+                        'abs_value': flags,
+                        'rel_value': None,
+                        'metric_name': metric_name,
+                        'year_month': lym,
+                        'timestamp': timestamp
+                    })
+            for user_id, edits in editor_monthly_namespace_coordination.items():
+                if user_id in user_id_user_name_dict:
+                    namespaces.append({
+                        'user_id': user_id,
+                        'user_name': user_id_user_name_dict[user_id],
+                        'abs_value': edits,
+                        'rel_value': None,
+                        'metric_name': 'monthly_edits_coordination',
+                        'year_month': lym,
+                        'timestamp': ''
+                    })
+            for user_id, edits in editor_monthly_namespace_technical.items():
+                if user_id in user_id_user_name_dict:
+                    namespaces.append({
+                        'user_id': user_id,
+                        'user_name': user_id_user_name_dict[user_id],
+                        'abs_value': edits,
+                        'rel_value': None,
+                        'metric_name': 'monthly_edits_technical',
+                        'year_month': lym,
+                        'timestamp': ''
+                    })
+            query = text(f"""
+                    INSERT INTO enwiki_editor_metrics_{file_name}
+                    (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
+                    VALUES (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
+                    ON CONFLICT DO NOTHING
+                """)
+            if namespaces:
+                conn.execute(query, namespaces)
+            namespaces = []
+            monthly_edits = []
+            editor_monthly_edits = {}
+            editor_monthly_namespace_coordination = {}
+            editor_monthly_namespace_technical = {}
+            editor_user_group_dict_timestamp = {}
+        # USER CHARACTERISTICS INSERT
+        user_characteristics1 = []
+        user_characteristics2 = []
+        for user_id, user_name in user_id_user_name_dict.items():
+            try:
+                user_flags = user_id_user_groups_dict[user_id]
+            except:
+                user_flags = None
+            try:
+                bot = user_id_bot_dict[user_id]
+            except:
+                bot = 'editor'
+            if user_id in survived_dict:
+                survived60d = '1'
+            else:
+                survived60d = '0'
+            try:
+                edit_count = int(editor_edit_count[user_id])
+            except:
+                edit_count = 0
+            try:
+                registration_date = editor_registration_date[user_id]
+            except:
+                registration_date = None
+            # THIS IS SOMETHING WE "ASSUME" BECAUSE THERE ARE MANY ACCOUNTS WITHOUT A REGISTRATION DATE.
+            if registration_date == None:
                 try:
-                    user_flags = user_id_user_groups_dict[user_id]
-                except:
-                    user_flags = None
-
-                try:
-                    bot = user_id_bot_dict[user_id]
-                except:
-                    bot = 'editor'
-
-                if user_id in survived_dict:
-                    survived60d = '1'
-                else:
-                    survived60d = '0'
-
-                try:
-                    edit_count = int(editor_edit_count[user_id])
-                except:
-                    edit_count = 0
-
-                try:
-                    registration_date = editor_registration_date[user_id]
+                    registration_date = editor_first_edit_timestamp[user_id]
                 except:
                     registration_date = None
-
-                # THIS IS SOMETHING WE "ASSUME" BECAUSE THERE ARE MANY ACCOUNTS WITHOUT A REGISTRATION DATE.
-                if registration_date == None:
-                    try:
-                        registration_date = editor_first_edit_timestamp[user_id]
-                    except:
-                        registration_date = None
-
-                if registration_date != '' and registration_date != None:
-                    year_month_registration = datetime.datetime.strptime(registration_date[:len(
-                        registration_date)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
-                else:
-                    year_month_registration = None
-
-                try:
-                    fe = editor_first_edit_timestamp[user_id]
-                except:
-                    fe = None
-
-                try:
-                    le = editor_last_edit_timestamp[user_id]
-                    year_last_edit = datetime.datetime.strptime(
-                        le[:len(le)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
-                except:
-                    le = None
-                    year_last_edit = None
-
-                if fe:
-                    year_month = datetime.datetime.strptime(
-                        fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
-                    year_first_edit = datetime.datetime.strptime(
-                        fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
-
-                    if int(year_first_edit) >= 2001 < 2006:
-                        lustrum_first_edit = '2001-2005'
-                    if int(year_first_edit) >= 2006 < 2011:
-                        lustrum_first_edit = '2006-2010'
-                    if int(year_first_edit) >= 2011 < 2016:
-                        lustrum_first_edit = '2011-2015'
-                    if int(year_first_edit) >= 2016 < 2021:
-                        lustrum_first_edit = '2016-2020'
-                    if int(year_first_edit) >= 2021 < 2026:
-                        lustrum_first_edit = '2021-2025'
-
-                    fe_d = datetime.datetime.strptime(
-                        fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S')
-                else:
-                    year_month = None
-                    year_first_edit = None
-                    lustrum_first_edit = None
-                    fe_d = None
-
-                if le:
-                    le_d = datetime.datetime.strptime(
-                        le[:len(le)-2], '%Y-%m-%d %H:%M:%S')
-                    days_since_last_edit = (cym_timestamp_dt - le_d).days
-                else:
-                    le_d = None
-                    days_since_last_edit = None
-
-                if fe and le:
-                    lifetime_days = (le_d - fe_d).days
-                else:
-                    lifetime_days = None
-
-                user_characteristics1.append({
+            if registration_date != '' and registration_date != None:
+                year_month_registration = datetime.datetime.strptime(registration_date[:len(
+                    registration_date)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
+            else:
+                year_month_registration = None
+            try:
+                fe = editor_first_edit_timestamp[user_id]
+            except:
+                fe = None
+            try:
+                le = editor_last_edit_timestamp[user_id]
+                year_last_edit = datetime.datetime.strptime(
+                    le[:len(le)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
+            except:
+                le = None
+                year_last_edit = None
+            if fe:
+                year_month = datetime.datetime.strptime(
+                    fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
+                year_first_edit = datetime.datetime.strptime(
+                    fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
+                if int(year_first_edit) >= 2001 < 2006:
+                    lustrum_first_edit = '2001-2005'
+                if int(year_first_edit) >= 2006 < 2011:
+                    lustrum_first_edit = '2006-2010'
+                if int(year_first_edit) >= 2011 < 2016:
+                    lustrum_first_edit = '2011-2015'
+                if int(year_first_edit) >= 2016 < 2021:
+                    lustrum_first_edit = '2016-2020'
+                if int(year_first_edit) >= 2021 < 2026:
+                    lustrum_first_edit = '2021-2025'
+                fe_d = datetime.datetime.strptime(
+                    fe[:len(fe)-2], '%Y-%m-%d %H:%M:%S')
+            else:
+                year_month = None
+                year_first_edit = None
+                lustrum_first_edit = None
+                fe_d = None
+            if le:
+                le_d = datetime.datetime.strptime(
+                    le[:len(le)-2], '%Y-%m-%d %H:%M:%S')
+                days_since_last_edit = (cym_timestamp_dt - le_d).days
+            else:
+                le_d = None
+                days_since_last_edit = None
+            if fe and le:
+                lifetime_days = (le_d - fe_d).days
+            else:
+                lifetime_days = None
+            user_characteristics1.append({
+                'user_id': user_id,
+                'user_name': user_name,
+                'registration_date': registration_date,
+                'year_month_registration': year_month_registration,
+                'first_edit_timestamp': fe,
+                'year_month_first_edit': year_month,
+                'year_first_edit': year_first_edit,
+                'lustrum_first_edit': lustrum_first_edit
+            })
+            if le:
+                user_characteristics2.append({
                     'user_id': user_id,
                     'user_name': user_name,
                     'registration_date': registration_date,
@@ -1508,97 +1488,75 @@ def process_editor_metrics_from_dump_en(path, cym):
                     'first_edit_timestamp': fe,
                     'year_month_first_edit': year_month,
                     'year_first_edit': year_first_edit,
-                    'lustrum_first_edit': lustrum_first_edit
+                    'lustrum_first_edit': lustrum_first_edit,
+                    'bot': bot,
+                    'user_flags': user_flags,
+                    'last_edit_timestamp': le,
+                    'year_last_edit': year_last_edit,
+                    'lifetime_days': lifetime_days,
+                    'days_since_last_edit': days_since_last_edit,
+                    'survived60d': survived60d,
+                    'edit_count': edit_count
                 })
-
-                if le:
-                    user_characteristics2.append({
-                        'user_id': user_id,
-                        'user_name': user_name,
-                        'registration_date': registration_date,
-                        'year_month_registration': year_month_registration,
-                        'first_edit_timestamp': fe,
-                        'year_month_first_edit': year_month,
-                        'year_first_edit': year_first_edit,
-                        'lustrum_first_edit': lustrum_first_edit,
-                        'bot': bot,
-                        'user_flags': user_flags,
-                        'last_edit_timestamp': le,
-                        'year_last_edit': year_last_edit,
-                        'lifetime_days': lifetime_days,
-                        'days_since_last_edit': days_since_last_edit,
-                        'survived60d': survived60d,
-                        'edit_count': edit_count
-                    })
-
-            query = text(f"""
-                INSERT INTO enwiki_editors_{file_name} 
-                (user_id, user_name, registration_date, year_month_registration, first_edit_timestamp, year_month_first_edit, year_first_edit, lustrum_first_edit) 
-                VALUES (:user_id, :user_name, :registration_date, :year_month_registration, :first_edit_timestamp, :year_month_first_edit, :year_first_edit, :lustrum_first_edit)
-                ON CONFLICT DO NOTHING
+        query = text(f"""
+            INSERT INTO enwiki_editors_{file_name} 
+            (user_id, user_name, registration_date, year_month_registration, first_edit_timestamp, year_month_first_edit, year_first_edit, lustrum_first_edit) 
+            VALUES (:user_id, :user_name, :registration_date, :year_month_registration, :first_edit_timestamp, :year_month_first_edit, :year_first_edit, :lustrum_first_edit)
+            ON CONFLICT DO NOTHING
+        """)
+        if user_characteristics1:
+            conn.execute(query, user_characteristics1)
+        # upsert
+        query = text(f"""
+            INSERT INTO enwiki_editors_{file_name} (
+                user_id, user_name, registration_date, year_month_registration, 
+                first_edit_timestamp, year_month_first_edit, year_first_edit, lustrum_first_edit,
+                bot, user_flags, last_edit_timestamp, year_last_edit, lifetime_days,
+                days_since_last_edit, survived60d, edit_count
+            ) VALUES (
+                :user_id, :user_name, :registration_date, :year_month_registration, 
+                :first_edit_timestamp, :year_month_first_edit, :year_first_edit, :lustrum_first_edit,
+                :bot, :user_flags, :last_edit_timestamp, :year_last_edit, :lifetime_days,
+                :days_since_last_edit, :survived60d, :edit_count
+            )
+            ON CONFLICT (user_id) DO UPDATE SET
+                bot = EXCLUDED.bot,
+                user_flags = EXCLUDED.user_flags,
+                last_edit_timestamp = EXCLUDED.last_edit_timestamp,
+                year_last_edit = EXCLUDED.year_last_edit,
+                lifetime_days = EXCLUDED.lifetime_days,
+                days_since_last_edit = EXCLUDED.days_since_last_edit,
+                survived60d = EXCLUDED.survived60d,
+                edit_count = EXCLUDED.edit_count,
+                user_name = EXCLUDED.user_name,
+                registration_date = EXCLUDED.registration_date,
+                year_month_registration = EXCLUDED.year_month_registration,
+                first_edit_timestamp = EXCLUDED.first_edit_timestamp,
+                year_month_first_edit = EXCLUDED.year_month_first_edit,
+                year_first_edit = EXCLUDED.year_first_edit,
+                lustrum_first_edit = EXCLUDED.lustrum_first_edit
             """)
-            if user_characteristics1:
-                conn.execute(query, user_characteristics1)
-
-            # upsert
-            query = text(f"""
-                INSERT INTO enwiki_editors_{file_name} (
-                    user_id, user_name, registration_date, year_month_registration, 
-                    first_edit_timestamp, year_month_first_edit, year_first_edit, lustrum_first_edit,
-                    bot, user_flags, last_edit_timestamp, year_last_edit, lifetime_days,
-                    days_since_last_edit, survived60d, edit_count
-                ) VALUES (
-                    :user_id, :user_name, :registration_date, :year_month_registration, 
-                    :first_edit_timestamp, :year_month_first_edit, :year_first_edit, :lustrum_first_edit,
-                    :bot, :user_flags, :last_edit_timestamp, :year_last_edit, :lifetime_days,
-                    :days_since_last_edit, :survived60d, :edit_count
-                )
-                ON CONFLICT (user_id) DO UPDATE SET
-                    bot = EXCLUDED.bot,
-                    user_flags = EXCLUDED.user_flags,
-                    last_edit_timestamp = EXCLUDED.last_edit_timestamp,
-                    year_last_edit = EXCLUDED.year_last_edit,
-                    lifetime_days = EXCLUDED.lifetime_days,
-                    days_since_last_edit = EXCLUDED.days_since_last_edit,
-                    survived60d = EXCLUDED.survived60d,
-                    edit_count = EXCLUDED.edit_count,
-                    user_name = EXCLUDED.user_name,
-                    registration_date = EXCLUDED.registration_date,
-                    year_month_registration = EXCLUDED.year_month_registration,
-                    first_edit_timestamp = EXCLUDED.first_edit_timestamp,
-                    year_month_first_edit = EXCLUDED.year_month_first_edit,
-                    year_first_edit = EXCLUDED.year_first_edit,
-                    lustrum_first_edit = EXCLUDED.lustrum_first_edit
-                """)
-            if user_characteristics2:
-                conn.execute(query, user_characteristics2)
-
-            user_characteristics1 = []
-            user_characteristics2 = []
-
-            # insert or ignore + update
-            user_id_bot_dict = {}
-            user_id_user_groups_dict = {}
-            editor_last_edit_timestamp = {}
-            editor_seconds_since_last_edit = {}
-            editor_edit_count = {}
-
-            # insert or ignore
-            editor_first_edit_timestamp = {}
-            editor_registration_date = {}
-
-            user_id_user_name_dict2 = {}
-            for k in editor_monthly_edits.keys():
-                user_id_user_name_dict2[k] = user_id_user_name_dict[k]
-
-            for k in editor_monthly_namespace_coordination.keys():
-                user_id_user_name_dict2[k] = user_id_user_name_dict[k]
-
-            for k in editor_monthly_namespace_technical.keys():
-                user_id_user_name_dict2[k] = user_id_user_name_dict[k]
-
-            for k in editor_user_group_dict_timestamp.keys():
-                user_id_user_name_dict2[k[0]] = user_id_user_name_dict[k[0]]
-
-            user_id_user_name_dict = user_id_user_name_dict2
-            user_id_user_name_dict2 = {}
+        if user_characteristics2:
+            conn.execute(query, user_characteristics2)
+        user_characteristics1 = []
+        user_characteristics2 = []
+        # insert or ignore + update
+        user_id_bot_dict = {}
+        user_id_user_groups_dict = {}
+        editor_last_edit_timestamp = {}
+        editor_seconds_since_last_edit = {}
+        editor_edit_count = {}
+        # insert or ignore
+        editor_first_edit_timestamp = {}
+        editor_registration_date = {}
+        user_id_user_name_dict2 = {}
+        for k in editor_monthly_edits.keys():
+            user_id_user_name_dict2[k] = user_id_user_name_dict[k]
+        for k in editor_monthly_namespace_coordination.keys():
+            user_id_user_name_dict2[k] = user_id_user_name_dict[k]
+        for k in editor_monthly_namespace_technical.keys():
+            user_id_user_name_dict2[k] = user_id_user_name_dict[k]
+        for k in editor_user_group_dict_timestamp.keys():
+            user_id_user_name_dict2[k[0]] = user_id_user_name_dict[k[0]]
+        user_id_user_name_dict = user_id_user_name_dict2
+        user_id_user_name_dict2 = {}
