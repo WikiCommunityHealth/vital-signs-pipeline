@@ -993,7 +993,7 @@ def process_editor_metrics_from_dump_en(path, cym):
             if len(values) == 1:
                 continue
 
-            print(values[3])
+            logger.info(values[3])
 
             event_entity = values[1]  # user, page, revision
             # diversi tipi di evento per ogni entità
