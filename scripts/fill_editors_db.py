@@ -8,6 +8,29 @@ from dateutil import relativedelta
 import logging
 from pathlib import Path
 import re
+import io
+import shutil
+import subprocess
+
+
+def iter_lines_bz2_fast(path: str):
+    if shutil.which("lbzip2"):
+        p = subprocess.Popen(["lbzip2", "-dcq", path],
+                             stdout=subprocess.PIPE, bufsize=1 << 20)
+        stream = io.TextIOWrapper(p.stdout, encoding="utf-8", newline="")
+        try:
+            for line in stream:
+                yield line
+        finally:
+            try:
+                stream.detach()
+            except Exception:
+                pass
+            p.wait()
+    else:
+        with bz2.open(path, mode="rt", encoding="utf-8", newline="") as f:
+            for line in f:
+                yield line
 
 
 def process_editor_metrics_from_dump(languagecode):
@@ -909,16 +932,17 @@ def calculate_editor_activity_streaks(languagecode):
 
         logger.info("Processed all activity streaks")
 
+
 PG_MAX_IDENT = 63
+
 
 def safe_suffix(path: str) -> str:
     s = re.sub(r"[^A-Za-z0-9_]+", "_", path).strip("_")
     return s[:PG_MAX_IDENT - 32]
 
+
 def process_editor_metrics_from_dump_en(path, cym):
 
-
-    
     logger = logging.getLogger(path + __name__)
     cym_timestamp_dt = datetime.datetime.today().replace(
         day=1)
@@ -943,7 +967,7 @@ def process_editor_metrics_from_dump_en(path, cym):
     last_year_month = 0
 
     with engine_editors.begin() as conn:
-        file_name =  safe_suffix(Path(path).stem)
+        file_name = safe_suffix(Path(path).stem)
         tmp_tablename = "enwiki_editors_" + file_name
         conn.execute(text(f"""
         CREATE TABLE IF NOT EXISTS {tmp_tablename}
@@ -957,10 +981,9 @@ def process_editor_metrics_from_dump_en(path, cym):
         """))
 
         logger.info(f"processing {path}")
-        dump_in = bz2.open(path, 'r')
 
-        while True:
-            line = dump_in.readline()
+        for raw_line in iter_lines_bz2_fast(path):
+            line = raw_line.rstrip("\n")
             if line == b'':
                 break
             line = line.rstrip().decode('utf-8')

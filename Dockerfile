@@ -11,6 +11,10 @@ COPY requirements.txt /requirements.txt
 COPY --chown=airflow:root dags/ /opt/airflow/dags/
 COPY --chown=airflow:root scripts/ /opt/airflow/scripts/
 
+# install lbzip2: multi-core decompression
+RUN apt-get update && apt-get install -y --no-install-recommends lbzip2 \
+    && rm -rf /var/lib/apt/lists/*
+
 # create the dir logs
 RUN mkdir -p  /opt/airflow/logs 
 RUN chown -R airflow: /opt/airflow/logs
