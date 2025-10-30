@@ -987,10 +987,9 @@ def process_editor_metrics_from_dump_en(path, cym):
         logger.info(f"processing {path}")
 
         for raw_line in iter_lines_bz2_fast(path, logger):
-            line = raw_line.rstrip("\n")
-            if line == b'':
+            if raw_line == b'':
                 break
-            line = line.rstrip().decode('utf-8')
+            line = raw_line.rstrip().decode('utf-8')
             if not line:
                 continue
             values = line.split('\t')
