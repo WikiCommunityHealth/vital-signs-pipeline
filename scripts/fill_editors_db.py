@@ -756,7 +756,7 @@ def calculate_editors_flag(languagecode):
             'founder': 6
         }
 
-        # 2. Assegna la highest_flag per ogni user_name
+        # 2. Assegna la highest_flag per ogni user
         query = text(f'''
             SELECT user_id, user_flags, user_name
             FROM {languagecode}wiki_editors
@@ -791,22 +791,22 @@ def calculate_editors_flag(languagecode):
                             key: val for key, val in highest_count.items() if val == maxval}
 
                         f = list(highest_count.keys())[0]
-                        params.append({'f': f, 'user_name': user_name})
+                        params.append({'f': f, 'user_id': user_id})
                         user_id_flag[user_id] = f
                     else:
                         f = list(highest_rank.keys())[0]
-                        params.append({'f': f, 'user_name': user_name})
+                        params.append({'f': f, 'user_id': user_id})
                         user_id_flag[user_id] = f
 
             else:
                 if user_flags in flag_ranks and 'bot' not in user_flags:
-                    params.append({'f': user_flags, 'user_name': user_name})
+                    params.append({'f': user_flags, 'user_id': user_id})
                     user_id_flag[user_id] = user_flags
 
         update_query = text(f'''
             UPDATE {languagecode}wiki_editors
             SET highest_flag = :f
-            WHERE user_name = :user_name
+            WHERE user_id = :user_id
         ''')
         if params:
             conn.execute(update_query, params)
@@ -823,12 +823,12 @@ def calculate_editors_flag(languagecode):
             ex_flag = user_id_flag.get(user_id)
             if ex_flag and ex_flag in flag:
                 params2.append(
-                    {'year_month': year_month, 'user_name': user_name})
+                    {'year_month': year_month, 'user_id': user_id})
 
         update_query2 = text(f'''
             UPDATE {languagecode}wiki_editors
             SET highest_flag_year_month = :year_month
-            WHERE user_name = :user_name
+            WHERE user_id = :user_id
         ''')
         if params2:
             conn.execute(update_query2, params2)
@@ -843,12 +843,12 @@ def calculate_editors_flag(languagecode):
         for row in conn.execute(query):
             username = row[1]
             bottype = 'name,group' if 'bot' in username else 'group'
-            params3.append({'bottype': bottype, 'user_name': username})
+            params3.append({'bottype': bottype, 'user_id': user_id})
 
         update_query3 = text(f'''
             UPDATE {languagecode}wiki_editors
             SET bot = :bottype
-            WHERE user_name = :user_name
+            WHERE user_id = :user_id
         ''')
         if params3:
             conn.execute(update_query3, params3)

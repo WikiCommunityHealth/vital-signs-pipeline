@@ -1,77 +1,89 @@
-import pandas as pd
-from sqlalchemy import text, create_engine
-import logging
-
 from scripts import config
+from sqlalchemy import create_engine, text
+import logging
 
 logger = logging.getLogger(__name__)
 
 
 def cross_wiki_editor_metrics(wikilanguagecodes):
-    all_rows = []
-    engine = create_engine(config.db_uri_editors)
+    engine = create_engine(config.db_uri_editors, pool_pre_ping=True)
+    unions = []
+    for lang in wikilanguagecodes:
+        unions.append(f"""
+            SELECT
+                '{lang}'::text AS lang,
+                user_id,
+                user_name,
+                edit_count,
+                year_month_first_edit,
+                lustrum_first_edit
+            FROM {lang}wiki_editors
+            WHERE user_id IS NOT NULL
+        """)
+    union_sql = "\nUNION ALL\n".join(unions)
+
+    base_sql = f"""
+    WITH all_editors AS (
+        {union_sql}
+    ),
+    filtered AS (
+        SELECT * FROM all_editors WHERE lang <> 'meta'
+    ),
+    totals AS (
+        SELECT user_id, SUM(edit_count)::int AS tot_ecount
+        FROM all_editors
+        GROUP BY user_id
+    ),
+    n_langs AS (
+        SELECT user_id,
+               GREATEST(1, COUNT(*) FILTER (WHERE edit_count > 4))::int AS n_langs
+        FROM filtered
+        GROUP BY user_id
+    ),
+    prim AS (
+        SELECT
+            user_id,
+            -- scegli anche uno user_name "canonico" dalla lingua primaria
+            user_name,
+            lang        AS prim_lang,
+            edit_count::int AS prim_ecount,
+            year_month_first_edit AS prim_ym_first_e,
+            lustrum_first_edit   AS prim_lus_first_e,
+            ROW_NUMBER() OVER (
+                PARTITION BY user_id
+                ORDER BY edit_count DESC, lang ASC, user_name ASC
+            ) AS rk
+        FROM filtered
+    ),
+    result AS (
+        SELECT
+            p.user_id,
+            p.user_name,
+            p.prim_lang,
+            p.prim_ecount,
+            t.tot_ecount,
+            n.n_langs,
+            p.prim_ym_first_e,
+            p.prim_lus_first_e
+        FROM prim p
+        JOIN totals t USING (user_id)
+        JOIN n_langs n USING (user_id)
+        WHERE p.rk = 1
+    )
+    """
 
     with engine.begin() as conn:
-        # Estrai i dati da tutte le tabelle wiki_editors in un unico DataFrame
-        for languagecode in wikilanguagecodes:
-            table = f"{languagecode}wiki_editors"
-            res = conn.execute(text(f"""
-            SELECT :lang AS lang, user_name, edit_count, year_month_first_edit, lustrum_first_edit
-            FROM {table}
-            WHERE user_name != '';
-            """), {"lang": languagecode})
-            df = pd.DataFrame(res.mappings().all())
-            all_rows.append(df)
-
-        df = pd.concat(all_rows, ignore_index=True)
-        df["edit_count"] = pd.to_numeric(
-            df["edit_count"], errors="coerce").fillna(0).astype(int)
-        df = df[df["user_name"] != ""]
-        df_filtered = df[df["lang"] != "meta"]
-
-        totals = df.groupby("user_name")["edit_count"].sum().reset_index()
-        totals = totals.rename(columns={"edit_count": "tot_ecount"})
-
-        langs_over_4 = df_filtered[df_filtered["edit_count"] > 4]
-        n_langs = langs_over_4.groupby(
-            "user_name").size().reset_index(name="n_langs")
-
-        idx = df_filtered.groupby("user_name")["edit_count"].idxmax()
-        prim_lang_df = df_filtered.loc[idx, [
-            "user_name", "lang", "edit_count", "year_month_first_edit", "lustrum_first_edit"]]
-        prim_lang_df = prim_lang_df.rename(columns={
-            "lang": "prim_lang",
-            "edit_count": "prim_ecount",
-            "year_month_first_edit": "prim_ym_first_e",
-            "lustrum_first_edit": "prim_lus_first_e"
-        })
-
-        result = prim_lang_df.merge(totals, on="user_name").merge(
-            n_langs, on="user_name", how="left")
-        result["n_langs"] = result["n_langs"].fillna(1).astype(int)
-
-        # Aggiorna ogni tabella wiki_editors con le nuove metriche
-        for languagecode in wikilanguagecodes:
-            update_df = result.copy()
-            for row in update_df.itertuples(index=False):
-                query = text(f"""
-                    UPDATE {languagecode}wiki_editors SET
-                        primarylang = :prim_lang,
-                        primary_ecount = :prim_ecount,
-                        totallangs_ecount = :tot_ecount,
-                        numberlangs = :n_langs,
-                        primary_year_month_first_edit = :prim_ym_first_e,
-                        primary_lustrum_first_edit = :prim_lus_first_e
-                    WHERE user_name = :user_name
-                """)
-                conn.execute(query, {
-                    "prim_lang": row.prim_lang,
-                    "prim_ecount": int(row.prim_ecount),
-                    "tot_ecount": int(row.tot_ecount),
-                    "n_langs": int(row.n_langs),
-                    "prim_ym_first_e": row.prim_ym_first_e,
-                    "prim_lus_first_e": row.prim_lus_first_e,
-                    "user_name": row.user_name
-                })
-
-        logger.info("Calculated cross wiki metrics")
+        for lang in wikilanguagecodes:
+            conn.execute(text(f"""
+                {base_sql}
+                UPDATE {lang}wiki_editors AS e
+                SET primarylang                    = r.prim_lang,
+                    primary_ecount                 = r.prim_ecount,
+                    totallangs_ecount              = r.tot_ecount,
+                    numberlangs                    = r.n_langs,
+                    primary_year_month_first_edit  = r.prim_ym_first_e,
+                    primary_lustrum_first_edit     = r.prim_lus_first_e, 
+                    user_name = COALESCE(e.user_name, r.user_name)
+                FROM result r
+                WHERE e.user_id = r.user_id;
+            """))
