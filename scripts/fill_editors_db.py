@@ -76,19 +76,14 @@ def process_editor_metrics_from_dump(languagecode):
 
         for dump_path in d_paths:
             logger.info(f"processing {dump_path}")
-            dump_in = bz2.open(dump_path, 'r')
-
-            while True:
-                line = dump_in.readline()
-                if line == b'':
-                    break
-                line = line.rstrip().decode('utf-8')
+            
+            for line in iter_lines_bz2_fast(dump_path, logger):
                 if not line:
                     continue
+                line = line.rstrip('\n')      
                 values = line.split('\t')
                 if len(values) == 1:
                     continue
-
                 event_entity = values[1]  # user, page, revision
                 # diversi tipi di evento per ogni entità
                 event_type = values[2]
@@ -680,7 +675,7 @@ def process_editor_metrics_from_dump(languagecode):
         :bot, :user_flags, :last_edit_timestamp, :year_last_edit, :lifetime_days,
         :days_since_last_edit, :survived60d, :edit_count
     )
-    ON CONFLICT (user_name) DO UPDATE SET
+    ON CONFLICT (user_id) DO UPDATE SET
         bot = EXCLUDED.bot,
         user_flags = EXCLUDED.user_flags,
         last_edit_timestamp = EXCLUDED.last_edit_timestamp,
@@ -689,7 +684,7 @@ def process_editor_metrics_from_dump(languagecode):
         days_since_last_edit = EXCLUDED.days_since_last_edit,
         survived60d = EXCLUDED.survived60d,
         edit_count = EXCLUDED.edit_count,
-        user_id = EXCLUDED.user_id,
+        user_name = EXCLUDED.user_name,
         registration_date = EXCLUDED.registration_date,
         year_month_registration = EXCLUDED.year_month_registration,
         first_edit_timestamp = EXCLUDED.first_edit_timestamp,

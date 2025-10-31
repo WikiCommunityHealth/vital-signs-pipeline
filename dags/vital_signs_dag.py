@@ -53,7 +53,8 @@ with DAG(
     # cron expresion: make the dag run every 10 of the month (usually the dumps are uploaded betwen the 2 and the 10)
     schedule_interval='0 0 10 * *',
     catchup=False,
-    max_active_runs=1
+    max_active_runs=1,
+    
 ) as dag:
 
     start = EmptyOperator(task_id='start', dag=dag)
