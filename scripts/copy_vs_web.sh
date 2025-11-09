@@ -19,6 +19,7 @@ then
   PGPASSWORD="$PGPASSWORD" pg_dump \
     -h "$SRC_HOST" -U "$PGUSER" -d "$DB_NAME" \
     --data-only --no-owner --no-privileges --table "$TABLE_NAME" \
+  | sed '/^SET transaction_timeout/d' \
   | PGPASSWORD="$PGPASSWORD" psql \
       -h "$DST_HOST" -U "$PGUSER" -d "$DB_NAME" -v ON_ERROR_STOP=1
 else
@@ -32,6 +33,7 @@ else
   PGPASSWORD="$PGPASSWORD" pg_dump \
     -h "$SRC_HOST" -U "$PGUSER" -d "$DB_NAME" \
     --data-only --no-owner --no-privileges --table "$TABLE_NAME" \
+  | sed '/^SET transaction_timeout/d' \
   | PGPASSWORD="$PGPASSWORD" psql \
       -h "$DST_HOST" -U "$PGUSER" -d "$DB_NAME" -v ON_ERROR_STOP=1
 fi
