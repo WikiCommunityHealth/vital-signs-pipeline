@@ -164,7 +164,7 @@ with DAG(
 
     copy_db_task = BashOperator(
         task_id="copy_db",
-        bash_command="bash /opt/airflow/scripts/copy_vs_web.sh"
+        bash_command="bash -c '/opt/airflow/scripts/copy_vs_web.sh'"
     )
 
     start >> create_dbs_task >> editors_db_group >> primary_language_task >> web_db_group >> copy_db_task >> end
