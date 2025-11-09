@@ -17,10 +17,13 @@ import logging
 from pathlib import Path
 from datetime import datetime, timedelta
 
-
-wikilanguagecodes_woen = wikilanguagecodes.copy()
-wikilanguagecodes_woen.remove('en')
-endpaths, cym = get_mediawiki_paths('en')
+if 'en' in wikilanguagecodes:
+    wikilanguagecodes_woen = wikilanguagecodes.copy()
+    wikilanguagecodes_woen.remove('en')
+    endpaths, cym = get_mediawiki_paths('en')
+else: 
+    wikilanguagecodes_woen = wikilanguagecodes.copy()
+    endpaths, cym = '', ''
 
 
 logging.basicConfig(level=logging.INFO,
@@ -99,41 +102,42 @@ with DAG(
         editors_db_group.append(calculate_flags_task)
         editors_db_group.append(calculate_streaks_task)
 
-    with TaskGroup(group_id="en_process_dump") as en_dump_group:
-        for dump_path in endpaths:
-            PythonOperator(
-                task_id=f"en_process_{Path(dump_path).stem}",
-                python_callable=fill_editors_db.process_editor_metrics_from_dump_en,
-                op_args=[dump_path, cym],
-                on_success_callback=log_task_end,
-                on_failure_callback=log_task_failure,
-            )
-    join_en_tables_task = PythonOperator(
-        task_id="en_join_tables",
-        python_callable=join_tables,
-        op_args=[endpaths],
-        on_success_callback=log_task_end,
-        on_failure_callback=log_task_failure,
-    )
-    calculate_flags_task = PythonOperator(
-        task_id=f"en_calc_flags",
-        python_callable=fill_editors_db.calculate_editors_flag,
-        op_args=['en'],
-        on_success_callback=log_task_end,
-        on_failure_callback=log_task_failure,
-    )
-    calculate_streaks_task = PythonOperator(
-        task_id=f"en_calc_streaks",
-        python_callable=fill_editors_db.calculate_editor_activity_streaks,
-        op_args=['en'],
-        on_success_callback=log_task_end,
-        on_failure_callback=log_task_failure,
-    )
-    en_dump_group >> join_en_tables_task >> calculate_flags_task >> calculate_streaks_task
-    editors_db_group.append(en_dump_group)
-    editors_db_group.append(join_en_tables_task)
-    editors_db_group.append(calculate_flags_task)
-    editors_db_group.append(calculate_streaks_task)
+    if endpaths and cym:
+        with TaskGroup(group_id="en_process_dump") as en_dump_group:
+            for dump_path in endpaths:
+                PythonOperator(
+                    task_id=f"en_process_{Path(dump_path).stem}",
+                    python_callable=fill_editors_db.process_editor_metrics_from_dump_en,
+                    op_args=[dump_path, cym],
+                    on_success_callback=log_task_end,
+                    on_failure_callback=log_task_failure,
+                )
+        join_en_tables_task = PythonOperator(
+            task_id="en_join_tables",
+            python_callable=join_tables,
+            op_args=[endpaths],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
+        calculate_flags_task = PythonOperator(
+            task_id=f"en_calc_flags",
+            python_callable=fill_editors_db.calculate_editors_flag,
+            op_args=['en'],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
+        calculate_streaks_task = PythonOperator(
+            task_id=f"en_calc_streaks",
+            python_callable=fill_editors_db.calculate_editor_activity_streaks,
+            op_args=['en'],
+            on_success_callback=log_task_end,
+            on_failure_callback=log_task_failure,
+        )
+        en_dump_group >> join_en_tables_task >> calculate_flags_task >> calculate_streaks_task
+        editors_db_group.append(en_dump_group)
+        editors_db_group.append(join_en_tables_task)
+        editors_db_group.append(calculate_flags_task)
+        editors_db_group.append(calculate_streaks_task)
 
     primary_language_task = PythonOperator(
         task_id="calc_primary_language",
@@ -157,7 +161,6 @@ with DAG(
 
         web_db_group.append(compute_vital_signs_task)
 
-    #todo: script per fare la replica del database sul database del frontend 
 
     copy_db_task = BashOperator(
         task_id="copy_db",
