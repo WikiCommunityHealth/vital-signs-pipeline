@@ -40,7 +40,7 @@ metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
 # languages
-wikilanguagecodes = ['pms', 'vec', 'lmo', 'lij', 'nap', 'sc', 'scn']
+wikilanguagecodes = ['it', 'es', 'de', 'fr', 'meta']
 
 #wikilanguagecodes = ['ab', 'ace', 'ady', 'af', 'ak', 'als', 'alt', 'ami', 'am', 'ang', 'ann', 'anp', 'an', 'arc', 'ar', 'ary', 'arz', 'ast', 'as', 'atj',
 #                     'avk', 'av', 'awa', 'ay', 'azb', 'az', 'ban', 'bar', 'bat_smg', 'ba', 'bbc', 'bcl', 'bdr', 'be_x_old', 'be', 'bew', 'bg', 'bh', 'bi', 'bjn',
