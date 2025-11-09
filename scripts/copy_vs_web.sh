@@ -23,10 +23,11 @@ then
       -h "$DST_HOST" -U "$PGUSER" -d "$DB_NAME" -v ON_ERROR_STOP=1
 else
   PGPASSWORD="$PGPASSWORD" pg_dump \
-    -h "$SRC_HOST" -U "$PGUSER" -d "$DB_NAME" \
-    --schema-only --no-owner --no-privileges --table "$TABLE_NAME" \
+  -h "$SRC_HOST" -U "$PGUSER" -d "$DB_NAME" \
+  --schema-only --no-owner --no-privileges --table "$TABLE_NAME" \
+  | sed '/^SET transaction_timeout/d' \
   | PGPASSWORD="$PGPASSWORD" psql \
-      -h "$DST_HOST" -U "$PGUSER" -d "$DB_NAME" -v ON_ERROR_STOP=1
+    -h "$DST_HOST" -U "$PGUSER" -d "$DB_NAME" -v ON_ERROR_STOP=1
 
   PGPASSWORD="$PGPASSWORD" pg_dump \
     -h "$SRC_HOST" -U "$PGUSER" -d "$DB_NAME" \
