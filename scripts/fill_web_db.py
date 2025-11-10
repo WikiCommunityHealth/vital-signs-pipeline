@@ -556,16 +556,16 @@ def compute_wiki_vital_signs(languagecode):
 
                 if t == 'ym':
                     query = text(f'''
-                        SELECT count(distinct e1.user_id), e1.year_month, e2.primarylang 
+                        SELECT count(distinct e1.user_id), e1.year_month, COALESCE(e2.primarylang, 'unknown')   AS primarylang 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
                         WHERE e1.metric_name = 'monthly_edits' AND CAST(e1.abs_value AS REAL) >= {v}
                         AND e2.bot = 'editor' 
-                        GROUP BY e1.year_month, e2.primarylang
+                        GROUP BY e1.year_month, COALESCE(e2.primarylang, 'unknown')
                     ''')
                 else:
                     query = text(f'''
-                        SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), e2.primarylang 
+                        SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4), COALESCE(e2.primarylang, 'unknown')   AS primarylang 
                         FROM {languagecode}wiki_editor_metrics e1 
                         INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
                         WHERE e1.metric_name = 'monthly_edits' AND CAST(e1.abs_value AS REAL) >= {v}
