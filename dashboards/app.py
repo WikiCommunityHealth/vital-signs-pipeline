@@ -1327,4 +1327,4 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
 
 # ---------- MAIN ----------
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8050, debug=True)
+    app.run(host='0.0.0.0', port=8050, debug=False)
