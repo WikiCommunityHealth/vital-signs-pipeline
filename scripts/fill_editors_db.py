@@ -853,81 +853,58 @@ def calculate_editors_flag(languagecode):
         if params3:
             conn.execute(update_query3, params3)
 
-
 def calculate_editor_activity_streaks(languagecode):
     logger = logging.getLogger(__name__)
     engine = create_engine(config.db_uri_editors)
+
+    sql = text(f"""
+    WITH base AS (
+      SELECT
+        user_id,
+        user_name,
+        year_month,
+        (substring(year_month, 1, 4)::int * 12 + substring(year_month, 6, 2)::int) AS month_idx
+      FROM {languagecode}wiki_editor_metrics
+      WHERE metric_name = 'monthly_edits'
+      -- AND abs_value > 0  -- opzionale, se vuoi solo mesi con almeno 1 edit
+    ),
+    sequenced AS (
+      SELECT
+        user_id,
+        user_name,
+        year_month,
+        month_idx,
+        row_number() OVER (PARTITION BY user_id ORDER BY month_idx) AS rn,
+        (month_idx - row_number() OVER (PARTITION BY user_id ORDER BY month_idx)) AS grp
+      FROM base
+    ),
+    streaks AS (
+      SELECT
+        user_id,
+        user_name,
+        year_month,
+        row_number() OVER (PARTITION BY user_id, grp ORDER BY month_idx) AS active_months_row
+      FROM sequenced
+    )
+    INSERT INTO {languagecode}wiki_editor_metrics
+      (user_id, user_name, abs_value, rel_value, metric_name, year_month, timestamp)
+    SELECT
+      user_id,
+      user_name,
+      active_months_row,
+      NULL::double precision,
+      'active_months_row',
+      year_month,
+      ''
+    FROM streaks
+    WHERE active_months_row > 1
+    ON CONFLICT DO NOTHING;
+    """)
+
     with engine.begin() as conn:
-        # Ottieni tutti i record ordinati
-        query = text(f'''
-            SELECT abs_value, year_month, user_id, user_name
-            FROM {languagecode}wiki_editor_metrics
-            WHERE metric_name = 'monthly_edits'
-            ORDER BY user_name, year_month
-        ''')
+        conn.execute(sql)
 
-        results = list(conn.execute(query))
-
-        to_insert = []
-
-        old_user_id = None
-        expected_year_month_dt = None
-        active_months_row = 0
-
-        for row in results:
-            edits, current_year_month, cur_user_id, cur_user_name = row
-
-            if cur_user_id != old_user_id and old_user_id is not None:
-                active_months_row = 0
-                expected_year_month_dt = None
-
-            current_year_month_dt = datetime.datetime.strptime(
-                current_year_month, '%Y-%m'
-            )
-
-            if (
-                expected_year_month_dt is not None and
-                expected_year_month_dt != current_year_month_dt and
-                old_user_id == cur_user_id
-            ):
-                # Skip i mesi mancanti (reset della streak)
-                while expected_year_month_dt < current_year_month_dt:
-                    expected_year_month_dt = (
-                        expected_year_month_dt +
-                        relativedelta.relativedelta(months=1)
-                    )
-                active_months_row = 1
-            else:
-                active_months_row += 1
-                if active_months_row > 1:
-                    # Prepara la riga per l'inserimento
-                    to_insert.append({
-                        'user_id': cur_user_id,
-                        'user_name': cur_user_name,
-                        'abs_value': active_months_row,
-                        'rel_value': None,
-                        'metric_name': 'active_months_row',
-                        'year_month': current_year_month,
-                        'timestamp': ''
-                    })
-
-            expected_year_month_dt = current_year_month_dt + \
-                relativedelta.relativedelta(months=1)
-            old_user_id = cur_user_id
-
-        # Inserisci direttamente nel database
-        if to_insert:
-            insert_query = text(f'''
-                INSERT INTO {languagecode}wiki_editor_metrics
-                    (user_id, user_name, abs_value, rel_value,
-                     metric_name, year_month, timestamp)
-                VALUES
-                    (:user_id, :user_name, :abs_value, :rel_value, :metric_name, :year_month, :timestamp)
-                ON CONFLICT DO NOTHING
-            ''')
-            conn.execute(insert_query, to_insert)
-
-        logger.info("Processed all activity streaks")
+    logger.info("Processed all activity streaks")
 
 
 PG_MAX_IDENT = 63
