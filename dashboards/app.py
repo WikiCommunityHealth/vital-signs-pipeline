@@ -1325,6 +1325,10 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
     ])
 
 
+@app.route('/code')
+def code():
+    return redirect("https://github.com/WikiCommunityHealth/vital-signs-pipeline")
+
 # ---------- MAIN ----------
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8050, debug=False)
