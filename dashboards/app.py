@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from config import *
-from flask import Flask
+from flask import Flask, redirect
 
 server = Flask(__name__)
 app = Dash(__name__, server=server, external_stylesheets=external_stylesheets)
@@ -1129,7 +1129,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     else:
         # prepara l’etichetta già formattata (opzionale ma pulito)
         df3["label"] = df3["perc"].round(2).astype(str) + "%"
-    
+
         fig3 = px.bar(
             df3,
             x=x3, y="perc",
@@ -1139,14 +1139,14 @@ def admin_graph(language, admin_type: str, time_type: str):
             labels={x3: f"Period ({time_text})", "perc": "Percentage", "langcode": "Project (code)"},
             title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
         )
-    
+
         # azzera ogni eventuale testo residuo nel/i trace
         fig3.update_traces(text=None, texttemplate=None)
-    
+
         # imposta UNA sola etichetta, esterna
         # (se preferisci usare direttamente y: texttemplate="%{y:.2f}%")
         fig3.update_traces(text=df3["label"], texttemplate="%{text}", textposition="outside", cliponaxis=False)
-    
+
         fig3.update_layout(uniformtext_minsize=12, uniformtext_mode="hide", xaxis=xcfg3)
         fig3.update_layout(
             xaxis=dict(
@@ -1327,7 +1327,7 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
 
 @server.route('/code')
 def code():
-    return redirect("https://github.com/WikiCommunityHealth/vital-signs-pipeline")
+    return redirect("https://github.com/WikiCommunityHealth/vital-signs-pipeline", code=301)
 
 # ---------- MAIN ----------
 if __name__ == "__main__":
