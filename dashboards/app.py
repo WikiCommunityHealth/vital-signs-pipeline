@@ -981,6 +981,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     if filter_lang:
         params_q1["codes"] = codes
     df1 = pd.read_sql_query(stmt_q1, engine, params=params_q1)
+    
 
     # 3) Query 2: totale per lustrum (per lingua)
     sql_q2 = f"""
@@ -1045,6 +1046,13 @@ def admin_graph(language, admin_type: str, time_type: str):
     df1, x1, xcfg1 = to_datetime_if_possible(df1)
     df3, x3, xcfg3 = to_datetime_if_possible(df3)
 
+    if x1 == "dt":
+        df1 = df1.sort_values(["langcode", "dt", "m2_value"])
+    else:
+        df1["_x_sort"] = pd.to_datetime(df1["year_month"], errors="coerce")
+        df1 = df1.sort_values(["langcode", "_x_sort", "m2_value"])
+        ordered = df1["year_month"].drop_duplicates().tolist()
+
     # % tra active editors (senza NumPy)
     if not df3.empty:
         denom = df3["m1_count"].where(df3["m1_count"] != 0)
@@ -1082,24 +1090,22 @@ def admin_graph(language, admin_type: str, time_type: str):
             },
             title=f"[{admin_type}] flags granted over the years by lustrum of first edit",
         )
+        if x1 != "dt":
+            fig1.update_xaxes(categoryorder="array", categoryarray=ordered)
         fig1.update_traces(texttemplate="%{text}")
-        fig1.update_layout(uniformtext_minsize=8,
-                           uniformtext_mode="hide", xaxis=xcfg1)
-        fig1.update_layout(
-            xaxis=dict(
-                rangeselector=dict(buttons=[
-                    dict(count=6,  label="<b>6M</b>",
-                         step="month", stepmode="backward"),
-                    dict(count=1,  label="<b>1Y</b>",
-                         step="year",  stepmode="backward"),
-                    dict(count=5,  label="<b>5Y</b>",
-                         step="year",  stepmode="backward"),
-                    dict(count=10, label="<b>10Y</b>",
-                         step="year",  stepmode="backward"),
-                    dict(label="<b>ALL</b>", step="all"),
-                ]),
-            )
+        fig1.update_layout(uniformtext_minsize=8, uniformtext_mode="hide")
+        fig1.update_xaxes(**xcfg1) 
+
+        fig1.update_xaxes(
+            rangeselector=dict(buttons=[
+                dict(count=6,  label="<b>6M</b>", step="month", stepmode="backward"),
+                dict(count=1,  label="<b>1Y</b>", step="year",  stepmode="backward"),
+                dict(count=5,  label="<b>5Y</b>", step="year",  stepmode="backward"),
+                dict(count=10, label="<b>10Y</b>", step="year",  stepmode="backward"),
+                dict(label="<b>ALL</b>", step="all"),
+            ])
         )
+
 
     # 8) Figure 2: totale per lustrum (per lingua)
     if df2.empty:
