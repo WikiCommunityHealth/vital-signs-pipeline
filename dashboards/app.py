@@ -243,17 +243,13 @@ def display_page(pathname, search):
 
     if pathname == "/":
         return main_app_build_layout(params)
-    if pathname == "/data":
+    if pathname == "/data" or pathname == "/data/vital_signs_web.sqlite.gz":
         return data_page_layout()
     if pathname == "/docs":
         return docs_page_layout()
     if pathname == "/code":
-        return html.Div(
-            className="container",
-            children=[
-                html.H2("Waiting...")
-            ]
-        )
+        server.logger.info("Redirecting to GitHub repository")
+        return code()
 
 
     # fallback (404 semplice)
@@ -1407,7 +1403,7 @@ def data_page_layout() -> html.Div:
 
             html.A(
                 dbc.Button("Download vital_signs_web.sqlite.gz", color="primary"),
-                href="/downloads/vital_signs_web.sqlite.gz",
+                href="/data/vital_signs_web.sqlite.gz",
             ),
         ],
     )
