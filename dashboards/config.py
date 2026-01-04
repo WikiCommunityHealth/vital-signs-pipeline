@@ -18,8 +18,8 @@ import os
 
 last_period = (datetime.datetime.now().replace(day=1) -
                datetime.timedelta(days=1)).strftime('%Y-%m')
-LOGO = "./assets/logo.png"
-LOGO_foot = "./assets/wikimedia-logo.png"
+LOGO = "/app/assets/logo.png"
+LOGO_foot = "/app/assets/wikimedia-logo.png"
 
 # Web resources
 title_addenda = ' - Wikimedia Community Health Metrics'
