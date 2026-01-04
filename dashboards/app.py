@@ -247,6 +247,14 @@ def display_page(pathname, search):
         return data_page_layout()
     if pathname == "/docs":
         return docs_page_layout()
+    if pathname == "/code":
+        return html.Div(
+            className="container",
+            children=[
+                html.H2("Waiting...")
+            ]
+        )
+
 
     # fallback (404 semplice)
     return html.Div(
@@ -1365,13 +1373,13 @@ def data_page_layout() -> html.Div:
 
             html.H4("Database structure"),
 
-            html.P(
+            html.P([
                 "The dataset exposes a single main table, ",
                 html.Code("vital_signs_metrics"),
                 ", which stores aggregated metrics computed over Wikipedia editing activity. "
                 "Each row represents a specific metric pair for a given language, time period, "
                 "and topic."
-            ),
+            ]),
 
             html.H5("Table: vital_signs_metrics"),
 
@@ -1403,6 +1411,7 @@ def data_page_layout() -> html.Div:
             ),
         ],
     )
+
 
 
 
