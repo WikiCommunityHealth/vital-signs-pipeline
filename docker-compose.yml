@@ -152,10 +152,37 @@ services:
       - 9125:9125   # ingest port
     restart: always
 
+  db-exporter:
+    image: python:3.11-slim
+    container_name: db-exporter
+    restart: "no"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=postgres-frontend
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=vital_signs_web
+      - OUT_DIR=/out
+      - SQLITE_BASENAME=vital_signs_web.sqlite
+    volumes:
+      - ./public_downloads:/out
+      - ./exporter:/app
+    working_dir: /app
+    command: >
+      /bin/bash -lc "
+      pip install --no-cache-dir sqlalchemy psycopg2-binary pandas &&
+      python export_to_sqlite.py
+      "
+    depends_on:
+      - postgres-frontend
+
+
   dash-app:
     build:
       context: ./dashboards
       dockerfile: Dockerfile
+    volumes: 
+      - ./public_downloads:/app/public_downloads:ro
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

@@ -87,11 +87,29 @@ navbar = html.Div([
 
 
 footbar = html.Div([
-    html.Br(), html.Hr(),
+    html.Br(),
+    html.Hr(),
     dbc.Container([
         dbc.Row([
-            dbc.Col(html.Div(f"Updated with dataset from: {last_period}", style={
-                    'textAlign': 'right'}))
+            dbc.Col(
+                html.Div(
+                    [
+                        dcc.Link("Code", href="/code", style={"marginRight": "16px"}),
+                        dcc.Link("Dataset", href="/data", style={"marginRight": "16px"}),
+                        dcc.Link("Documentation", href="/docs"),
+                    ],
+                    style={"textAlign": "left"},
+                ),
+                width=6,
+            ),
+            dbc.Col(
+                html.Div(
+                    f"Updated with dataset from: {last_period}",
+                    style={"textAlign": "right"},
+                ),
+                width=6,
+            ),
         ])
     ])
 ])
+

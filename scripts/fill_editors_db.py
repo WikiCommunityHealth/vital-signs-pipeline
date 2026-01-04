@@ -118,7 +118,7 @@ def process_editor_metrics_from_dump(languagecode):
                 editor_last_edit_timestamp[event_user_id] = event_timestamp
 
                 # could be a problem
-                editor_edit_count[event_user_id] = values[23]
+                editor_edit_count[event_user_id] = values[24]
 
                 event_user_groups = values[11]
 
@@ -183,8 +183,8 @@ def process_editor_metrics_from_dump(languagecode):
                     user_id_bot_dict[event_user_id] = event_is_bot_by
 
                 # aggiungo data di registrazione dell'utente
-                event_user_registration_date = values[20]
-                event_user_creation_date = values[21]
+                event_user_registration_date = values[21]
+                event_user_creation_date = values[22]
                 if event_user_id not in editor_registration_date:
                     if event_user_registration_date:
                         editor_registration_date[event_user_id] = event_user_registration_date
@@ -318,7 +318,7 @@ def process_editor_metrics_from_dump(languagecode):
 
                 # SURVIVAL MEASURES
                 # Get first edit timestamp from dump
-                event_user_first_edit_timestamp = values[22]
+                event_user_first_edit_timestamp = values[23]
 
                 # Store first edit timestamp if not already recorded
                 if event_user_id not in editor_first_edit_timestamp and event_user_first_edit_timestamp:
@@ -409,7 +409,7 @@ def process_editor_metrics_from_dump(languagecode):
                 if event_user_id not in survived_dict:
 
                     # EDIT COUNT, ADD ONE MORE EDIT.
-                    event_user_revision_count = values[23]
+                    event_user_revision_count = values[24]
                     if event_user_revision_count != '':
                         user_id_edit_count[event_user_id] = event_user_revision_count
                     elif event_user_id in user_id_edit_count:
@@ -561,15 +561,13 @@ def process_editor_metrics_from_dump(languagecode):
                 if registration_date == None:
                     try:
                         registration_date = editor_first_edit_timestamp[user_id]
+                        year_month_registration = datetime.datetime.strptime(registration_date[:len(registration_date)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
                     except:
                         registration_date = None
-
-                if registration_date != '' and registration_date != None:
-                    year_month_registration = datetime.datetime.strptime(registration_date[:len(
-                        registration_date)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
+                        year_month_registration = None
                 else:
-                    year_month_registration = None
-
+                    year_month_registration = datetime.datetime.strptime(registration_date[:len(registration_date)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m')
+                
                 try:
                     fe = editor_first_edit_timestamp[user_id]
                 except:
@@ -577,8 +575,7 @@ def process_editor_metrics_from_dump(languagecode):
 
                 try:
                     le = editor_last_edit_timestamp[user_id]
-                    year_last_edit = datetime.datetime.strptime(
-                        le[:len(le)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
+                    year_last_edit = datetime.datetime.strptime(le[:len(le)-2], '%Y-%m-%d %H:%M:%S').strftime('%Y')
                 except:
                     le = None
                     year_last_edit = None

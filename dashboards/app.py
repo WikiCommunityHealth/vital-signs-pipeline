@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from config import *
-from flask import Flask, redirect
+from flask import Flask, redirect, send_from_directory, abort
 
 server = Flask(__name__)
 app = Dash(__name__, server=server, external_stylesheets=external_stylesheets)
@@ -234,11 +234,28 @@ app.layout = html.Div([
 ])
 
 
-@app.callback(Output('content', 'children'), Input('url', 'href'))
-def display_page(href):
-    params = parse_state(href) if href else {}
-    return main_app_build_layout(params)
+@app.callback(Output('content', 'children'),
+              Input('url', 'pathname'),
+              Input('url', 'search'))
+def display_page(pathname, search):
+    pathname = pathname or "/"
+    params = parse_state("?" + (search.lstrip("?") if search else "")) if search else {}
 
+    if pathname == "/":
+        return main_app_build_layout(params)
+    if pathname == "/data":
+        return data_page_layout()
+    if pathname == "/docs":
+        return docs_page_layout()
+
+    # fallback (404 semplice)
+    return html.Div(
+        className="container",
+        children=[
+            html.H2("404"),
+            html.P(f"Pagina non trovata: {pathname}"),
+        ],
+    )
 
 # ---------- Sincronizzazione controlli <-> URL (con anti-loop) ----------
 COMPONENT_IDS = ['metric', 'langcode', 'active_veryactive',
@@ -1331,9 +1348,92 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
     ])
 
 
+
+
+def data_page_layout() -> html.Div:
+    return html.Div(
+        className="container",
+        children=[
+            html.H2("Dataset (SQLite)"),
+
+            html.P(
+                "This page provides access to a compressed SQLite snapshot of the database "
+                "used by the web application. The dataset is intended for offline analysis, "
+                "reproducibility, and exploratory research using standard SQLite-compatible tools "
+                "(e.g., sqlite3, DB Browser for SQLite, or Python libraries)."
+            ),
+
+            html.H4("Database structure"),
+
+            html.P(
+                "The dataset exposes a single main table, ",
+                html.Code("vital_signs_metrics"),
+                ", which stores aggregated metrics computed over Wikipedia editing activity. "
+                "Each row represents a specific metric pair for a given language, time period, "
+                "and topic."
+            ),
+
+            html.H5("Table: vital_signs_metrics"),
+
+            html.Ul([
+                html.Li([html.Code("langcode"), " (TEXT)"]),
+                html.Li([html.Code("year_year_month"), " (TEXT)"]),
+                html.Li([html.Code("year_month"), " (TEXT)"]),
+                html.Li([html.Code("topic"), " (TEXT)"]),
+                html.Li([html.Code("m1"), " (TEXT)"]),
+                html.Li([html.Code("m1_calculation"), " (TEXT)"]),
+                html.Li([html.Code("m1_value"), " (TEXT)"]),
+                html.Li([html.Code("m2"), " (TEXT)"]),
+                html.Li([html.Code("m2_calculation"), " (TEXT)"]),
+                html.Li([html.Code("m2_value"), " (TEXT)"]),
+                html.Li([html.Code("m1_count"), " (FLOAT)"]),
+                html.Li([html.Code("m2_count"), " (FLOAT)"]),
+            ]),
+
+            html.H4("Download"),
+
+            html.P(
+                "You can download the compressed SQLite database using the button below. "
+                "The file contains the full dataset described above and can be queried locally."
+            ),
+
+            html.A(
+                dbc.Button("Download vital_signs_web.sqlite.gz", color="primary"),
+                href="/downloads/vital_signs_web.sqlite.gz",
+            ),
+        ],
+    )
+
+
+
+def docs_page_layout() -> html.Div:
+    return html.Div(
+        className="container",
+        children=[
+            html.H2("Documentation"),
+            html.P(
+                "This page is under construction. "
+                "Here you will find a detailed description of the dashboards, "
+                "the computed metrics, and the underlying data model."
+            ),
+        ],
+    )
+
+
+
 @server.route('/code')
 def code():
     return redirect("https://github.com/WikiCommunityHealth/vital-signs-pipeline", code=301)
+
+
+
+@server.route("/data/<path:filename>")
+def downloads(filename):
+    # whitelist semplice: consenti solo sqlite.gz / zip
+    if not (filename.endswith(".sqlite.gz") or filename.endswith(".zip")):
+        abort(404)
+    return send_from_directory("/app/public_downloads", filename, as_attachment=True)
+
 
 # ---------- MAIN ----------
 if __name__ == "__main__":
