@@ -1370,8 +1370,6 @@ def data_page_layout() -> html.Div:
                 "The dataset exposes a single main table, ",
                 html.Code("vital_signs_metrics"),
                 ", which stores aggregated metrics computed over Wikipedia editing activity. "
-                "Each row represents a specific metric pair for a given language, time period, "
-                "and topic."
             ]),
 
             html.H5("Table: vital_signs_metrics"),
