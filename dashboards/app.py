@@ -247,9 +247,6 @@ def display_page(pathname, search):
         return data_page_layout()
     if pathname == "/docs":
         return docs_page_layout()
-    if pathname == "/code":
-        server.logger.info("Redirecting to GitHub repository")
-        return code()
 
 
     # fallback (404 semplice)
