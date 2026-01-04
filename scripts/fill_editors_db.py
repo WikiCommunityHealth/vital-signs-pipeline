@@ -91,7 +91,7 @@ def process_editor_metrics_from_dump(languagecode):
                 # id dell'utente che ha causato l'evento
                 event_user_id = values[5]
 
-                event_user_is_anonymous = values[17]
+                event_user_is_anonymous = True if values[18] == 'true' else False
                 if event_user_is_anonymous == True or not event_user_id:
                     continue
 
@@ -101,7 +101,7 @@ def process_editor_metrics_from_dump(languagecode):
                     continue
 
                 # username dell'utente che ha causato l'evento
-                event_user_text = values[7]
+                event_user_text = values[8]
 
                 if event_user_text:
                     user_id_user_name_dict[event_user_id] = event_user_text
@@ -120,24 +120,24 @@ def process_editor_metrics_from_dump(languagecode):
                 # could be a problem
                 editor_edit_count[event_user_id] = values[24]
 
-                event_user_groups = values[11]
+                event_user_groups = values[12]
 
                 if event_user_groups:
                     user_id_user_groups_dict[event_user_id] = event_user_groups
 
-                page_namespace = values[30]
+                page_namespace = values[31]
 
                 if event_entity == 'user':  # vado a vedere se sono stati cambiati gli usergroup dell'utente
 
-                    user_text = str(values[40])  # this is target of the event
+                    user_text = str(values[42])  # this is target of the event
 
                     if event_type == 'altergroups':
 
-                        if not values[38]:
+                        if not values[39]:
                             continue
 
-                        user_id = int(values[38])
-                        cur_ug = values[44]
+                        user_id = int(values[39])
+                        cur_ug = values[46]
 
                         if user_text and user_id:
                             user_id_user_name_dict[user_id] = user_text
@@ -178,7 +178,7 @@ def process_editor_metrics_from_dump(languagecode):
 
                             editor_user_group_dict[user_id] = cur_ug
 
-                event_is_bot_by = values[13]  # aggiungo i dati dei bot
+                event_is_bot_by = values[14]  # aggiungo i dati dei bot
                 if event_is_bot_by:
                     user_id_bot_dict[event_user_id] = event_is_bot_by
 
@@ -960,8 +960,6 @@ def process_editor_metrics_from_dump_en(path, cym):
                 continue
             line = line.rstrip('\n')      
             values = line.split('\t')
-            if len(values) == 1:
-                continue
 
             logger.info(values[3])
 
@@ -970,7 +968,7 @@ def process_editor_metrics_from_dump_en(path, cym):
             event_type = values[2]
             # id dell'utente che ha causato l'evento
             event_user_id = values[5]
-            event_user_is_anonymous = values[17]
+            event_user_is_anonymous = True if values[18] == "true" else False
             if event_user_is_anonymous == True or not event_user_id:
                 continue
             if event_user_id.isdigit():
@@ -978,7 +976,7 @@ def process_editor_metrics_from_dump_en(path, cym):
             else:
                 continue
             # username dell'utente che ha causato l'evento
-            event_user_text = values[7]
+            event_user_text = values[8]
             if event_user_text:
                 user_id_user_name_dict[event_user_id] = event_user_text
             else:
@@ -990,18 +988,18 @@ def process_editor_metrics_from_dump_en(path, cym):
                 event_timestamp[:len(event_timestamp)-2], '%Y-%m-%d %H:%M:%S')
             editor_last_edit_timestamp[event_user_id] = event_timestamp
             # could be a problem
-            editor_edit_count[event_user_id] = values[23]
-            event_user_groups = values[11]
+            editor_edit_count[event_user_id] = values[24]
+            event_user_groups = values[12]
             if event_user_groups:
                 user_id_user_groups_dict[event_user_id] = event_user_groups
-            page_namespace = values[30]
+            page_namespace = values[31]
             if event_entity == 'user':  # vado a vedere se sono stati cambiati gli usergroup dell'utente
-                user_text = str(values[40])  # this is target of the event
+                user_text = str(values[42])  # this is target of the event
                 if event_type == 'altergroups':
-                    if not values[38]:
+                    if not values[39]:
                         continue
-                    user_id = int(values[38])
-                    cur_ug = values[44]
+                    user_id = int(values[39])
+                    cur_ug = values[46]
                     if user_text and user_id:
                         user_id_user_name_dict[user_id] = user_text
                     if cur_ug:
@@ -1033,12 +1031,12 @@ def process_editor_metrics_from_dump_en(path, cym):
                                     'removed_flag', x]
                                 i += 1
                         editor_user_group_dict[user_id] = cur_ug
-            event_is_bot_by = values[13]  # aggiungo i dati dei bot
+            event_is_bot_by = values[14]  # aggiungo i dati dei bot
             if event_is_bot_by:
                 user_id_bot_dict[event_user_id] = event_is_bot_by
             # aggiungo data di registrazione dell'utente
-            event_user_registration_date = values[20]
-            event_user_creation_date = values[21]
+            event_user_registration_date = values[21]
+            event_user_creation_date = values[22]
             if event_user_id not in editor_registration_date:
                 if event_user_registration_date:
                     editor_registration_date[event_user_id] = event_user_registration_date
@@ -1172,7 +1170,7 @@ def process_editor_metrics_from_dump_en(path, cym):
 
                 # SURVIVAL MEASURES
                 # Get first edit timestamp from dump
-                event_user_first_edit_timestamp = values[22]
+                event_user_first_edit_timestamp = values[23]
 
                 # Store first edit timestamp if not already recorded
                 if event_user_id not in editor_first_edit_timestamp and event_user_first_edit_timestamp:
@@ -1263,7 +1261,7 @@ def process_editor_metrics_from_dump_en(path, cym):
                 if event_user_id not in survived_dict:
 
                     # EDIT COUNT, ADD ONE MORE EDIT.
-                    event_user_revision_count = values[23]
+                    event_user_revision_count = values[24]
                     if event_user_revision_count != '':
                         user_id_edit_count[event_user_id] = event_user_revision_count
                     elif event_user_id in user_id_edit_count:
