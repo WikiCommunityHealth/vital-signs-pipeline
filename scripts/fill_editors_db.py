@@ -195,25 +195,25 @@ def process_editor_metrics_from_dump(languagecode):
                         editor_registration_date[event_user_id] = event_user_creation_date
 
                 # ---------
-
+                if event_entity == 'revision':
                 # MONTHLY EDITS COUNTER
-                try:
-                    editor_monthly_edits[event_user_id] = editor_monthly_edits[event_user_id]+1
-                except:
-                    editor_monthly_edits[event_user_id] = 1
-
+                    try:
+                        editor_monthly_edits[event_user_id] = editor_monthly_edits[event_user_id]+1
+                    except:
+                        editor_monthly_edits[event_user_id] = 1
+                if event_entity == 'page':
                 # MONTHLY NAMESPACES EDIT COUNTER
-                if page_namespace == '4' or page_namespace == '12':  # namespaces di coordinamento
-                    try:
-                        editor_monthly_namespace_coordination[
-                            event_user_id] = editor_monthly_namespace_coordination[event_user_id]+1
-                    except:
-                        editor_monthly_namespace_coordination[event_user_id] = 1
-                elif page_namespace == '8' or page_namespace == '10':  # namespaces tecnici
-                    try:
-                        editor_monthly_namespace_technical[event_user_id] = editor_monthly_namespace_technical[event_user_id]+1
-                    except:
-                        editor_monthly_namespace_technical[event_user_id] = 1
+                    if page_namespace == '4' or page_namespace == '12':  # namespaces di coordinamento
+                        try:
+                            editor_monthly_namespace_coordination[
+                                event_user_id] = editor_monthly_namespace_coordination[event_user_id]+1
+                        except:
+                            editor_monthly_namespace_coordination[event_user_id] = 1
+                    elif page_namespace == '8' or page_namespace == '10':  # namespaces tecnici
+                        try:
+                            editor_monthly_namespace_technical[event_user_id] = editor_monthly_namespace_technical[event_user_id]+1
+                        except:
+                            editor_monthly_namespace_technical[event_user_id] = 1
 
                 # ---------    ---------    ---------    ---------    ---------    ---------
 

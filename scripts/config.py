@@ -32,4 +32,4 @@ dumps_path = '/opt/airflow/mediawiki_history/'
 #
 #
 
-wikilanguagecodes = ['it', 'es']
+wikilanguagecodes = ['ca']
