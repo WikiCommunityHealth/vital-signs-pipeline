@@ -7,12 +7,11 @@ db_uri_editors = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgre
 db_uri_web = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres-backend/vital_signs_web'
 dumps_path = '/opt/airflow/mediawiki_history/'
 
-#wikilanguagecodes = ['it', 'es', 'de', 'fr', 'meta']
-
+wikilanguagecodes = ['ca', 'ar', 'af', 'it', 'es', 'de', 'fr', 'sh', 'meta']
 
 
 #
-#wikilanguagecodes = ['ab', 'ace', 'ady', 'af', 'ak', 'als', 'alt', 'ami', 'am', 'ang', 'ann', 'anp', 'an', 'arc', 'ar', 'ary', 'arz', 'ast', 'as', 'atj',
+# wikilanguagecodes = ['ab', 'ace', 'ady', 'af', 'ak', 'als', 'alt', 'ami', 'am', 'ang', 'ann', 'anp', 'an', 'arc', 'ar', 'ary', 'arz', 'ast', 'as', 'atj',
 #                     'avk', 'av', 'awa', 'ay', 'azb', 'az', 'ban', 'bar', 'bat_smg', 'ba', 'bbc', 'bcl', 'bdr', 'be_x_old', 'be', 'bew', 'bg', 'bh', 'bi', 'bjn',
 #                     'blk', 'bm', 'bn', 'bo', 'bpy', 'br', 'bs', 'btm', 'bug', 'bxr', 'ca', 'cbk_zam', 'cdo', 'ceb', 'ce', 'cho', 'chr', 'ch', 'chy', 'ckb',
 #                     'co', 'crh', 'cr', 'csb', 'cs', 'cu', 'cv', 'cy', 'dag', 'da', 'de', 'dga', 'din', 'diq', 'dsb', 'dtp', 'dty', 'dv', 'dz', 'ee', 'el',
@@ -31,5 +30,3 @@ dumps_path = '/opt/airflow/mediawiki_history/'
 #                     'wa', 'wo', 'wuu', 'xal', 'xh', 'xmf', 'yi', 'yo', 'za', 'zea', 'zgh', 'zh_classical', 'zh_min_nan', 'zh_yue', 'zh', 'zu']
 #
 #
-
-wikilanguagecodes = ['ca']
