@@ -11,14 +11,12 @@ def compute_wiki_vital_signs(languagecode):
     engine_editors = create_engine(config.db_uri_editors)
     engine_web = create_engine(config.db_uri_web)
 
-    #
     query_cm = text("""
         INSERT INTO vital_signs_metrics 
         (langcode, year_year_month, year_month, topic, m1, m1_calculation, m1_value, m2, m2_calculation, m2_value, m1_count, m2_count)
         VALUES (:langcode, :year_year_month, :year_month, :topic, :m1, :m1_calculation, :m1_value, :m2, :m2_calculation, :m2_value, :m1_count, :m2_count)
         ON CONFLICT DO NOTHING
     """)
-
 
     create_table_query = f"""
         CREATE TABLE IF NOT EXISTS vital_signs_metrics (
