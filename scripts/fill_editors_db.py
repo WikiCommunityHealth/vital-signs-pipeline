@@ -77,6 +77,7 @@ def process_editor_metrics_from_dump(languagecode):
         for dump_path in d_paths:
             logger.info(f"processing {dump_path}")
             
+            
             for line in iter_lines_bz2_fast(dump_path, logger):
                 if not line:
                     continue

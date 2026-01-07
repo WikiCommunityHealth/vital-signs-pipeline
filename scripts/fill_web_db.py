@@ -1,6 +1,7 @@
 from scripts import config
 from sqlalchemy import create_engine, text
 import logging
+import datetime
 
 
 def compute_wiki_vital_signs(languagecode):
@@ -199,10 +200,23 @@ def compute_wiki_vital_signs(languagecode):
                         active_editors_5_year_month[year_month] = m1_count
                     if v == 100:
                         active_editors_100_year_month[year_month] = m1_count
-
+                    
                     if year_month == '' or year_month == None:
                         continue
 
+                    if t == 'ym':
+                        ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                        current_month_date = datetime.date.today().replace(day=1)
+                        if ym_date >= current_month_date:
+                            continue
+                    else:
+                        year_int = int(year_month)
+                        current_year = datetime.date.today().year
+
+                        if year_int >= current_year:
+                            continue
+
+                    
                     parameters.append(dict(
                         langcode=languagecode, year_year_month=t, year_month=year_month,
                         topic='active_editors', m1='monthly_edits', m1_calculation='threshold', m1_value=v,
@@ -257,6 +271,16 @@ def compute_wiki_vital_signs(languagecode):
 
                         if year_month == '' or year_month == None:
                             continue
+                        if t == 'ym':
+                            ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                            current_month_date = datetime.date.today().replace(day=1)
+                            if ym_date >= current_month_date:
+                                continue
+                        else:
+                            year_int = int(year_month)
+                            current_year = datetime.date.today().year
+                            if year_int >= current_year:
+                                continue
 
                         if v == 5:
                             try:
@@ -346,6 +370,18 @@ def compute_wiki_vital_signs(languagecode):
                     if year_month == '' or year_month == None:
                         continue
 
+                    if t == 'ym':
+                        ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                        current_month_date = datetime.date.today().replace(day=1)
+                        if ym_date >= current_month_date:
+                            continue
+                    else:
+                        year_int = int(year_month)
+                        current_year = datetime.date.today().year
+
+                        if year_int >= current_year:
+                            continue
+
                     if v == 5:
                         parameters.append(dict(
                             langcode=languagecode, year_year_month=t, year_month=year_month,
@@ -401,6 +437,18 @@ def compute_wiki_vital_signs(languagecode):
                     if year_month == '' or year_month == None:
                         continue
 
+                    if t == 'ym':
+                        ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                        current_month_date = datetime.date.today().replace(day=1)
+                        if ym_date >= current_month_date:
+                            continue
+                    else:
+                        year_int = int(year_month)
+                        current_year = datetime.date.today().year
+
+                        if year_int >= current_year:
+                            continue
+
                     if v == 5:
                         parameters.append(dict(
                             langcode=languagecode, year_year_month=t, year_month=year_month,
@@ -453,6 +501,18 @@ def compute_wiki_vital_signs(languagecode):
 
                     if year_month == '' or year_month == None:
                         continue
+
+                    if t == 'ym':
+                        ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                        current_month_date = datetime.date.today().replace(day=1)
+                        if ym_date >= current_month_date:
+                            continue
+                    else:
+                        year_int = int(year_month)
+                        current_year = datetime.date.today().year
+
+                        if year_int >= current_year:
+                            continue
 
                     if v == 5:
                         parameters.append(dict(
@@ -507,6 +567,18 @@ def compute_wiki_vital_signs(languagecode):
                     if year_month == '' or year_month == None:
                         continue
 
+                    if t == 'ym':
+                        ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                        current_month_date = datetime.date.today().replace(day=1)
+                        if ym_date >= current_month_date:
+                            continue
+                    else:
+                        year_int = int(year_month)
+                        current_year = datetime.date.today().year
+
+                        if year_int >= current_year:
+                            continue
+
                     if v == 5:
                         parameters.append(dict(
                             langcode=languagecode, year_year_month=t, year_month=year_month,
@@ -557,6 +629,18 @@ def compute_wiki_vital_signs(languagecode):
 
                     if year_month == '' or year_month == None:
                         continue
+
+                    if t == 'ym':
+                        ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                        current_month_date = datetime.date.today().replace(day=1)
+                        if ym_date >= current_month_date:
+                            continue
+                    else:
+                        year_int = int(year_month)
+                        current_year = datetime.date.today().year
+
+                        if year_int >= current_year:
+                            continue
 
                     if v == 5:
                         parameters.append(dict(
@@ -610,6 +694,14 @@ def compute_wiki_vital_signs(languagecode):
                 m2_value = row[3]
 
                 if year_month and m2_value:
+
+                    year_int = int(year_month)
+                    current_year = datetime.date.today().year
+
+                    if year_int >= current_year:
+                        continue
+                        
+
                     parameters.append(dict(
                         langcode=languagecode, year_year_month='y', year_month=year_month,
                         topic='flags', m1=metric_name, m1_calculation='name', m1_value=m1_value,
