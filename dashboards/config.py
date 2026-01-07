@@ -40,7 +40,7 @@ metrics = ['activity', 'stability', 'balance',
            'retention', 'special', 'global', 'admin']
 
 # languages
-#wikilanguagecodes = ['it', 'es', 'de', 'fr', 'meta']
+# wikilanguagecodes = ['it', 'es', 'de', 'fr', 'meta']
 
 wikilanguagecodes = ['ab', 'ace', 'ady', 'af', 'ak', 'als', 'alt', 'ami', 'am', 'ang', 'ann', 'anp', 'an', 'arc', 'ar', 'ary', 'arz', 'ast', 'as', 'atj',
                      'avk', 'av', 'awa', 'ay', 'azb', 'az', 'ban', 'bar', 'bat_smg', 'ba', 'bbc', 'bcl', 'bdr', 'be_x_old', 'be', 'bew', 'bg', 'bh', 'bi', 'bjn',
@@ -94,8 +94,10 @@ footbar = html.Div([
             dbc.Col(
                 html.Div(
                     [
-                        dcc.Link("Code", href="https://github.com/WikiCommunityHealth/vital-signs-pipeline", style={"marginRight": "16px"}),
-                        dcc.Link("Dataset", href="/data", style={"marginRight": "16px"}),
+                        dcc.Link("Code", href="https://github.com/WikiCommunityHealth/vital-signs-pipeline",
+                                 target="_blank", style={"marginRight": "16px"}),
+                        dcc.Link("Dataset", href="/data",
+                                 style={"marginRight": "16px"}),
                         dcc.Link("Documentation", href="/docs"),
                     ],
                     style={"textAlign": "left"},
@@ -112,4 +114,3 @@ footbar = html.Div([
         ])
     ])
 ])
-

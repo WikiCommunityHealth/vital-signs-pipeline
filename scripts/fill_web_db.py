@@ -7,11 +7,10 @@ def compute_wiki_vital_signs(languagecode):
 
     logger = logging.getLogger(languagecode + '' + __name__)
 
-    # Connessione ai database con SQLAlchemy
     engine_editors = create_engine(config.db_uri_editors)
     engine_web = create_engine(config.db_uri_web)
 
-    # Query di inserimento (Postgres-style)
+    #
     query_cm = text("""
         INSERT INTO vital_signs_metrics 
         (langcode, year_year_month, year_month, topic, m1, m1_calculation, m1_value, m2, m2_calculation, m2_value, m1_count, m2_count)
@@ -19,10 +18,9 @@ def compute_wiki_vital_signs(languagecode):
         ON CONFLICT DO NOTHING
     """)
 
-    # Creazione tabella se non esiste
-    table_name = 'vital_signs_metrics'
+
     create_table_query = f"""
-        CREATE TABLE IF NOT EXISTS {table_name} (
+        CREATE TABLE IF NOT EXISTS vital_signs_metrics (
             langcode TEXT,
             year_year_month TEXT,
             year_month TEXT,
@@ -41,7 +39,7 @@ def compute_wiki_vital_signs(languagecode):
             )
         )
     """
-    # Esegui la query per creare la tabella
+    
     with engine_web.begin() as conn:
         conn.execute(text(create_table_query))
 
@@ -57,7 +55,7 @@ def compute_wiki_vital_signs(languagecode):
         ''')
         result = conn_editors.execute(query)
         for value, year_month in result:
-            logger.info(f'RETENTIONN: ({value}, {year_month})')
+            
             if not year_month:
                 continue
             try:
@@ -133,18 +131,6 @@ def compute_wiki_vital_signs(languagecode):
             ON ch.user_id = ce.user_id
             WHERE ce.metric_name = 'edit_count_60d' AND CAST(ce.abs_value AS REAL) > 0 AND ch.bot = 'editor'
             GROUP BY ch.year_month_first_edit ORDER BY ch.year_month_first_edit ASC
-            '''),
-            '365d': text(f'''
-            SELECT count(distinct user_id), year_month_first_edit
-            FROM {languagecode}wiki_editors
-            WHERE lifetime_days >= 365 AND bot = 'editor'
-            GROUP BY year_month_first_edit ORDER BY year_month_first_edit
-            '''),
-            '730d': text(f'''
-            SELECT count(distinct user_id), year_month_first_edit
-            FROM {languagecode}wiki_editors
-            WHERE lifetime_days >= 730 AND bot = 'editor'
-            GROUP BY year_month_first_edit ORDER BY year_month_first_edit
             ''')
         }
 
@@ -225,67 +211,6 @@ def compute_wiki_vital_signs(languagecode):
 
             conn_web.execute(query_cm, parameters)
 
-            # active_editors    monthly_edits   bin 1, 5, 10, 50, 100, 500, 1000
-            parameters = []
-            values = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
-            for x in range(0, len(values)):
-                v = values[x]
-                if x < len(values)-1:
-                    w = values[x+1]
-
-                    if t == 'ym':
-                        query = text(f'''
-                            SELECT count(distinct e1.user_id), e1.year_month 
-                            FROM {languagecode}wiki_editor_metrics e1 
-                            INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                            WHERE e2.bot = 'editor' AND e1.metric_name = 'monthly_edits'
-                            AND CAST(e1.abs_value AS REAL) >= {v} AND CAST(e1.abs_value AS REAL) < {w}
-                            GROUP BY e1.year_month ORDER BY e1.year_month
-                        ''')
-                    else:
-                        query = text(f'''
-                            SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4) 
-                            FROM {languagecode}wiki_editor_metrics e1 
-                            INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                            WHERE e2.bot = 'editor' AND e1.metric_name = 'monthly_edits'
-                            AND CAST(e1.abs_value AS REAL) >= {v} AND CAST(e1.abs_value AS REAL) < {w}
-                            GROUP BY 2 ORDER BY 2
-                        ''')
-
-                    w = w - 1
-                else:
-                    w = 'inf'
-                    if t == 'ym':
-                        query = text(f'''
-                            SELECT count(distinct e1.user_id), e1.year_month 
-                            FROM {languagecode}wiki_editor_metrics e1 
-                            INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                            WHERE e2.bot = 'editor' AND e1.metric_name = 'monthly_edits' AND CAST(e1.abs_value AS REAL) >= {v}
-                            GROUP BY e1.year_month ORDER BY e1.year_month
-                        ''')
-                    else:
-                        query = text(f'''
-                            SELECT count(distinct e1.user_id), substr(e1.year_month, 1, 4) 
-                            FROM {languagecode}wiki_editor_metrics e1 
-                            INNER JOIN {languagecode}wiki_editors e2 ON e1.user_id = e2.user_id 
-                            WHERE e2.bot = 'editor' AND e1.metric_name = 'monthly_edits' AND CAST(e1.abs_value AS REAL) >= {v}
-                            GROUP BY 2 ORDER BY 2
-                        ''')
-
-                # print (query)
-                for row in conn_editors.execute(query):
-                    # print (row)
-                    m1_count = row[0]
-                    year_month = row[1]
-                    if year_month == '':
-                        continue
-                    parameters.append(dict(
-                        langcode=languagecode, year_year_month=t, year_month=year_month,
-                        topic='active_editors', m1='monthly_edits', m1_calculation='bin', m1_value=str(v)+'_'+str(w),
-                        m2='', m2_calculation='', m2_value='', m1_count=m1_count, m2_count=0
-                    ))
-
-            conn_web.execute(query_cm, parameters)
 
             # STABILITY
             # active_editors  monthly_edits   threshold   5   active_months   bin 1-10, 10-20, 30-40,... to 150

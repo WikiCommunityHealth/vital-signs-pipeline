@@ -82,8 +82,7 @@ def process_editor_metrics_from_dump(languagecode):
                     continue
                 line = line.rstrip('\n')      
                 values = line.split('\t')
-                if len(values) == 1:
-                    continue
+                
                 event_entity = values[1]  # user, page, revision
                 # diversi tipi di evento per ogni entità
                 event_type = values[2]
@@ -114,6 +113,10 @@ def process_editor_metrics_from_dump(languagecode):
                 event_timestamp_dt = datetime.datetime.strptime(
                     # conversione in datetime
                     event_timestamp[:len(event_timestamp)-2], '%Y-%m-%d %H:%M:%S')
+
+                # se uguale o successivo al mese corrente continue
+                if event_timestamp_dt >= cym_timestamp_dt:
+                    continue
 
                 editor_last_edit_timestamp[event_user_id] = event_timestamp
 

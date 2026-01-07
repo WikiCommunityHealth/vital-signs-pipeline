@@ -368,7 +368,7 @@ def change_graph(metric, language, user_type, time_type, retention_rate, value_t
 
 
 def activity_graph(language, user_type, time_type):
-    # 1) Normalizza -> lista di codici
+    
     if not language:
         codes = []
     elif isinstance(language, str):
@@ -376,7 +376,7 @@ def activity_graph(language, user_type, time_type):
     else:
         codes = list(language)
 
-    # 2) Query (solo colonne necessarie)
+    
     base_sql = """
         SELECT langcode, year_month, m1_count
         FROM vital_signs_metrics
@@ -398,12 +398,12 @@ def activity_graph(language, user_type, time_type):
 
     df = pd.read_sql_query(stmt, engine, params=params)
 
-    # 3) Empty state
+    # caso vuoto
     if df.empty:
         fig = px.line(title="No data for current selection")
         return html.Div(dcc.Graph(id="activity_graph", figure=fig))
 
-    # 4) Asse X: prova a usare datetime
+    #
     x_col = "year_month"
     xaxis_cfg = {}
     try:
@@ -445,7 +445,7 @@ def activity_graph(language, user_type, time_type):
 def retention_graph(langcode: str, retention_rate: str, nlangs: int):
     """
     langcode: codice wiki (es. "pms")
-    retention_rate: "24h" | "30d" | "60d" | "365d" | "730d"
+    retention_rate: "24h"| "7d" | "30d" | "60d"
     nlangs: numero di lingue selezionate (per scalare l'altezza del grafico)
     """
 
@@ -519,8 +519,8 @@ def retention_graph(langcode: str, retention_rate: str, nlangs: int):
     )
 
     # 6) Layout
-    titles = {"24h": "24 hours", "30d": "30 days",
-              "60d": "60 days", "365d": "365 days", "730d": "730 days"}
+    titles = {"24h": "24 hours", "7d": "7 days", 
+              "30d": "30 days", "60d": "60 days"}
     rate_label = titles.get(retention_rate, retention_rate)
     height = 600 if nlangs == 1 else 350
 
@@ -591,6 +591,8 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
         params["codes"] = codes
 
     df = pd.read_sql_query(stmt, engine, params=params)
+    bucket_order = ["1", "2", "3-6", "7-12", "13-24", "24+"]
+
 
     # 3) Empty state
     if df.empty:
@@ -604,6 +606,13 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
     denom = df["m1_count"].replace(0, pd.NA)
     df["perc"] = (df["m2_count"] / denom) * 100.0
     df["perc"] = df["perc"].fillna(0).round(2)
+    df["m2_value"] = df["m2_value"].astype(str).str.strip()
+    df["m2_value"] = df["m2_value"].replace({"+24": "24+", ">24": "24+"})
+
+    df["m2_value"] = pd.Categorical(df["m2_value"], categories=bucket_order, ordered=True)
+
+    lang_order = sorted(df["langcode"].unique())
+
 
     # asse X in datetime se possibile
     x_col = "year_month"
@@ -635,6 +644,10 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
         facet_row="langcode",      # una riga per lingua (codice)
         width=1200,
         height=height_value,
+        category_orders={
+        "m2_value": bucket_order,
+        "langcode": lang_order,
+        },
         labels={
             x_col: f"Period ({time_text})",
             "perc": f"{incipit} Editors (%)",
