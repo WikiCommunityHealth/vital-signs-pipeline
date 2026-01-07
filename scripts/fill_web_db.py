@@ -52,6 +52,7 @@ def compute_wiki_vital_signs(languagecode):
         query = text(f'''
             SELECT count(distinct user_id), year_month_registration
             FROM {languagecode}wiki_editors
+            WHERE bot = 'editor'
             GROUP BY year_month_registration ORDER BY year_month_registration ASC
         ''')
         result = conn_editors.execute(query)
@@ -59,6 +60,11 @@ def compute_wiki_vital_signs(languagecode):
             
             if not year_month:
                 continue
+            ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+            current_month_date = datetime.date.today().replace(day=1)
+            if ym_date >= current_month_date:
+                continue
+            
             try:
                 registered_baseline[year_month] = int(value)
             except Exception:
@@ -73,11 +79,16 @@ def compute_wiki_vital_signs(languagecode):
         query = text(f'''
             SELECT count(distinct user_id), year_month_first_edit
             FROM {languagecode}wiki_editors
+            WHERE bot = 'editor'
             GROUP BY year_month_first_edit ORDER BY year_month_first_edit ASC
         ''')
         result = conn_editors.execute(query)
         for value, year_month in result:
             if not year_month:
+                continue
+            ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+            current_month_date = datetime.date.today().replace(day=1)
+            if ym_date >= current_month_date:
                 continue
             try:
                 retention_baseline[year_month] = int(value)
@@ -138,6 +149,10 @@ def compute_wiki_vital_signs(languagecode):
         for metric_name, query in queries_retention_dict.items():
             for value, year_month in conn_editors.execute(query):
                 if not year_month:
+                    continue
+                ym_date = datetime.datetime.strptime(year_month, '%Y-%m').date()
+                current_month_date = datetime.date.today().replace(day=1)
+                if ym_date >= current_month_date:
                     continue
                 m1_count = retention_baseline.get(year_month, 0)
                 parameters.append(dict(
