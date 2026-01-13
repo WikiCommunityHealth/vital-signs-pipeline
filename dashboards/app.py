@@ -233,6 +233,8 @@ app.layout = html.Div([
     footbar
 ])
 
+app._favicon = "https://vitalsigns.wmcloud.org/assets/logo.png"
+
 
 @app.callback(Output('content', 'children'),
               Input('url', 'pathname'),
@@ -240,23 +242,8 @@ app.layout = html.Div([
 def display_page(pathname, search):
     pathname = pathname or "/"
     params = parse_state("?" + (search.lstrip("?") if search else "")) if search else {}
+    return main_app_build_layout(params)
 
-    if pathname == "/":
-        return main_app_build_layout(params)
-    if pathname == "/data" or pathname == "/data/vital_signs_web.sqlite.gz":
-        return data_page_layout()
-    if pathname == "/docs":
-        return docs_page_layout()
-
-
-    # fallback (404 semplice)
-    return html.Div(
-        className="container",
-        children=[
-            html.H2("404"),
-            html.P(f"Pagina non trovata: {pathname}"),
-        ],
-    )
 
 # ---------- Sincronizzazione controlli <-> URL (con anti-loop) ----------
 COMPONENT_IDS = ['metric', 'langcode', 'active_veryactive',
@@ -960,7 +947,6 @@ def special_graph(language, user_type: str, value_type: str, time_type: str):
     return html.Div(
         children=[
             dcc.Graph(id="special_graph_tech",  figure=fig1),
-            html.H5("Highlights"),
             html.Div(id="highlights_container_additional", children=[]),
             dcc.Graph(id="special_graph_coord", figure=fig2),
         ]
@@ -1356,7 +1342,6 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
         dcc.Graph(id="global_graph_timeseries", figure=fig1,
                   style={'display': 'inline-block'}),
         html.Hr(),
-        html.H5('Highlights'),
         html.Div(id='highlights_container_additional', children=[]),
         dcc.Graph(id="global_graph_treemap", figure=fig2),
     ])
@@ -1419,38 +1404,28 @@ def data_page_layout() -> html.Div:
 
 
 
-def docs_page_layout() -> html.Div:
-    return html.Div(
-        className="container",
-        children=[
-            html.H2("Documentation"),
-            html.P(
-                "This page is under construction. "
-                "Here you will find a detailed description of the dashboards, "
-                "the computed metrics, and the underlying data model."
-            ),
-        ],
-    )
-
-
-
 @server.route('/code')
 def code():
     return redirect("https://github.com/WikiCommunityHealth/vital-signs-pipeline", code=301)
 
 
-
 @server.route("/data/<path:filename>")
 def downloads(filename):
-    # whitelist semplice: consenti solo sqlite.gz / zip
+    
     if not (filename.endswith(".sqlite.gz") or filename.endswith(".zip")):
         abort(404)
     return send_from_directory("/app/public_downloads", filename, as_attachment=True)
 
 @server.route("/architecture")
 def architecture_page():
-    # percorso dentro il container
+    
     return send_file("/app/static/architecture.html")
+
+@server.route("/data")
+def dataset_page():
+    
+    return send_file("/app/static/dataset.html")
+
 
 
 # ---------- MAIN ----------
