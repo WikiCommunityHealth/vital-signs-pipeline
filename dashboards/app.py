@@ -233,7 +233,6 @@ app.layout = html.Div([
     footbar
 ])
 
-app._favicon = "https://vitalsigns.wmcloud.org/assets/logo.png"
 
 
 @app.callback(Output('content', 'children'),
