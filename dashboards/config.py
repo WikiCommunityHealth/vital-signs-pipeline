@@ -98,7 +98,9 @@ footbar = html.Div([
                                  target="_blank", style={"marginRight": "16px"}),
                         dcc.Link("Dataset", href="/data",
                                  style={"marginRight": "16px"}),
-                        dcc.Link("Documentation", href="/docs"),
+                        dcc.Link("Architecture", href="/architecture",
+                                 style={"marginRight": "16px"}),
+                        dcc.Link("Documentation", href="/docs")
                     ],
                     style={"textAlign": "left"},
                 ),

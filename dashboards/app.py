@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from config import *
-from flask import Flask, redirect, send_from_directory, abort
+from flask import Flask, redirect, send_file, send_from_directory, abort
 
 server = Flask(__name__)
 app = Dash(__name__, server=server, external_stylesheets=external_stylesheets)
@@ -1446,6 +1446,11 @@ def downloads(filename):
     if not (filename.endswith(".sqlite.gz") or filename.endswith(".zip")):
         abort(404)
     return send_from_directory("/app/public_downloads", filename, as_attachment=True)
+
+@server.route("/architecture")
+def architecture_page():
+    # percorso dentro il container
+    return send_file("/app/static/architecture.html")
 
 
 # ---------- MAIN ----------
