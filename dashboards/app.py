@@ -237,13 +237,10 @@ app._favicon = "https://vitalsigns.wmcloud.org/assets/logo.png"
 
 
 @app.callback(Output('content', 'children'),
-              Input('url', 'pathname'),
-              Input('url', 'search'))
-def display_page(pathname, search):
-    pathname = pathname or "/"
-    params = parse_state("?" + (search.lstrip("?") if search else "")) if search else {}
+              Input('url', 'href'))
+def display_page(href):
+    params = parse_state(href) if href else {}
     return main_app_build_layout(params)
-
 
 # ---------- Sincronizzazione controlli <-> URL (con anti-loop) ----------
 COMPONENT_IDS = ['metric', 'langcode', 'active_veryactive',
@@ -1345,62 +1342,6 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
         html.Div(id='highlights_container_additional', children=[]),
         dcc.Graph(id="global_graph_treemap", figure=fig2),
     ])
-
-
-
-
-def data_page_layout() -> html.Div:
-    return html.Div(
-        className="container",
-        children=[
-            html.H2("Dataset (SQLite)"),
-
-            html.P(
-                "This page provides access to a compressed SQLite snapshot of the database "
-                "used by the web application. The dataset is intended for offline analysis, "
-                "reproducibility, and exploratory research using standard SQLite-compatible tools "
-                "(e.g., sqlite3, DB Browser for SQLite, or Python libraries)."
-            ),
-
-            html.H4("Database structure"),
-
-            html.P([
-                "The dataset exposes a single main table, ",
-                html.Code("vital_signs_metrics"),
-                ", which stores aggregated metrics computed over Wikipedia editing activity. "
-            ]),
-
-            html.H5("Table: vital_signs_metrics"),
-
-            html.Ul([
-                html.Li([html.Code("langcode"), " (TEXT)"]),
-                html.Li([html.Code("year_year_month"), " (TEXT)"]),
-                html.Li([html.Code("year_month"), " (TEXT)"]),
-                html.Li([html.Code("topic"), " (TEXT)"]),
-                html.Li([html.Code("m1"), " (TEXT)"]),
-                html.Li([html.Code("m1_calculation"), " (TEXT)"]),
-                html.Li([html.Code("m1_value"), " (TEXT)"]),
-                html.Li([html.Code("m2"), " (TEXT)"]),
-                html.Li([html.Code("m2_calculation"), " (TEXT)"]),
-                html.Li([html.Code("m2_value"), " (TEXT)"]),
-                html.Li([html.Code("m1_count"), " (FLOAT)"]),
-                html.Li([html.Code("m2_count"), " (FLOAT)"]),
-            ]),
-
-            html.H4("Download"),
-
-            html.P(
-                "You can download the compressed SQLite database using the button below. "
-                "The file contains the full dataset described above and can be queried locally."
-            ),
-
-            html.A(
-                dbc.Button("Download vital_signs_web.sqlite.gz", color="primary"),
-                href="/data/vital_signs_web.sqlite.gz",
-            ),
-        ],
-    )
-
 
 
 
