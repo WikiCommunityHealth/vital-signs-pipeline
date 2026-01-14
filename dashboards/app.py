@@ -421,7 +421,7 @@ def activity_graph(language, user_type, time_type):
         labels={
             "m1_count": f"{incipit} Editors",
             x_col: f"Period ({time_text})",
-            "langcode": "Project (code)",
+            "langcode": "wiki",
         },
     )
     if xaxis_cfg:
@@ -556,7 +556,7 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
     time_type: "y" | "ym"
     """
 
-    # 1) Normalizza lingue -> lista di codici
+    
     if not language:
         codes = []
     elif isinstance(language, str):
@@ -566,7 +566,7 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
 
     filter_lang = bool(codes)
 
-    # 2) Query parametrica (solo colonne necessarie)
+    
     base_sql = f"""
         SELECT langcode, year_month, m2_value, m1_count, m2_count
         FROM vital_signs_metrics
@@ -588,15 +588,14 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
     bucket_order = ["1", "2", "3-6", "7-12", "13-24", "24+"]
 
 
-    # 3) Empty state
+    
     if df.empty:
         return html.Div(
             dcc.Graph(id="my_graph", figure=px.bar(
                 title="No data for selected filters"))
         )
 
-    # 4) Colonne derivate
-    # perc = 100 * m2_count / m1_count (evita divisioni per zero)
+    
     denom = df["m1_count"].replace(0, pd.NA)
     df["perc"] = (df["m2_count"] / denom) * 100.0
     df["perc"] = df["perc"].fillna(0).round(2)
@@ -608,7 +607,7 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
     lang_order = sorted(df["langcode"].unique())
 
 
-    # asse X in datetime se possibile
+   
     x_col = "year_month"
     xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
     try:
@@ -618,17 +617,17 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
     except Exception:
         pass
 
-    # 5) Testi e layout
+    
     incipit = "Active" if user_type == "5" else "Very Active"
     time_text = "Yearly" if time_type == "y" else "Monthly"
     y_col = "perc" if value_type == "perc" else "m2_count"
     text_tmpl = "%{y:.2f}%" if value_type == "perc" else ""
 
-    # altezza proporzionale alle lingue mostrate
+    
     n_langs = max(1, df["langcode"].nunique())
     height_value = 400 if n_langs == 1 else min(230 * n_langs, 1200)
 
-    # 6) Grafico: una riga (facet_row) per ciascun langcode, colori per m2_value
+    
     fig = px.bar(
         df,
         x=x_col,
@@ -647,7 +646,7 @@ def stability_graph(language, user_type: str, value_type: str, time_type: str):
             "perc": f"{incipit} Editors (%)",
             "m2_count": f"{incipit} Editors",
             "m2_value": "Active Months in a row",
-            "langcode": "Project (code)",
+            "langcode": "wiki",
         },
         title=f"{incipit} users stability",
     )
@@ -889,7 +888,7 @@ def special_graph(language, user_type: str, value_type: str, time_type: str):
                 "perc": f"{incipit} editors (%)",
                 "m2_count": f"{incipit} editors",
                 "m2_value": "Lustrum First Edit",
-                "langcode": "Project (code)",
+                "langcode": "wiki",
             },
             title=f"{incipit} Technical Contributors",
         )
@@ -927,7 +926,7 @@ def special_graph(language, user_type: str, value_type: str, time_type: str):
                 "perc": f"{incipit} editors (%)",
                 "m2_count": f"{incipit} editors",
                 "m2_value": "Lustrum First Edit",
-                "langcode": "Project (code)",
+                "langcode": "wiki",
             },
             title=f"{incipit} Project Coordinators",
         )
@@ -1097,7 +1096,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     # 7) Figure 1: flags per mese e lustrum
     if df1.empty:
         fig1 = px.bar(
-            title=f"[{admin_type}] flags granted — No data", width=850, height=height_value)
+            title=f"{admin_type} flags granted — No data", width=850, height=height_value)
     else:
         fig1 = px.bar(
             df1,
@@ -1110,9 +1109,9 @@ def admin_graph(language, admin_type: str, time_type: str):
                 x1: f"Period ({time_text})",
                 "count": "Number of Admins",
                 "m2_value": "Lustrum First Edit",
-                "langcode": "Project (code)",
+                "langcode": "wiki",
             },
-            title=f"[{admin_type}] flags granted over the years by lustrum of first edit",
+            title=f"{admin_type} flags granted over the years by lustrum of first edit",
         )
         if x1 != "dt":
             fig1.update_xaxes(categoryorder="array", categoryarray=ordered)
@@ -1143,8 +1142,8 @@ def admin_graph(language, admin_type: str, time_type: str):
             text="count",
             facet_row="langcode",
             width=300, height=height_value,
-            labels={"count": "", "x": "", "langcode": "Project (code)"},
-            title=f"Total Num. of [{admin_type}]",
+            labels={"count": "", "x": "", "langcode": "wiki"},
+            title=f"Total Num. of {admin_type}",
         )
         fig2.update_traces(texttemplate="%{text}")
         fig2.update_layout(uniformtext_minsize=8,
@@ -1153,7 +1152,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     # 9) Figure 3: percentuale admin tra active editors
     if df3.empty:
         fig3 = px.bar(
-            title=f"Percentage of [{admin_type}] flags among active editors — No data",
+            title=f"Percentage of {admin_type} flags among active editors — No data",
             width=1000, height=height_value
         )
     else:
@@ -1166,8 +1165,8 @@ def admin_graph(language, admin_type: str, time_type: str):
             facet_row="langcode",
             text=None,                      # <— forza: nessun testo di base
             width=1000, height=height_value,
-            labels={x3: f"Period ({time_text})", "perc": "Percentage", "langcode": "Project (code)"},
-            title=f"Percentage of [{admin_type}] flags among active editors on a {time_text} basis",
+            labels={x3: f"Period ({time_text})", "perc": "Percentage", "langcode": "wiki"},
+            title=f"Percentage of {admin_type} flags among active editors on a {time_text} basis",
         )
 
         # azzera ogni eventuale testo residuo nel/i trace
@@ -1297,7 +1296,7 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
             "perc": f"{incipit} editors (%)",
             "m2_count": f"{incipit} editors",
             "m2_value": "Primary language",
-            "langcode": "Project (code)",
+            "langcode": "wiki",
         },
         title=f"{incipit} editors by primary language",
     )
