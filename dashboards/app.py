@@ -243,23 +243,12 @@ app.layout = html.Div([
 def display_page(pathname, href):
     pathname = pathname or "/"
     params = parse_state(href) if href else {}
-
-    if pathname == "/":
-        return main_app_build_layout(params)
-
     
     if pathname in ("/data", "/architecture"):
         
         return dcc.Location(pathname=pathname, refresh=True)
 
-    
-    return html.Div(
-        className="container",
-        children=[
-            html.H2("404"),
-            html.P(f"Pagina non trovata: {pathname}"),
-        ],
-    )
+    return main_app_build_layout(params)
 
 
 
