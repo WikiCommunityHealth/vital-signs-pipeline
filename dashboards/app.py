@@ -235,6 +235,34 @@ app.layout = html.Div([
 
 
 
+@app.callback(
+    Output('content', 'children'),
+    Input('url', 'pathname'),
+    Input('url', 'search'),
+)
+def display_page(pathname, search):
+    pathname = pathname or "/"
+    params = parse_state("?" + (search.lstrip("?") if search else "")) if search else {}
+
+    if pathname == "/":
+        return main_app_build_layout(params)
+
+    
+    if pathname in ("/data", "/architecture"):
+        
+        return dcc.Location(pathname=pathname, refresh=True)
+
+    
+    return html.Div(
+        className="container",
+        children=[
+            html.H2("404"),
+            html.P(f"Pagina non trovata: {pathname}"),
+        ],
+    )
+
+
+
 @app.callback(Output('content', 'children'),
               Input('url', 'href'))
 def display_page(href):

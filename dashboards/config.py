@@ -94,11 +94,10 @@ footbar = html.Div([
             dbc.Col(
                 html.Div(
                     [
-                        dcc.Link("Code", href="https://github.com/WikiCommunityHealth/vital-signs-pipeline",
+                        html.A("Code", href="https://github.com/WikiCommunityHealth/vital-signs-pipeline",
                                  target="_blank", style={"marginRight": "16px"}),
-                        dcc.Link("Dataset", href="/data",
-                                 style={"marginRight": "16px"}),
-                        dcc.Link("Architecture", href="/architecture")
+                        html.A("Dataset", href="/data", style={"marginRight": "16px"}),
+                        html.A("Architecture", href="/architecture")
                     ],
                     style={"textAlign": "left"},
                 ),
