@@ -252,12 +252,6 @@ def display_page(pathname, href):
 
 
 
-@app.callback(Output('content', 'children'),
-              Input('url', 'href'))
-def display_page(href):
-    params = parse_state(href) if href else {}
-    return main_app_build_layout(params)
-
 # ---------- Sincronizzazione controlli <-> URL (con anti-loop) ----------
 COMPONENT_IDS = ['metric', 'langcode', 'active_veryactive',
                  'year_yearmonth', 'retention_rate', 'percentage_number', 'admin']
