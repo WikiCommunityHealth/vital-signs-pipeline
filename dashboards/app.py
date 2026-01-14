@@ -238,11 +238,11 @@ app.layout = html.Div([
 @app.callback(
     Output('content', 'children'),
     Input('url', 'pathname'),
-    Input('url', 'search'),
+    Input('url', 'href'),
 )
-def display_page(pathname, search):
+def display_page(pathname, href):
     pathname = pathname or "/"
-    params = parse_state("?" + (search.lstrip("?") if search else "")) if search else {}
+    params = parse_state(href) if href else {}
 
     if pathname == "/":
         return main_app_build_layout(params)
