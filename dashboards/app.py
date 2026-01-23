@@ -1155,15 +1155,7 @@ def admin_graph(language, admin_type: str, time_type: str):
         fig1.update_layout(uniformtext_minsize=8, uniformtext_mode="hide")
         fig1.update_xaxes(**xcfg1) 
 
-        fig1.update_xaxes(
-            rangeselector=dict(buttons=[
-                dict(count=6,  label="<b>6M</b>", step="month", stepmode="backward"),
-                dict(count=1,  label="<b>1Y</b>", step="year",  stepmode="backward"),
-                dict(count=5,  label="<b>5Y</b>", step="year",  stepmode="backward"),
-                dict(count=10, label="<b>10Y</b>", step="year",  stepmode="backward"),
-                dict(label="<b>ALL</b>", step="all"),
-            ])
-        )
+        
 
 
     
@@ -1212,17 +1204,7 @@ def admin_graph(language, admin_type: str, time_type: str):
         fig3.update_traces(text=df3["label"], texttemplate="%{text}", textposition="outside", cliponaxis=False)
 
         fig3.update_layout(uniformtext_minsize=12, uniformtext_mode="hide", xaxis=xcfg3)
-        fig3.update_layout(
-            xaxis=dict(
-                rangeselector=dict(buttons=[
-                    dict(count=6,  label="<b>6M</b>", step="month", stepmode="backward"),
-                    dict(count=1,  label="<b>1Y</b>", step="year",  stepmode="backward"),
-                    dict(count=5,  label="<b>5Y</b>", step="year",  stepmode="backward"),
-                    dict(count=10, label="<b>10Y</b>", step="year",  stepmode="backward"),
-                    dict(label="<b>ALL</b>", step="all"),
-                ]),
-            )
-        )
+        
 
 
    
