@@ -970,7 +970,6 @@ def admin_graph(language, admin_type: str, time_type: str):
     time_type: "y" | "ym"
     """
 
-    # 1) Normalizza lingue -> lista di codici
     if not language:
         codes = []
     elif isinstance(language, str):
@@ -981,7 +980,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     filter_lang = bool(codes)
     time_text = "Yearly" if time_type == "y" else "Monthly"
 
-    # 2) Query 1: flags per mese e lustrum (per lingua)
+    
     sql_q1 = f"""
         SELECT
             langcode,
@@ -1006,7 +1005,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     df1 = pd.read_sql_query(stmt_q1, engine, params=params_q1)
     
 
-    # 3) Query 2: totale per lustrum (per lingua)
+    
     sql_q2 = f"""
         SELECT
             langcode,
@@ -1031,8 +1030,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     if not df2.empty:
         df2["x"] = ""  # asse X “finto” per impilare per-facet
 
-    # 4) Query 3: % admin tra active editors (per mese/lingua)
-    # Nota: manteniamo il filtro che hai in origine (m2_value = :admin_type).
+    
     sql_q3 = f"""
         SELECT langcode, year_month, m1_count, m2_count
         FROM vital_signs_metrics
@@ -1052,22 +1050,60 @@ def admin_graph(language, admin_type: str, time_type: str):
         params_q3["codes"] = codes
     df3 = pd.read_sql_query(stmt_q3, engine, params=params_q3)
 
-    # 5) Derivate + asse tempo
-    def to_datetime_if_possible(df: pd.DataFrame) -> tuple[pd.DataFrame, str, dict]:
+    
+    #def to_datetime_if_possible(df: pd.DataFrame) -> tuple[pd.DataFrame, str, dict]:
+    #    if df.empty:
+    #        return df, "year_month", {"rangeslider": {"visible": False}, "type": "category"}
+    #    x_col = "year_month"
+    #    xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
+    #    try:
+    #        df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
+    #        x_col = "dt"
+    #        xaxis_cfg = {"rangeslider": {"visible": False}, "type": "date"}
+    #    except Exception:
+    #        pass
+    #    return df, x_col, xaxis_cfg
+    def to_datetime_axis(df: pd.DataFrame, time_type: str) -> tuple[pd.DataFrame, str, dict]:
+        """
+        Converte year_month in datetime:
+        - time_type == "ym": atteso "YYYY-MM"
+        - time_type == "y" : atteso "YYYY" (oppure gestisce anche casi misti)
+        Ritorna (df, x_col, xaxis_cfg)
+        """
         if df.empty:
             return df, "year_month", {"rangeslider": {"visible": False}, "type": "category"}
-        x_col = "year_month"
-        xaxis_cfg = {"rangeslider": {"visible": False}, "type": "category"}
-        try:
-            df["dt"] = pd.to_datetime(df["year_month"], format="%Y-%m")
-            x_col = "dt"
-            xaxis_cfg = {"rangeslider": {"visible": False}, "type": "date"}
-        except Exception:
-            pass
-        return df, x_col, xaxis_cfg
 
-    df1, x1, xcfg1 = to_datetime_if_possible(df1)
-    df3, x3, xcfg3 = to_datetime_if_possible(df3)
+        s = df["year_month"].astype(str).str.strip()
+
+        # Parsing robusto: prima prova in base al time_type, poi fallback
+        dt = pd.to_datetime(pd.NaT)  # placeholder
+
+        if time_type == "ym":
+            dt = pd.to_datetime(s, format="%Y-%m", errors="coerce")
+            if dt.isna().any():
+                # fallback: tenta parse generico
+                dt2 = pd.to_datetime(s, errors="coerce")
+                dt = dt.fillna(dt2)
+        else:  # time_type == "y"
+            # "YYYY" -> "YYYY-01-01"
+            dt = pd.to_datetime(s + "-01-01", format="%Y-%m-%d", errors="coerce")
+            if dt.isna().any():
+                dt2 = pd.to_datetime(s, errors="coerce")
+                dt = dt.fillna(dt2)
+
+        df = df.copy()
+        df["dt"] = dt
+
+        # Se non riesce a convertire nulla, resta category
+        if df["dt"].isna().all():
+            return df, "year_month", {"rangeslider": {"visible": False}, "type": "category"}
+
+        return df, "dt", {"rangeslider": {"visible": False}, "type": "date"}
+
+
+
+    df1, x1, xcfg1 = to_datetime_axis(df1, time_type)
+    df3, x3, xcfg3 = to_datetime_axis(df3, time_type)
 
     if x1 == "dt":
         df1 = df1.sort_values(["langcode", "dt", "m2_value"])
@@ -1076,13 +1112,13 @@ def admin_graph(language, admin_type: str, time_type: str):
         df1 = df1.sort_values(["langcode", "_x_sort", "m2_value"])
         ordered = df1["year_month"].drop_duplicates().tolist()
 
-    # % tra active editors (senza NumPy)
+   
     if not df3.empty:
         denom = df3["m1_count"].where(df3["m1_count"] != 0)
         df3["perc"] = (df3["m2_count"] / denom) * 100.0
         df3["perc"] = df3["perc"].fillna(0).round(2)
 
-    # 6) Altezze
+  
     n_langs = max(
         1,
         max(
@@ -1093,7 +1129,7 @@ def admin_graph(language, admin_type: str, time_type: str):
     )
     height_value = 400 if n_langs == 1 else min(230 * n_langs, 1200)
 
-    # 7) Figure 1: flags per mese e lustrum
+    
     if df1.empty:
         fig1 = px.bar(
             title=f"{admin_type} flags granted — No data", width=850, height=height_value)
@@ -1130,7 +1166,7 @@ def admin_graph(language, admin_type: str, time_type: str):
         )
 
 
-    # 8) Figure 2: totale per lustrum (per lingua)
+    
     if df2.empty:
         fig2 = px.bar(
             title=f"Total Num. of [{admin_type}] — No data", width=300, height=height_value)
@@ -1149,31 +1185,30 @@ def admin_graph(language, admin_type: str, time_type: str):
         fig2.update_layout(uniformtext_minsize=8,
                            uniformtext_mode="hide", showlegend=False)
 
-    # 9) Figure 3: percentuale admin tra active editors
+    
     if df3.empty:
         fig3 = px.bar(
             title=f"Percentage of {admin_type} flags among active editors — No data",
             width=1000, height=height_value
         )
     else:
-        # prepara l’etichetta già formattata (opzionale ma pulito)
+        
         df3["label"] = df3["perc"].round(2).astype(str) + "%"
 
         fig3 = px.bar(
             df3,
             x=x3, y="perc",
             facet_row="langcode",
-            text=None,                      # <— forza: nessun testo di base
+            text=None,                      
             width=1000, height=height_value,
             labels={x3: f"Period ({time_text})", "perc": "Percentage", "langcode": "wiki"},
             title=f"Percentage of {admin_type} flags among active editors on a {time_text} basis",
         )
 
-        # azzera ogni eventuale testo residuo nel/i trace
+        
         fig3.update_traces(text=None, texttemplate=None)
 
-        # imposta UNA sola etichetta, esterna
-        # (se preferisci usare direttamente y: texttemplate="%{y:.2f}%")
+        
         fig3.update_traces(text=df3["label"], texttemplate="%{text}", textposition="outside", cliponaxis=False)
 
         fig3.update_layout(uniformtext_minsize=12, uniformtext_mode="hide", xaxis=xcfg3)
@@ -1190,7 +1225,7 @@ def admin_graph(language, admin_type: str, time_type: str):
         )
 
 
-    # 10) Output
+   
     return html.Div(children=[
         dcc.Graph(id="admin_graph_flags_over_time", figure=fig1,
                   style={'display': 'inline-block'}),
@@ -1214,7 +1249,7 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
     year, month: periodo per lo snapshot (es. "2024", "03")
     """
 
-    # 1) Normalizza lingue -> lista di codici
+    
     if not language:
         codes = []
     elif isinstance(language, str):
@@ -1224,7 +1259,7 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
 
     filter_lang = bool(codes)
 
-    # 2) Query 1 — serie temporale primary_editors
+    
     base_q1 = f"""
         SELECT langcode, year_month, m1_count, m2_count, m2_value
         FROM vital_signs_metrics
@@ -1244,7 +1279,7 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
 
     df1 = pd.read_sql_query(stmt_q1, engine, params=params_q1)
 
-    # Stato totalmente vuoto → restituisco due grafici "gentili"
+    
     if df1.empty:
         empty = px.bar(title="No data for selected filters")
         return html.Div([
@@ -1255,13 +1290,12 @@ def global_graph(language, user_type: str, value_type: str, time_type: str, year
             dcc.Graph(id="global_graph_treemap", figure=empty),
         ])
 
-    # 3) Derivate + asse tempo
-    # perc = 100 * m2_count / m1_count, evitando divisione per zero
+    
     denom = df1["m1_count"].where(df1["m1_count"] != 0)
     df1["perc"] = (df1["m2_count"] / denom) * 100.0
     df1["perc"] = df1["perc"].fillna(0).round(2)
 
-    # year_month -> datetime se possibile
+    
     x_col = "year_month"
     xaxis_cfg = {"rangeslider": {"visible": True}, "type": "category"}
     try:
