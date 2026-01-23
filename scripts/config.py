@@ -7,8 +7,7 @@ db_uri_editors = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgre
 db_uri_web = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASS}@postgres-backend/vital_signs_web'
 dumps_path = '/opt/airflow/mediawiki_history/'
 
-wikilanguagecodes = ['ca', 'ar', 'af', 'it', 'es', 'de', 'fr', 'sh', 'meta']
-
+wikilanguagecodes = ['af', 'ar', 'ca', 'de', 'es', 'et', 'fr', 'he', 'hi', 'id', 'it', 'ja', 'ko', 'ms', 'pa', 'pl', 'pt', 'ro', 'ru', 'sh', 'sr', 'uk', 'zh', 'meta']
 
 #
 # wikilanguagecodes = ['ab', 'ace', 'ady', 'af', 'ak', 'als', 'alt', 'ami', 'am', 'ang', 'ann', 'anp', 'an', 'arc', 'ar', 'ary', 'arz', 'ast', 'as', 'atj',
