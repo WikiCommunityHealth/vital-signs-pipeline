@@ -1142,7 +1142,7 @@ def admin_graph(language, admin_type: str, time_type: str):
             facet_row="langcode",
             width=850, height=height_value,
             labels={
-                x1.strip().split(" ")[1]: f"Period ({time_text})",
+                x1: f"Period ({time_text})",
                 "count": "Number of Admins",
                 "m2_value": "Lustrum First Edit",
                 "langcode": "wiki",
