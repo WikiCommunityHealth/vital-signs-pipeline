@@ -1,0 +1,628 @@
+<h1
+id="wikipedia-community-health-metrics-dataset-vital-signs">Wikipedia
+Community Health Metrics dataset (Vital Signs)</h1>
+<p>By: Andrea Denina, Paolo Aliprandi, Marc Miquel‑Ribé, David Laniado
+and Cristian Consonni</p>
+<p>This datasheet documents the SQLite snapshot of the Vital Signs
+dataset released with the paper <em>“Wikipedia Community Health
+Dashboards”</em>. The dataset aggregates month‑level statistics about
+editor participation in every available Wikipedia language edition. Each
+row in the table <code>vital_signs_metrics</code> summarises one
+indicator of community health – such as retention of newcomers or the
+renewal of administrators – for a given language edition and month. The
+data is derived programmatically from the public MediaWiki History Dump
+and is released under the CC0 dedication to support reproducible
+research and community analysis.</p>
+<p>Community Vital Signs have been introduced in this paper: &gt;
+Miquel-Ribé, Marc, Cristian Consonni, and David Laniado. &gt; “Community
+vital signs: measuring Wikipedia communities’ sustainable growth and
+renewal.” Sustainability 14.8 (2022): 4705.</p>
+<h2 id="motivation">Motivation</h2>
+<ol type="1">
+<li><p><strong>For what purpose was the dataset created?</strong>
+<em>(Was there a specific task in mind? Was there a specific gap that
+needed to be filled? Please provide a description.)</em></p>
+<p>The Vital Signs project was created to provide a set of simple,
+reproducible indicators that summarise the health of Wikipedia editor
+communities. While many tools focus on single metrics (for example,
+retention only), there was no up‑to‑date, cross‑lingual dataset allowing
+researchers or community members to compare how different language
+editions are growing, renewing themselves and retaining volunteers. The
+authors therefore built a pipeline to compute six language‑independent
+“vital signs” – retention, stability, balance, administrators,
+specialists and global participation – across all Wikipedia editions.
+The dataset supports longitudinal analysis of community health and can
+be used by researchers, Wikimedia affiliates and volunteers to identify
+trends, plan interventions and monitor the effects of community
+initiatives.</p></li>
+<li><p><strong>Who created this dataset (e.g., which team, research
+group) and on behalf of which entity (e.g., company, institution,
+organization)?</strong></p>
+<p><strong>The dataset was created by researchers at the University of
+Trento, the Universitat Pompeu Fabra, Eurecat – Centre Tecnològic de
+Catalunya and the European Commission Joint Research Centre as part of
+the Community Health Metrics project.</strong> The authors Andrea
+Denina, Paolo Aliprandi, Marc Miquel‑Ribé, David Laniado and Cristian
+Consonni implemented the pipeline and host the dashboards on the
+Wikimedia Cloud infrastructure.</p></li>
+<li><p><strong>Who funded the creation of the dataset?</strong> <em>(If
+there is an associated grant, please provide the name of the grantor and
+the grant name and number.)</em></p>
+<p>The paper does not list a specific grant. The work was carried out
+under the Community Health Metrics project, which is supported by the
+Wikimedia movement and the institutions of the authors. Some authors are
+affiliated with the European Commission’s Joint Research Centre. No
+commercial funding is disclosed.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>The authors note that the dashboards and the underlying code are open
+source and aim to be maintained beyond the initial publication. By
+releasing the data under the CC0 dedication, they encourage reuse and
+remixing.</p></li>
+</ol>
+<h2 id="composition">Composition</h2>
+<ol type="1">
+<li><p><strong>What do the instances that comprise the dataset represent
+(e.g., documents, photos, people, countries)?</strong> <em>(Are there
+multiple types of instances (e.g., movies, users, and ratings; people
+and interactions between them; nodes and edges)? Please provide a
+description.)</em></p>
+<p>Each instance is an aggregated record summarising a community‑health
+indicator for a given Wikipedia language edition and calendar month. The
+record does not contain individual editors; instead it stores counts and
+derived values describing participation. For example, the “retention”
+topic records the number of new editors who register, those who make a
+first edit, and those who continue editing after a certain number of
+days; the “stability” topic counts active editors by months of
+continuous activity; the “balance” topic records the distribution of
+active editors by cohort; “administrators” and “specialists” capture the
+renewal of administrators and technical/coordinating editors; and
+“global participation” measures how many editors of a language edition
+also contribute to the Meta‑Wiki.</p></li>
+<li><p><strong>How many instances are there in total (of each type, if
+appropriate)?</strong></p>
+<p>The dataset includes one row for each combination of language
+edition, month and indicator. At the time of publication the pipeline
+computes vital signs for more than 358 Wikipedia language editions.
+Metrics are computed monthly using data from 2001 onward, and seven
+indicator groups (retention, stability, balance, administrators,
+specialists, global participation and overall activity) are produced for
+each month. Each indicator can have multiple sub‑rows where the m1/m2
+fields identify the numerator and denominator used in the calculation.
+Consequently, the snapshot contains hundreds of thousands of aggregated
+records. (Exact counts vary because some older months are missing for
+smaller projects and new language editions appear over time.)</p></li>
+<li><p><strong>Does the dataset contain all possible instances or is it
+a sample (not necessarily random) of instances from a larger
+set?</strong></p>
+<p>The dataset aims to be exhaustive. It aggregates statistics from the
+MediaWiki History Dump, which records every edit, page and user event
+across Wikimedia projects since 2001. Each available month for each
+project is processed. However, the underlying dumps are occasionally
+missing months or years for some language editions (for instance the
+2001 file for Arabic Wikipedia is missing). Therefore the dataset
+contains all instances available in the dump but may omit months where
+the source data is absent.</p></li>
+<li><p><strong>What data does each instance consist of?</strong>
+<em>(“Raw’ ’ data (e.g., unprocessed text or images) or features? In
+either case, please provide a description.)</em></p>
+<p>Each row in the table <code>vital_signs_metrics</code> contains:</p>
+<ul>
+<li><p><code>langcode</code>: ISO 639‑1/2 code for the Wikipedia edition
+(e.g., “en” for English).</p></li>
+<li><p><code>year_year_month</code> and <code>year_month</code>: strings
+identifying the year and month of the observation.</p></li>
+<li><p><code>topic</code>: the name of the indicator (“retention”,
+“stability”, “balance”, “administrators”, “specialists”, “global
+participation” or “activity”).</p></li>
+<li><p><code>m1</code>, <code>m1_calculation</code>,
+<code>m1_value</code> and <code>m1_count</code>: describe the numerator
+used for the metric (e.g., number of new editors who registered, or the
+“first_edit” cohort) and the corresponding count.</p></li>
+<li><p><code>m2</code>, <code>m2_calculation</code>,
+<code>m2_value</code> and <code>m2_count</code>: describe the
+denominator used (e.g., number of registered users) and its
+count.</p></li>
+</ul>
+<p>The m1 and m2 fields allow multiple derivations of the same metric
+(for example, the retention rate can be calculated as new editors who
+edit 60 days after registration divided by those who registered in the
+same month). No raw edit content is included; only aggregated counts
+derived from the MediaWiki History Dump are stored.</p></li>
+<li><p><strong>Is there a label or target associated with each instance?
+If so, please provide a description.</strong></p>
+<p>There are no machine‑learning labels. Each instance stores aggregated
+counts and ratios. The m1 and m2 counts can be combined
+(m1_count/m2_count) to compute a rate (for example, the retention rate)
+but there is no ground‑truth label.</p></li>
+<li><p><strong>Is any information missing from individual
+instances?</strong> <em>(If so, please provide a description, explaining
+why this information is missing (e.g., because it was unavailable). This
+does not include intentionally removed information, but might include,
+e.g., redacted text.)</em></p>
+<p>Some months do not appear for certain languages because the MediaWiki
+History Dump does not contain data for those periods. Smaller projects
+may have no editors in a given month, in which case the pipeline does
+not insert a row. Otherwise, each record contains all fields listed
+above. Since the data is aggregated, individual‑level attributes (e.g.,
+gender) are not available.</p></li>
+<li><p><strong>Are relationships between individual instances made
+explicit (e.g., users’ movie ratings, social network links)?</strong>
+<em>(If so, please describe how these relationships are made
+explicit.)</em></p>
+<p>Rows are related by the <code>langcode</code> and
+<code>year_month</code> fields. Together they allow time‑series analyses
+for each language edition. There are no explicit links between different
+language editions or between individual editors, as the dataset
+aggregates counts at the community level.</p></li>
+<li><p><strong>Are there recommended data splits (e.g., training,
+development/validation, testing)?</strong> <em>(If so, please provide a
+description of these splits, explaining the rationale behind
+them.)</em></p>
+<p>No predefined splits are provided because the dataset is intended for
+descriptive analysis rather than model training. Researchers may choose
+to hold out recent months to evaluate predictive models but must define
+these splits themselves.</p></li>
+<li><p><strong>Are there any errors, sources of noise, or redundancies
+in the dataset?</strong> <em>(If so, please provide a
+description.)</em></p>
+<p>Potential sources of noise include missing dump files for particular
+months and languages and classification errors when categorising editors
+as bots, administrators or specialists. The authors note that the
+computation relies on heuristics (e.g., identifying technical namespaces
+and activity thresholds) that may not perfectly reflect editors’ roles.
+Redundancy arises because each indicator is stored in multiple forms
+(different m1/m2 combinations) for the same month and language.</p></li>
+<li><p><strong>Is the dataset self‑contained, or does it link to or
+otherwise rely on external resources (e.g., websites, tweets, other
+datasets)?</strong> <em>(If it links to or relies on external resources,
+a) are there guarantees that they will exist, and remain constant, over
+time; b) are there official archival versions of the complete dataset
+(i.e., including the external resources as they existed at the time the
+dataset was created); c) are there any restrictions (e.g., licenses,
+fees) associated with any of the external resources that might apply to
+a future user? Please provide descriptions of all external resources and
+any restrictions associated with them, as well as links or other access
+points, as appropriate.)</em></p>
+<p>The dataset is self‑contained in the sense that all aggregated counts
+are stored in the SQLite file. However, it depends on the MediaWiki
+History Dump as the raw source and uses classification of user roles
+from Wikimedia data. The MediaWiki History Dump is a public dataset
+maintained by the Wikimedia Foundation. It is updated monthly, and
+previous releases are archived on Wikimedia’s servers. No external
+tweets or web content are included. The dumps and this aggregated
+dataset are released under the CC0 dedication, so there are no licence
+fees.</p></li>
+<li><p><strong>Does the dataset contain data that might be considered
+confidential (e.g., data that is protected by legal privilege or by
+doctor‑patient confidentiality, data that includes the content of
+individuals’ non‑public communications)?</strong> <em>(If so, please
+provide a description.)</em></p>
+<p>No. Only counts of public editing activity are included. There is no
+text, no editor names, and no private communications. User‑level details
+such as real names or email addresses are absent.</p></li>
+<li><p><strong>Does the dataset contain data that, if viewed directly,
+might be offensive, insulting, threatening, or might otherwise cause
+anxiety?</strong> <em>(If so, please describe why.)</em></p>
+<p>No. The dataset consists of numerical counts and ratios. It does not
+contain content, comments or text that could be offensive.</p></li>
+<li><p><strong>Does the dataset relate to people?</strong> <em>(If not,
+you may skip the remaining questions in this section.)</em></p>
+<p>Yes. Although the records aggregate editor activities, the underlying
+counts originate from people editing Wikipedia. The dataset therefore
+relates to human volunteers but only in aggregate.</p></li>
+<li><p><strong>Does the dataset identify any subpopulations (e.g., by
+age, gender)?</strong> <em>(If so, please describe how these
+subpopulations are identified and provide a description of their
+respective distributions within the dataset.)</em></p>
+<p>The dataset differentiates between broad editor roles (administrators
+and specialists) but does not include demographic characteristics such
+as gender, age or geographic location. The MediaWiki History Dump
+includes a “gender” field for registered users, but it is not propagated
+into <code>vital_signs_metrics</code>.</p></li>
+<li><p><strong>Is it possible to identify individuals (i.e., one or more
+natural persons), either directly or indirectly (i.e., in combination
+with other data) from the dataset?</strong> <em>(If so, please describe
+how.)</em></p>
+<p>No. The dataset is aggregated at the level of language edition and
+month. Even for small projects, it reports only counts. There are no
+user identifiers or usernames. Because of this aggregation and because
+small projects are aggregated by month, it would be difficult to infer
+specific editors.</p></li>
+<li><p><strong>Does the dataset contain data that might be considered
+sensitive in any way (e.g., data that reveals racial or ethnic origins,
+sexual orientations, religious beliefs, political opinions or union
+memberships, or locations; financial or health data; biometric or
+genetic data; forms of government identification, such as social
+security numbers; criminal history)?</strong> <em>(If so, please provide
+a description.)</em></p>
+<p>No. It does not include any personal attributes beyond aggregated
+counts. There is no sensitive demographic or health
+information.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>The developers explicitly acknowledge privacy concerns and commit to
+publishing only anonymised, aggregated metrics. Users should
+nevertheless be cautious when analysing small language communities:
+extremely low counts may still relate to a handful of individuals and
+could reveal activity patterns if combined with external
+knowledge.</p></li>
+</ol>
+<h2 id="collection-process">Collection Process</h2>
+<ol type="1">
+<li><p><strong>How was the data associated with each instance
+acquired?</strong> <em>(Was the data directly observable (e.g., raw
+text, movie ratings), reported by subjects (e.g., survey responses), or
+indirectly inferred/derived from other data (e.g., part‑of‑speech tags,
+model‑based guesses for age or language)? If data was reported by
+subjects or indirectly inferred/derived from other data, was the data
+validated/verified? If so, please describe how.)</em></p>
+<p>TThe dataset is derived from the MediaWiki History Dump. This dump
+records every revision, page creation, user registration and flag
+assignment across Wikimedia projects. These events are directly
+observable from Wikimedia’s servers and are exported in monthly or
+yearly TSV files. The Vital Signs pipeline reads the dump files for each
+language edition and computes aggregated metrics such as the number of
+new editors, the number of editors who continue editing after 60 days,
+the number of administrators appointed in a given month, etc. Role
+assignments (e.g., administrators, specialists) are inferred from the
+flags in the dump and from namespace activity; for example, specialists
+are editors who make more than 5 edits in technical namespaces.</p></li>
+<li><p><strong>What mechanisms or procedures were used to collect the
+data (e.g., hardware apparatus or sensor, manual human curation,
+software program, software API)?</strong> <em>(How were these mechanisms
+or procedures validated?)</em></p>
+<p>The dataset is derived entirely from the MediaWiki History Dumps
+(MWHD), a public and authoritative dataset released monthly by the
+Wikimedia Foundation that contains the complete historical record of
+revision, page, and user events for all Wikimedia projects since 2001.
+The dumps are distributed as BZ2-compressed TSV files, partitioned by
+project (e.g., each Wikipedia language edition) and by time period.</p>
+<p>Data collection is fully automated through a software-based ETL
+pipeline orchestrated with Apache Airflow. The pipeline performs the
+following steps:</p>
+<ol type="1">
+<li>retrieval of the latest MWHD files available on Wikimedia
+infrastructure;</li>
+<li>parsing and filtering of revision-level records;</li>
+<li>aggregation of editor-level activity statistics;</li>
+<li>computation of the Community Vital Signs indicators on a monthly
+basis.</li>
+</ol>
+<p>All processing components are containerized using Docker and
+orchestrated via Docker Compose, ensuring reproducibility across
+executions and deployments. The computed results are stored in
+PostgreSQL databases and exposed to the web application through a
+backend service.</p>
+<p>No manual human curation, annotation, or labeling is involved at any
+stage of data collection or processing. The dataset is generated
+exclusively through deterministic transformations of the original MWHD
+data.</p>
+<p><strong>Validation procedures</strong> rely on several
+mechanisms:</p>
+<ul>
+<li><strong>Source validation</strong>: MWHD is an official Wikimedia
+dataset widely used in academic research and community analytics,
+providing a trusted and stable upstream data source.</li>
+<li><strong>Pipeline monitoring</strong>: execution status, task
+durations, and failures are monitored in real time via StatsD →
+Prometheus → Grafana, enabling detection of anomalies or incomplete
+runs.</li>
+<li><strong>Reproducibility checks</strong>: the full pipeline is open
+source and can be executed independently to reproduce the same results
+from the same dump versions.</li>
+<li><strong>Conceptual validation</strong>: indicator definitions
+strictly follow the formal specifications of the Community Vital Signs
+framework introduced in prior peer-reviewed work (Miquel-Ribé et al.,
+2022), ensuring methodological consistency over time.</li>
+<li><strong>Community feedback</strong>: the metrics and dashboards have
+been discussed and presented in multiple Wikimedia community venues over
+several years, providing qualitative validation against community
+expectations and known trends.</li>
+</ul></li>
+<li><p><strong>If the dataset is a sample from a larger set, what was
+the sampling strategy (e.g., deterministic, probabilistic with specific
+sampling probabilities)?</strong></p>
+<p>No sampling was performed. The pipeline processes all available edits
+in the MediaWiki History Dump for each project. Missing data is due only
+to absent dump files rather than sampling.</p></li>
+<li><p><strong>Who was involved in the data collection process (e.g.,
+students, crowdworkers, contractors) and how were they compensated
+(e.g., how much were crowdworkers paid)?</strong></p>
+<p>The data collection is automated; no crowdworkers or manual data
+entry were involved. The authors wrote and maintain the code as part of
+their academic and institutional responsibilities. Volunteers may
+contribute to the project code but are not paid.</p></li>
+<li><p><strong>Over what timeframe was the data collected?</strong>
+<em>(Does this timeframe match the creation timeframe of the data
+associated with the instances (e.g., recent crawl of old news articles)?
+If not, please describe the timeframe in which the data associated with
+the instances was created.)</em></p>
+<p>The underlying MediaWiki History Dump covers editing activity from
+January 2001 through the most recent monthly dump. The snapshot
+described in the paper uses the November 2025 dump as its base; table 1
+in the appendix summarises the size of the 2025‑11 release. The pipeline
+is scheduled to update monthly, so newer snapshots will incorporate more
+recent months. Because the data summarises historic edits, some
+instances refer to activity decades earlier.</p></li>
+<li><p><strong>Were any ethical review processes conducted (e.g., by an
+institutional review board)?</strong> <em>(If so, please provide a
+description of these review processes, including the outcomes, as well
+as a link or other access point to any supporting
+documentation.)</em></p>
+<p>The dataset uses public data about editing activity and does not
+include personal identifiers. As a result, the authors did not report an
+institutional review board (IRB) approval. They do, however, discuss
+privacy considerations and commit to anonymisation.</p></li>
+<li><p><strong>Does the dataset relate to people?</strong> <em>(If not,
+you may skip the remaining questions in this section.)</em></p>
+<p>Yes. It aggregates behaviours of Wikipedia editors.</p></li>
+<li><p><strong>Did you collect the data from the individuals in question
+directly, or obtain it via third parties or other sources (e.g.,
+websites)?</strong></p>
+<p>The data was not collected directly from individuals. It was obtained
+from the publicly available MediaWiki History Dump hosted by the
+Wikimedia Foundation.</p></li>
+<li><p><strong>Were the individuals in question notified about the data
+collection?</strong> <em>(If so, please describe (or show with
+screenshots or other information) how notice was provided, and provide a
+link or other access point to, or otherwise reproduce, the exact
+language of the notification itself.)</em></p>
+<p>Editors agree to Wikimedia’s terms of use when they create an account
+or contribute. Those terms state that edit histories are public. The
+Vital Signs project did not provide additional notifications because it
+uses only aggregated, publicly available data.</p></li>
+<li><p><strong>Did the individuals in question consent to the collection
+and use of their data?</strong> <em>(If so, please describe (or show
+with screenshots or other information) how consent was requested and
+provided, and provide a link or other access point to, or otherwise
+reproduce, the exact language to which the individuals
+consented.)</em></p>
+<p>Contributors consent to the publication of their edits under open
+licences when they contribute to Wikimedia projects. The dataset does
+not collect new personal data and therefore did not require additional
+consent.</p></li>
+<li><p><strong>If consent was obtained, were the consenting individuals
+provided with a mechanism to revoke their consent in the future or for
+certain uses?</strong> <em>(If so, please provide a description, as well
+as a link or other access point to the mechanism (if
+appropriate).)</em></p>
+<p>Editors can request deletion of their accounts or contributions
+through Wikimedia’s standard processes, but the MediaWiki History Dump
+and the aggregated dataset reflect public editing history and may
+continue to include anonymised counts. As the data is aggregated,
+individual revocation is not supported.</p></li>
+<li><p><strong>Has an analysis of the potential impact of the dataset
+and its use on data subjects (e.g., a data protection impact analysis)
+been conducted?</strong> <em>(If so, please provide a description of
+this analysis, including the outcomes, as well as a link or other access
+point to any supporting documentation.)</em></p>
+<p>No formal data protection impact analysis is published. The project’s
+privacy statement on Meta‑Wiki acknowledges potential risks and
+emphasises aggregation and anonymisation. Users should consider the
+possibility of re‑identification in very small language
+editions.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>The dataset creators invite community feedback and view the metrics
+as a collaborative effort. The Community Health Metrics page contains a
+questionnaire and encourages suggestions for new indicators.</p></li>
+</ol>
+<h2
+id="preprocessingcleaninglabeling">Preprocessing/cleaning/labeling</h2>
+<ol type="1">
+<li><p><strong>Was any preprocessing/cleaning/labeling of the data done
+(e.g., discretization or bucketing, tokenization, part‑of‑speech
+tagging, SIFT feature extraction, removal of instances, processing of
+missing values)?</strong> <em>(If so, please provide a description. If
+not, you may skip the remainder of the questions in this
+section.)</em></p>
+<p>Yes. The pipeline parses the MediaWiki History Dump and extracts
+relevant attributes such as registration date, first edit timestamp,
+number of edits per month and user roles. It classifies accounts as bots
+or human editors and derives editor roles (administrators, specialists)
+based on flags and namespaces. It then groups editors by lustrum
+(five‑year cohort) and counts those who meet certain thresholds (e.g.,
+more than 100 edits in a month). All of these steps transform raw event
+data into aggregated metrics.</p></li>
+<li><p><strong>Was the “raw” data saved in addition to the
+preprocessed/cleaned/labeled data (e.g., to support unanticipated future
+uses)?</strong> <em>(If so, please provide a link or other access point
+to the “raw” data.)</em></p>
+<p>Yes. The raw MediaWiki History Dump is publicly accessible and
+archived by the Wikimedia Foundation. Users can download the full dumps
+from <a href="https://dumps.wikimedia.org/other/mediawiki_history/">https://dumps.wikimedia.org/other/mediawiki_history/</a>. The pipeline
+also stores intermediate editor‑level tables which are not distributed
+but can be recreated from the dumps using the provided code.</p></li>
+<li><p><strong>Is the software used to preprocess/clean/label the
+instances available?</strong> <em>(If so, please provide a link or other
+access point.)</em></p>
+<p>Yes. The Python scripts and the associated Airflow pipeline are
+available on GitHub at
+<a href="https://github.com/WikiCommunityHealth/vital-signs-pipeline">https://github.com/WikiCommunityHealth/vital-signs-pipeline</a>. The
+repository includes instructions for reproducing the database and
+dashboards.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>The classification of administrators and specialists uses simple
+heuristics (e.g., edit counts and namespace names). Future users should
+be aware that these categories may not perfectly align with community
+definitions and may want to refine the preprocessing code.</p></li>
+</ol>
+<h2 id="uses">Uses</h2>
+<ol type="1">
+<li><p><strong>Has the dataset been used for any tasks already?</strong>
+<em>(If so, please provide a description.)</em></p>
+<p>Yes. The dataset powers the Wikipedia Community Health Dashboards,
+which allow anyone to visualise trends such as retention, stability and
+renewal of administrators across language editions. The authors use the
+data in their ICWSM 2026 paper to illustrate use cases like generational
+shifts in Italian Wikipedia and administrator renewal in German
+Wikipedia. The dataset has also been used in earlier community reports
+(e.g., a report on Polish Wikipedia’s vital signs referenced on the
+project page) and presentations to Wikimedia communities.</p></li>
+<li><p><strong>Is there a repository that links to any or all papers or
+systems that use the dataset?</strong> <em>(If so, please provide a link
+or other access point.)</em></p>
+<p>The Community Health Metrics page on Meta‑Wiki maintains a
+dissemination timeline and links to papers, presentations and reports
+that use the data. The GitHub repository also lists resources and
+presentations.</p></li>
+<li><p><strong>What (other) tasks could the dataset be used
+for?</strong></p>
+<p>Researchers could use the dataset to:</p>
+<ul>
+<li><p>Compare editor retention rates across languages or time
+periods.</p></li>
+<li><p>Identify patterns of growth or stagnation in small versus large
+Wikipedias.</p></li>
+<li><p>Evaluate the effectiveness of interventions aimed at newcomer
+retention or administrator renewal.</p></li>
+<li><p>Build predictive models of community health, using past trends to
+forecast future participation.</p></li>
+<li><p>Combine with external socio‑economic or linguistic data to study
+factors associated with community resilience.</p></li>
+</ul></li>
+<li><p><strong>Is there anything about the composition of the dataset or
+the way it was collected and preprocessed/cleaned/labeled that might
+impact future uses?</strong> <em>(For example, is there anything that a
+future user might need to know to avoid uses that could result in unfair
+treatment of individuals or groups (e.g., stereotyping, quality of
+service issues) or other undesirable harms (e.g., financial harms, legal
+risks) If so, please provide a description. Is there anything a future
+user could do to mitigate these undesirable harms?)</em></p>
+<p>Because the data is aggregated at the language level, it masks
+heterogeneity within communities. Using it to make decisions about
+individual editors or specific subgroups would be inappropriate. Smaller
+communities may have very low counts where an increase or decrease
+corresponds to a single person; caution is required to avoid drawing
+conclusions about individuals. Additionally, the roles (administrators,
+specialists) are derived from flags and heuristics and may not
+accurately reflect community perceptions; misuse could unfairly
+characterise editor groups. To mitigate these risks, users should
+combine Vital Signs with qualitative understanding of the communities
+and avoid ranking or penalising individuals based on aggregate
+metrics.</p></li>
+<li><p><strong>Are there tasks for which the dataset should not be
+used?</strong> <em>(If so, please provide a description.)</em></p>
+<p>The dataset should not be used to identify or evaluate individual
+editors, to make hiring or promotion decisions, or to infer personal
+attributes like gender or political affiliation. It is unsuitable for
+any high‑impact decisions affecting specific individuals or small
+groups.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>None.</p></li>
+</ol>
+<h2 id="distribution">Distribution</h2>
+<ol type="1">
+<li><p><strong>Will the dataset be distributed to third parties outside
+of the entity (e.g., company, institution, organization) on behalf of
+which the dataset was created?</strong> <em>(If so, please provide a
+description.)</em></p>
+<p>Yes. The dataset is intended for public release. It is hosted on the
+Wikimedia Cloud and can be downloaded by anyone from
+<a href="https://vitalsigns.wmcloud.org/data">https://vitalsigns.wmcloud.org/data</a>.</p></li>
+<li><p><strong>How will the dataset will be distributed (e.g., tarball
+on website, API, GitHub)?</strong> <em>(Does the dataset have a digital
+object identifier (DOI)?)</em></p>
+<p>It is distributed as a compressed SQLite file
+(<code>vital_signs_web.sqlite.gz</code>) via the project website.
+Currently there is no DOI. The dataset is also regenerated regularly, so
+users should note the snapshot date.</p></li>
+<li><p><strong>When will the dataset be distributed?</strong></p>
+<p>The snapshot described in the paper corresponds to the November 2025
+dumps. New snapshots are generated monthly through the automated
+pipeline and become available shortly after each dump is released. The
+dataset page always links to the latest version.</p></li>
+<li><p><strong>Will the dataset be distributed under a copyright or
+other intellectual property (IP) license, and/or under applicable terms
+of use (ToU)?</strong> <em>(If so, please describe this license and/or
+ToU, and provide a link or other access point to, or otherwise
+reproduce, any relevant licensing terms or ToU, as well as any fees
+associated with these restrictions.)</em></p>
+<p>Yes. All data, charts and content are released under the Creative
+Commons CC0 public domain dedication, meaning they can be used for any
+purpose without restriction. The source code is licensed under the MIT
+Licence.</p></li>
+<li><p><strong>Have any third parties imposed IP‑based or other
+restrictions on the data associated with the instances?</strong> <em>(If
+so, please describe these restrictions, and provide a link or other
+access point to, or otherwise reproduce, any relevant licensing terms,
+as well as any fees associated with these restrictions.)</em></p>
+<p>No. The data is derived from Wikimedia projects, which are themselves
+released under open licences. The aggregated dataset carries no
+additional restrictions beyond the CC0 dedication.</p></li>
+<li><p><strong>Do any export controls or other regulatory restrictions
+apply to the dataset or to individual instances?</strong> <em>(If so,
+please describe these restrictions, and provide a link or other access
+point to, or otherwise reproduce, any supporting
+documentation.)</em></p>
+<p>None known. The dataset contains only aggregate counts and is not
+subject to export controls.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>None.</p></li>
+</ol>
+<h2 id="maintenance">Maintenance</h2>
+<ol type="1">
+<li><p><strong>Who is supporting/hosting/maintaining the
+dataset?</strong></p>
+<p>The dataset is hosted on the Wikimedia Cloud infrastructure. It is
+maintained by the Community Health Metrics team consisting of the
+authors (Andrea Denina, Paolo Aliprandi, Marc Miquel‑Ribé, David
+Laniado, Cristian Consonni) and other contributors. The pipeline runs on
+a Wikimedia Cloud virtual machine and is monitored via Airflow,
+Prometheus and Grafana.</p></li>
+<li><p><strong>How can the owner/curator/manager of the dataset be
+contacted (e.g., email address)?</strong></p>
+<p>Contact information for the authors is available in the paper. Email
+addresses include andrea.denina@studenti.unitn.it,
+paoloalipro@gmail.com, mmiquelr@tecnocampus.cat,
+david.laniado@eurecat.org and cristian.consonni@acm.org. Users can also
+open issues on the GitHub repository.</p></li>
+<li><p><strong>Is there an erratum?</strong> <em>(If so, please provide
+a link or other access point.)</em></p>
+<p>At the time of writing no erratum is published. Should errors in the
+metrics or pipeline be discovered, they will be corrected in subsequent
+releases and documented on the project page.</p></li>
+<li><p><strong>Will the dataset be updated (e.g., to correct labeling
+errors, add new instances, delete instances’)?</strong> <em>(If so,
+please describe how often, by whom, and how updates will be communicated
+to users (e.g., mailing list, GitHub)?)</em></p>
+<p>Yes. The pipeline re‑computes the metrics every month when a new
+MediaWiki History Dump is released. Updates are automated via Airflow
+and the resulting SQLite snapshot replaces the previous one on the
+website. Significant changes (e.g., new indicators) will be announced
+through the Community Health Metrics page and the GitHub
+repository.</p></li>
+<li><p><strong>If the dataset relates to people, are there applicable
+limits on the retention of the data associated with the instances (e.g.,
+were individuals in question told that their data would be retained for
+a fixed period of time and then deleted)?</strong> <em>(If so, please
+describe these limits and explain how they will be enforced.)</em></p>
+<p>Because the dataset contains aggregated counts rather than individual
+records, no retention limits apply. Aggregated historical counts will be
+kept indefinitely as part of the public record of Wikipedia’s editing
+history.</p></li>
+<li><p><strong>Will older versions of the dataset continue to be
+supported/hosted/maintained?</strong> <em>(If so, please describe how.
+If not, please describe how its obsolescence will be communicated to
+users.)</em></p>
+<p>Only the latest snapshot is made available via the data page. Older
+versions are not explicitly archived. Users who require a specific
+snapshot should download and archive it themselves. When new metrics are
+added, the project page and repository documentation will describe the
+changes.</p></li>
+<li><p><strong>If others want to extend/augment/build on/contribute to
+the dataset, is there a mechanism for them to do so?</strong> <em>(If
+so, please provide a description. Will these contributions be
+validated/verified? If so, please describe how. If not, why not? Is
+there a process for communicating/distributing these contributions to
+other users? If so, please provide a description.)</em></p>
+<p>Contributions are welcomed through the GitHub repository. Researchers
+can propose new indicators or improvements to the pipeline by opening
+issues or submitting pull requests. The maintainers review contributions
+and, if accepted, integrate them into future releases. The Meta‑Wiki
+project page also invites community suggestions and provides contact
+links. As metrics are co‑created with the community, proposed changes
+are discussed publicly before adoption.</p></li>
+<li><p><strong>Any other comments?</strong></p>
+<p>The project emphasises collaboration with Wikimedia communities.
+Users are encouraged to share use cases, suggest improvements and report
+issues to ensure the metrics remain relevant and fair.</p></li>
+</ol>
