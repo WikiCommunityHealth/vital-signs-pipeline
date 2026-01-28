@@ -1392,6 +1392,10 @@ def dataset_page():
     
     return send_file("/app/static/dataset.html")
 
+@server.route("/data/datasheet")
+def datasheet_page():
+    return send_file("/app/static/datasheet.html")
+
 
 
 # ---------- MAIN ----------
